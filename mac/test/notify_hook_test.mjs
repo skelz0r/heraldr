@@ -138,6 +138,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     });
     assert.equal(push.body.session_url, "https://claude.ai/code/session_01ABCDEFGHIJKLMNOPQRSTUV");
     assert.equal(push.body.workspace_id, "w1");
+    assert.equal(push.body.agent, "acme_app-main");
   });
 
   it("ignore les agents qui ne sont pas des -main, comme les Claude des worktrees", async () => {

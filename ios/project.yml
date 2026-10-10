@@ -69,6 +69,8 @@ targets:
       - path: HeraldrTests
       - path: ../Vendor/Heeler/plugin/test-vectors/pairing-code-v1.json
         buildPhase: resources
+      - path: ../mac/test/agent-names.tsv
+        buildPhase: resources
     dependencies:
       - target: Heraldr
     settings:

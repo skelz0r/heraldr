@@ -23,8 +23,4 @@ xcodebuild test \
     "${ONLY_TESTING[@]}" \
     2>&1 | grep -E "✔|✘|Test run|error:|\*\* TEST"
 
-echo "Running dispatch script tests..."
-"${PROJECT_DIR}/mac/test/dispatch_test.sh"
-
-echo "Running notify hook tests..."
-node --test "${PROJECT_DIR}/mac/test/notify_hook_test.mjs"
+"${PROJECT_DIR}/bin/run-mac-tests"

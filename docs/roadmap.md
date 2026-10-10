@@ -2,7 +2,7 @@
 
 ## V1 : MVP
 
-Voir [mvp.md](mvp.md).
+Voir [spec.md](spec.md).
 
 ## V2 : être prévenu quand un workspace a besoin de moi
 
