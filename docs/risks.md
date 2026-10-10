@@ -61,3 +61,47 @@ workspace jetable « Spike compagnon » et son agent
     alors `agent_not_ready` et l'agent est `blocked`. Le script ne
     répond pas à la place de l'utilisateur : il attend que l'agent
     devienne `idle`, la question se règle sur le Mac.
+
+## Spike des notifications push
+
+Spike du 2026-10-10 (herdr 0.9.3, Claude Code 2.1.296, Node 25), avant
+d'écrire les push des questions des agents `-main`.
+
+11. URL de la session Remote Control d'un agent, récupérable côté Mac ?
+    - Levé : `~/.claude/sessions/<pid>.json` porte le `sessionId` de la
+      session Claude, celui que herdr expose dans
+      `agent_session.value`, et son `bridgeSessionId`
+      (`session_01…`). L'URL est
+      `https://claude.ai/code/<bridgeSessionId>`, celle qu'affiche
+      `/remote-control`.
+    - `claude.ai/code/*` est un universal link de l'app Claude
+      (`apple-app-site-association` de claude.ai, appID
+      `Q6L2SF6YDW.com.anthropic.claude`) : Heraldr l'ouvre avec
+      `universalLinksOnly`, et se rabat sur un bouton « Ouvrir dans
+      Claude » si l'app ne le prend pas.
+    - Le texte de la question est dans le transcript
+      `~/.claude/projects/<cwd encodé>/<sessionId>.jsonl` : dernier
+      `tool_use` `AskUserQuestion` d'un message `assistant`,
+      `input.questions[0].question`. Pour une permission, le dernier
+      `tool_use` donne le nom de l'outil.
+12. Passage en `blocked` sans daemon ?
+    - Levé : un plugin herdr déclare
+      `[[events]] on = "pane.agent_status_changed"` ; herdr lance un
+      process court par changement d'état avec
+      `HERDR_PLUGIN_EVENT_JSON` (`pane_id`, `workspace_id`,
+      `agent_status`). Le nom de l'agent n'y est pas : il vient de
+      `herdr agent get <pane>`, qui sert aussi à revérifier l'état après
+      le debounce. `herdr plugin link` enregistre un plugin local sans
+      build.
+13. Envoi APNs HTTP/2 depuis le Mac ?
+    - Levé : Node (déjà requis par le plugin Heeler) signe le JWT ES256
+      avec `node:crypto` (`dsaEncoding: "ieee-p1363"`) et poste avec
+      `node:http2`, sans dépendance. curl 8.7.1 du système a aussi
+      nghttp2, mais signer en ES256 en shell est pénible.
+    - La clé `.p8` APNs de local_events (`KEYID67890`, équipe
+      `ABCDE12345`) passe l'authentification pour le topic
+      `com.skelz0r.heraldr.dev` : sandbox et production répondent
+      `BadDeviceToken` à un faux token, et non `InvalidProviderToken`.
+      Une clé APNs vaut pour toutes les apps de l'équipe.
+    - Piège : `~/.private_keys/AuthKey_KEYID12345.p8` est une clé App
+      Store Connect API, refusée par APNs (`InvalidProviderToken`).
