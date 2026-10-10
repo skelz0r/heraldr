@@ -30,8 +30,20 @@ targets:
       - path: Heraldr
       - path: ../mac/dispatch.sh
         buildPhase: resources
+      - path: ../mac/notify-hook.mjs
+        buildPhase: resources
     dependencies:
       - package: HeelerSSH
+    info:
+      path: Heraldr/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        HeraldrTeamID: $(DEVELOPMENT_TEAM)
+    entitlements:
+      path: Heraldr/Heraldr.entitlements
+      properties:
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.heraldr.dev

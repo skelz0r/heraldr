@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct HeraldrApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -18,6 +19,7 @@ struct HeraldrApp: App {
             .tint(.heraldrAccent)
             .task {
                 model.resetTargetToHome()
+                appDelegate.model = model
                 await model.refresh()
             }
             .onChange(of: scenePhase) { _, phase in

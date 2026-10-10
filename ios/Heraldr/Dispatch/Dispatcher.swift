@@ -41,6 +41,21 @@ struct Dispatcher: Sendable {
         return data
     }()
 
+    static let bundledNotifyHook: Data = {
+        guard
+            let url = Bundle.main.url(forResource: "notify-hook", withExtension: "mjs"),
+            let data = try? Data(contentsOf: url)
+        else { fatalError("notify-hook.mjs absent du bundle") }
+        return data
+    }()
+
+    func registerPush(_ device: PushDevice) async throws {
+        try await installScript()
+        let arguments = [device.token, device.environment, device.topic, device.teamId].map(quoted).joined(separator: " ")
+        let result = try await link.run("/bin/sh \(Self.script) register-push \(arguments)", input: Self.bundledNotifyHook)
+        guard result.exitStatus == 0 else { throw failure(result) }
+    }
+
     func send(_ text: String, to workspace: Workspace) async throws -> String {
         try await installScript()
         let agent = AgentName.forWorkspace(label: workspace.label)

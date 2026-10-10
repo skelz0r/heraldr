@@ -33,7 +33,10 @@ struct HomeView: View {
             actionBar
         }
         .overlay(alignment: .top) {
-            if let notice = model.notice {
+            if let question = model.unopenedQuestion {
+                UnopenedQuestionCard(question: question) { model.unopenedQuestion = nil }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            } else if let notice = model.notice {
                 NoticeToast(notice: notice)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .onTapGesture { model.notice = nil }
@@ -44,6 +47,7 @@ struct HomeView: View {
             }
         }
         .animation(.spring(duration: 0.35), value: model.notice)
+        .animation(.spring(duration: 0.35), value: model.unopenedQuestion)
         .fullScreenCover(item: $compose) { request in
             ComposeView(request: request)
         }

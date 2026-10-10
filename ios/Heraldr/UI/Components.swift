@@ -110,3 +110,42 @@ struct NoticeToast: View {
         }
     }
 }
+
+struct UnopenedQuestionCard: View {
+    let question: QuestionNotification
+    let dismiss: () -> Void
+    @Environment(\.openURL) private var openURL
+
+    private static let claudeCode = URL(string: "https://claude.ai/code")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "questionmark.bubble.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Color.onAccent)
+                    .frame(width: 36, height: 36)
+                    .background(AgentStatus.blocked.color, in: .circle)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(question.agent) attend une réponse").font(.subheadline.bold())
+                    Text("La session ne s'est pas ouverte dans Claude.").font(.footnote).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Button("Fermer", systemImage: "xmark", action: dismiss)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.glass)
+            }
+            Button {
+                openURL(question.sessionURL ?? Self.claudeCode)
+                dismiss()
+            } label: {
+                Label("Ouvrir dans Claude", systemImage: "arrow.up.forward.app")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+        }
+        .padding(14)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 16)
+    }
+}

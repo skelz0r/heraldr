@@ -1,5 +1,7 @@
 import Foundation
 import Observation
+import UIKit
+import UserNotifications
 
 @MainActor
 @Observable
@@ -49,6 +51,10 @@ final class AppModel {
     private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
     var notice: Notice?
+    var unopenedQuestion: QuestionNotification?
+    private var pushDevice: PushDevice?
+    private var pushDeviceRegistered = false
+    private var notificationsRequested = false
 
     private var link: MacLink?
     private var deviceKey: DeviceKey?
@@ -94,6 +100,7 @@ final class AppModel {
         mac = nil
         workspaces = []
         jobs = []
+        pushDeviceRegistered = false
         connection = .unpaired
     }
 
@@ -122,8 +129,47 @@ final class AppModel {
             connection = .online
         } catch {
             connection = .unreachable(error.localizedDescription)
+            schedulePolling()
+            return
         }
+        Task { await requestNotificationsOnce() }
+        await registerPushDeviceIfNeeded()
         schedulePolling()
+    }
+
+    func registerPush(_ device: PushDevice) async {
+        guard device != pushDevice else { return }
+        pushDevice = device
+        pushDeviceRegistered = false
+        await registerPushDeviceIfNeeded()
+    }
+
+    func open(_ question: QuestionNotification) async {
+        selectedWorkspaceId = question.workspaceId
+        if let url = question.sessionURL, await UIApplication.shared.open(url, options: [.universalLinksOnly: true]) {
+            unopenedQuestion = nil
+            return
+        }
+        unopenedQuestion = question
+    }
+
+    private func requestNotificationsOnce() async {
+        guard !notificationsRequested else { return }
+        notificationsRequested = true
+        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
+        if granted {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
+    }
+
+    private func registerPushDeviceIfNeeded() async {
+        guard let link, let pushDevice, !pushDeviceRegistered else { return }
+        do {
+            try await Dispatcher(link: link).registerPush(pushDevice)
+            pushDeviceRegistered = true
+        } catch {
+            notice = Notice(kind: .failed, title: "Notifications non installées sur le Mac", detail: error.localizedDescription)
+        }
     }
 
     func send(_ text: String, to workspace: Workspace) async throws {
