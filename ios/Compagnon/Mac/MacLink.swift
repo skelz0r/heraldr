@@ -1,0 +1,163 @@
+import Foundation
+import HeelerSSH
+
+enum MacLinkError: Error, LocalizedError {
+    case unreachable(String)
+    case hostKeyChanged(presented: String)
+    case authenticationRefused
+    case tailscaleSSH
+    case commandFailed(status: Int32, stderr: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unreachable(let detail):
+            "Mac injoignable (\(detail))"
+        case .hostKeyChanged(let presented):
+            "La clé du Mac a changé (\(presented)) : refais l'appairage"
+        case .authenticationRefused:
+            "Le Mac refuse la clé de cet iPhone : refais l'appairage"
+        case .tailscaleSSH:
+            "Tailscale SSH a répondu à la place du sshd du Mac : désactive-le (RunSSH: false)"
+        case .commandFailed(let status, let stderr):
+            "Commande refusée par le Mac (\(status)) : \(stderr)"
+        }
+    }
+}
+
+struct SSHIdentity: Sendable {
+    let publicKeyBlob: Data
+    let sign: @Sendable (Data) throws -> Data
+
+    init(_ key: DeviceKey) {
+        publicKeyBlob = key.publicKeyBlob
+        sign = { challenge in try key.sign(challenge) }
+    }
+}
+
+enum SSHDialer {
+    static let perAddressTimeout: Duration = .seconds(6)
+    static let authenticationTimeout: Duration = .seconds(10)
+
+    static func connect(
+        addresses: [String],
+        port: Int,
+        username: String,
+        hostKeyFingerprint: String,
+        identity: SSHIdentity
+    ) async throws -> (connection: SSHConnection, address: String) {
+        var attempts: [String] = []
+        var sawTailscale = false
+        var mismatchedKey: String?
+        for address in addresses {
+            try Task.checkCancellation()
+            guard let sshPort = UInt16(exactly: port) else { throw MacLinkError.unreachable("port \(port)") }
+            let connection: SSHConnection
+            do {
+                connection = try await SSHConnection.connect(
+                    to: SSHEndpoint(host: address, port: sshPort),
+                    timeout: perAddressTimeout)
+            } catch {
+                attempts.append("\(address): \(error)")
+                continue
+            }
+            if connection.serverIdentification?.hasPrefix("SSH-2.0-Tailscale") == true {
+                sawTailscale = true
+                try? await connection.close(timeout: .seconds(2))
+                continue
+            }
+            let presented = SSHFingerprint.of(publicKeyBlob: connection.hostKey.key)
+            guard presented == hostKeyFingerprint else {
+                try? await connection.close(timeout: .seconds(2))
+                mismatchedKey = presented
+                continue
+            }
+            do {
+                try await connection.authenticate(
+                    username: username,
+                    publicKey: identity.publicKeyBlob,
+                    signer: identity.sign,
+                    timeout: authenticationTimeout)
+                return (connection, address)
+            } catch SSHError.authenticationFailed {
+                try? await connection.close(timeout: .seconds(2))
+                throw MacLinkError.authenticationRefused
+            } catch {
+                try? await connection.close(timeout: .seconds(2))
+                attempts.append("\(address): \(error)")
+            }
+        }
+        if let mismatchedKey { throw MacLinkError.hostKeyChanged(presented: mismatchedKey) }
+        if sawTailscale { throw MacLinkError.tailscaleSSH }
+        throw MacLinkError.unreachable(attempts.joined(separator: " ; "))
+    }
+}
+
+actor MacLink {
+    private(set) var mac: PairedMac
+    private let identity: SSHIdentity
+    private var connection: SSHConnection?
+    private var home: String?
+
+    init(mac: PairedMac, deviceKey: DeviceKey) {
+        self.mac = mac
+        self.identity = SSHIdentity(deviceKey)
+    }
+
+    func run(_ command: String, input: Data = Data(), timeout: Duration = .seconds(20)) async throws -> SSHExecResult {
+        try await withReconnect { connection in
+            try await connection.execute(command, input: input, timeout: timeout)
+        }
+    }
+
+    func herdrSocketPath() async throws -> String {
+        if let home { return "\(home)/.config/herdr/herdr.sock" }
+        let result = try await run("printf %s \"$HOME\"")
+        let resolved = String(decoding: result.stdout, as: UTF8.self)
+        guard result.exitStatus == 0, resolved.hasPrefix("/") else {
+            throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "HOME introuvable")
+        }
+        home = resolved
+        return "\(resolved)/.config/herdr/herdr.sock"
+    }
+
+    func exchangeWithHerdr(_ request: Data) async throws -> Data {
+        let socketPath = try await herdrSocketPath()
+        return try await withReconnect { connection in
+            try await connection.exchangeStreamLocal(socketPath: socketPath, request: request, timeout: .seconds(10))
+        }
+    }
+
+    func disconnect() async {
+        try? await connection?.close(timeout: .seconds(2))
+        connection = nil
+    }
+
+    private func withReconnect<T: Sendable>(_ operation: (SSHConnection) async throws -> T) async throws -> T {
+        let current = try await liveConnection()
+        do {
+            return try await operation(current)
+        } catch let error as SSHError where error == .connectionInvalidated || error == .connectionFailed || error == .unexpectedEOF {
+            connection = nil
+            return try await operation(try await liveConnection())
+        }
+    }
+
+    private func liveConnection() async throws -> SSHConnection {
+        if let connection, await connection.isConnected {
+            return connection
+        }
+        connection = nil
+        let dialed = try await SSHDialer.connect(
+            addresses: mac.addresses,
+            port: mac.port,
+            username: mac.username,
+            hostKeyFingerprint: mac.hostKeyFingerprint,
+            identity: identity)
+        if dialed.address != mac.addresses.first {
+            mac = mac.preferring(dialed.address)
+            PairedMacStore.save(mac)
+        }
+        connection = dialed.connection
+        return dialed.connection
+    }
+}
