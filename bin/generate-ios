@@ -18,4 +18,4 @@ for patch in "${PROJECT_DIR}"/Vendor/patches/*.patch; do
     fi
 done
 
-xcodegen generate --spec "${PROJECT_DIR}/ios/project.yml" --use-cache --quiet
+xcodegen generate --spec "${PROJECT_DIR}/ios/project.yml" --quiet
