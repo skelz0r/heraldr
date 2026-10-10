@@ -63,6 +63,7 @@ final class AppModel {
     private var deviceKey: DeviceKey?
     private var pollTask: Task<Void, Never>?
     private var refreshing = false
+    private var refreshRequestedWhileRefreshing = false
 
     init() {
         if let mac = PairedMacStore.load(), let key = try? DeviceKeyStore.load() {
@@ -112,9 +113,20 @@ final class AppModel {
     }
 
     func refresh() async {
-        guard let link, !refreshing else { return }
+        guard !refreshing else {
+            refreshRequestedWhileRefreshing = true
+            return
+        }
         refreshing = true
         defer { refreshing = false }
+        repeat {
+            refreshRequestedWhileRefreshing = false
+            await refreshOnce()
+        } while refreshRequestedWhileRefreshing
+    }
+
+    private func refreshOnce() async {
+        guard let link else { return }
         if workspaces.isEmpty { connection = .connecting }
         do {
             let herdr = HerdrClient(link: link)
