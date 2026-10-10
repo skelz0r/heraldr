@@ -20,6 +20,15 @@ teardown_world() {
   rm -rf "$sandbox"
 }
 
+add_workspace() {
+  mkdir -p "$FAKE_HERDR_WORLD/workspaces"
+  printf '%s\t%s' "$2" "$3" > "$FAKE_HERDR_WORLD/workspaces/$1"
+}
+
+relay() {
+  printf '%s' "$2" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" relay "$1" > /dev/null 2>&1
+}
+
 add_agent() {
   mkdir -p "$FAKE_HERDR_WORLD/agents/$1"
   echo "$2" > "$FAKE_HERDR_WORLD/agents/$1/workspace_id"
@@ -135,6 +144,34 @@ check "le hook est toujours la version envoyée par l'app" "$(cat "$HERALDR_STAT
 check "le plugin herdr n'est lié qu'une fois" "$(cat "$FAKE_HERDR_WORLD/plugin_links")" "plugin link $HERALDR_STATE_DIR/plugin"
 check "un token mal formé est refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push 'abc;rm' sandbox t ABCDE12345 2>&1; echo $?)" "invalid token
 2"
+teardown_world
+
+echo "Home relaie une demande au -main du workspace du projet, avec la consigne standard"
+setup_world
+add_workspace w5 5 'Vidéo studio'
+relay w5 "Ajoute un sous-titre"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "l'agent du projet est créé dans son workspace, nommé comme le fait l'app" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Vidéo studio—main"
+check "il reçoit /clear puis la demande enveloppée qui finit par /start" "$(prompts_of vid-o-studio-main)" "idle|/clear
+idle|Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+
+Ajoute un sous-titre
+
+Consignes :
+- explore le code pour comprendre la demande, ne modifie rien ici
+- si la demande est ambiguë, pose tes questions avec AskUserQuestion
+- termine obligatoirement en dispatchant le travail avec /start"
+check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	vid-o-studio-main"
+teardown_world
+
+echo "un relais vers Home ou un workspace inconnu est refusé"
+setup_world
+add_workspace w1 1 'Home'
+relay w1 "Boucle"
+check "relais vers Home, le workspace 1, refusé" "$?" "2"
+relay w404 "Perdu"
+check "relais vers un workspace inconnu refusé" "$?" "2"
+check "aucun envoi créé" "$(job_states)" ""
 teardown_world
 
 if [ $failures -gt 0 ]; then

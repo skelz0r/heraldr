@@ -10,7 +10,8 @@ Issu de la session de cadrage du 2026-10-10.
 | Pairing | QR `HERDR-PAIR:1` de `heeler.pair` | système maison |
 | Lib SSH iOS | package HeelerSSH (libssh2) | Citadel |
 | Focus | sélection de la cible dans l'app, rien côté Mac | `workspace focus` sur le Mac |
-| Cible par défaut | toujours `~` au lancement | dernier utilisé |
+| Cible par défaut | toujours Home au lancement | dernier utilisé |
+| Repérage de Home | workspace numéro 1 de herdr, quel que soit son label | label `~` (le workspace s'appelle parfois `Home`) |
 | Agent cible | agent nommé `<slug>-main` dans le tab 1, créé s'il manque | adopter un Claude existant |
 | Lancement | équivalent `dclaude` (yolo) via `herdr agent start --kind claude -- --dangerously-skip-permissions` | |
 | Session Claude | nommée `<label>—main` en Remote Control | |
@@ -31,3 +32,4 @@ Issu de la session de cadrage du 2026-10-10.
 | Tap sur la notif | universal link `claude.ai/code/<session>` vers l'app Claude, repli sur Heraldr avec un bouton « Ouvrir dans Claude » | ouvrir Heraldr seulement |
 | Token APNs | envoyé par SSH exec (`dispatch.sh register-push`), qui installe aussi le hook | fichier édité à la main |
 | Logo | Voix et voies du premier tour, version noire (`5-voies-dark.svg`), palette vert d'eau ; trait épaissi de 60 à 80 px pour l'icône | Éventail et ses variantes, Troupeau |
+| Demande envoyée à Home | l'agent de Home identifie le projet (labels, cwd), demande si ambigu, relaie au `<slug>-main` du projet via `dispatch.sh relay` qui finit par /start ; sans projet, /start dans Home | /start depuis Home avec un tab dans le workspace du projet (faisait évoluer `/start`) |

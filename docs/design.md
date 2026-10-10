@@ -55,7 +55,7 @@ SF Pro, sans police embarquée.
 
 | Élément | Style |
 | --- | --- |
-| Nom de la cible | SF Pro Rounded heavy 44 pt, 88 pt pour `~`, tracking -1 |
+| Nom de la cible | SF Pro Rounded heavy 44 pt, 88 pt pour Home, tracking -1 |
 | Libellé « CIBLE » | caption heavy, capitales, tracking 1,2 |
 | État de la cible | callout semibold, puis footnote secondaire |
 | Tuile workspace | 15 pt semibold, deux lignes au plus |
@@ -72,7 +72,7 @@ SF Pro, sans police embarquée.
   l'anneau tournant puis le halo à cercle fin chargeaient trop l'écran
 - barre Écrire / Coller : capsule de 92 pt de haut, 12 pt des bords
 - grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
-  workspace (`~`) occupe toute la largeur au-dessus
+  workspace (Home) occupe toute la largeur au-dessus
 - tuile : 58 pt de haut minimum, coins de 20 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
 - aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt

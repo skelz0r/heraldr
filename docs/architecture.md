@@ -115,6 +115,16 @@ Un second envoi vers un agent occupé ne lance pas de deuxième runner :
 le verrou est pris, son job attend que le runner en place le traite.
 Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
 
+`relay <workspace_id>` sert à l'agent de Home pour transmettre une
+demande au projet qu'elle vise : la demande brute arrive sur stdin, le
+script lit le label avec `herdr workspace get`, en déduit
+`<slug>-main`, l'enveloppe dans la consigne standard et crée un job
+comme `enqueue`. Il refuse Home (workspace numéro 1) comme cible. Le
+slug et la consigne standard existent donc en double, dans
+`AgentName.swift` / `PromptEnvelope.swift` et dans `dispatch.sh`, à
+garder alignés. Le script est toujours installé sur le Mac au moment du
+relais, puisque l'envoi vers Home vient de l'installer.
+
 ## Notifications
 
 ```text

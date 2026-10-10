@@ -61,7 +61,7 @@ struct Dispatcher: Sendable {
         let agent = AgentName.forWorkspace(label: workspace.label)
         let label = Data(workspace.label.utf8).base64EncodedString()
         let command = "/bin/sh \(Self.script) enqueue \(quoted(workspace.id)) \(quoted(agent)) \(quoted(label))"
-        let result = try await link.run(command, input: Data(PromptEnvelope.wrap(text).utf8))
+        let result = try await link.run(command, input: Data(PromptEnvelope.wrap(text, for: workspace).utf8))
         guard result.exitStatus == 0 else { throw failure(result) }
         return String(decoding: result.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
     }

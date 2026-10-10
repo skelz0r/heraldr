@@ -7,13 +7,14 @@ Chaque workspace herdr suit la même organisation :
 - tab 1 : un ou plusieurs Claude et un shell
 - tabs suivants : un worktree chacun
 
-Le workspace principal est celui dont le label est `~`.
+Le workspace principal, Home, est le workspace numéro 1 de herdr,
+quel que soit son label (`~`, `Home`…).
 
 ## Écran principal
 
 Liste de tous les workspaces herdr :
 
-- `~` en premier, puis les autres dans l'ordre herdr (`number`)
+- Home en premier, puis les autres dans l'ordre herdr (`number`)
 - une ligne par workspace : label, et un dot d'état agrégé
   (`agent_status` de `herdr workspace list`)
   - gris : idle
@@ -26,7 +27,7 @@ Liste de tous les workspaces herdr :
 - tap sur une ligne : elle devient la cible des envois (sélection
   visuelle forte). C'est le seul sens de « focus » : rien ne bouge sur le
   Mac
-- au lancement de l'app, la cible est toujours `~`
+- au lancement de l'app, la cible est toujours Home
 - rafraîchissement : au retour au premier plan, en pull-to-refresh, après
   chaque envoi
 
@@ -81,6 +82,42 @@ Consignes :
 - si la demande est ambiguë, pose tes questions avec AskUserQuestion
 - termine obligatoirement en dispatchant le travail avec /start
 ```
+
+### Envoi vers Home
+
+Home est la cible par défaut, donc beaucoup de demandes y arrivent alors
+qu'elles visent un projet. Son agent `home-main` reçoit une consigne à
+part :
+
+```text
+Demande envoyée depuis l'iPhone vers Home, la cible par défaut de l'app
+(peut venir d'une dictée vocale : attention aux erreurs de
+transcription).
+
+<texte>
+
+Consignes :
+- ne modifie rien ici
+- identifie le projet visé parmi les workspaces herdr ouverts : labels
+  avec `herdr workspace list`, dossiers avec
+  `herdr pane list --workspace <workspace_id>` (cwd)
+- si plusieurs projets peuvent correspondre, pose la question avec
+  AskUserQuestion avant tout relais
+- si un projet est visé, relaie-lui la demande puis arrête-toi, sans
+  /start : `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" relay
+  <workspace_id>` avec sur l'entrée standard la demande d'origine,
+  corrigée des erreurs de transcription évidentes et complétée des
+  réponses à tes questions
+- si aucun projet ouvert n'est concerné : explore ce qu'il faut pour
+  comprendre la demande, pose tes questions avec AskUserQuestion si
+  elle est ambiguë et termine obligatoirement en dispatchant le
+  travail avec /start
+```
+
+Le relais suit le même chemin qu'un envoi de l'app vers ce workspace
+(création de `<slug>-main`, file, `/clear`, consigne standard) : c'est
+le `-main` du projet qui explore son dépôt et lance `/start`, et l'envoi
+s'affiche sur la ligne du projet.
 
 ## Nommage
 

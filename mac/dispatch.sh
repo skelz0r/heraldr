@@ -20,7 +20,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | relay <workspace_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
   exit 2
 }
 
@@ -34,10 +34,47 @@ valid_agent_name() {
   printf '%s' "$1" | grep -Eq '^[a-z][a-z0-9_-]{0,31}$'
 }
 
+agent_name_for_label() {
+  slug="$(printf '%s' "$1" | tr 'A-Z' 'a-z' | LC_ALL=en_US.UTF-8 sed 's/[^abcdefghijklmnopqrstuvwxyz0123456789_-]/-/g')"
+  case "$slug" in
+    [abcdefghijklmnopqrstuvwxyz]*) ;;
+    *) slug="w-$slug" ;;
+  esac
+  printf '%s-main' "$(printf '%s' "$slug" | cut -c1-27)"
+}
+
+standard_envelope() {
+  cat <<EOF
+Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+
+$1
+
+Consignes :
+- explore le code pour comprendre la demande, ne modifie rien ici
+- si la demande est ambiguë, pose tes questions avec AskUserQuestion
+- termine obligatoirement en dispatchant le travail avec /start
+EOF
+}
+
 enqueue_job() {
+  label="$(printf '%s' "$3" | base64 -d 2>/dev/null)" || label=""
+  create_job "$1" "$2" "$label"
+}
+
+relay_job() {
+  workspace_id="$1"
+  workspace="$(herdr workspace get "$workspace_id" 2>&1)" || { echo "workspace introuvable: $workspace_id" >&2; exit 2; }
+  label="$(printf '%s' "$workspace" | json_value result.workspace.label)" || { echo "workspace sans label: $workspace_id" >&2; exit 2; }
+  [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "relais vers Home impossible" >&2; exit 2; }
+  request="$(cat)"
+  [ -n "$request" ] || { echo "empty prompt" >&2; exit 2; }
+  standard_envelope "$request" | create_job "$workspace_id" "$(agent_name_for_label "$label")" "$label"
+}
+
+create_job() {
   workspace_id="$1"
   agent="$2"
-  label="$(printf '%s' "$3" | base64 -d 2>/dev/null)" || label=""
+  label="$3"
   valid_agent_name "$agent" || { echo "invalid agent name: $agent" >&2; exit 2; }
   [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
 
@@ -271,6 +308,7 @@ shift
 case "$command" in
   install) install_script ;;
   enqueue) [ $# -eq 3 ] || fail_usage; enqueue_job "$@" ;;
+  relay) [ $# -eq 1 ] || fail_usage; relay_job "$1" ;;
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;
