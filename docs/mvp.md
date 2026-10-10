@@ -82,6 +82,42 @@ Consignes :
 - termine obligatoirement en dispatchant le travail avec /start
 ```
 
+### Envoi vers `~`
+
+`~` est la cible par défaut, donc beaucoup de demandes y arrivent alors
+qu'elles visent un projet. Son agent `home-main` reçoit une consigne à
+part :
+
+```text
+Demande envoyée depuis l'iPhone vers Home, la cible par défaut de l'app
+(peut venir d'une dictée vocale : attention aux erreurs de
+transcription).
+
+<texte>
+
+Consignes :
+- ne modifie rien ici
+- identifie le projet visé parmi les workspaces herdr ouverts : labels
+  avec `herdr workspace list`, dossiers avec
+  `herdr pane list --workspace <workspace_id>` (cwd)
+- si plusieurs projets peuvent correspondre, pose la question avec
+  AskUserQuestion avant tout relais
+- si un projet est visé, relaie-lui la demande puis arrête-toi, sans
+  /start : `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" relay
+  <workspace_id>` avec sur l'entrée standard la demande d'origine,
+  corrigée des erreurs de transcription évidentes et complétée des
+  réponses à tes questions
+- si aucun projet ouvert n'est concerné : explore ce qu'il faut pour
+  comprendre la demande, pose tes questions avec AskUserQuestion si
+  elle est ambiguë et termine obligatoirement en dispatchant le
+  travail avec /start
+```
+
+Le relais suit le même chemin qu'un envoi de l'app vers ce workspace
+(création de `<slug>-main`, file, `/clear`, consigne standard) : c'est
+le `-main` du projet qui explore son dépôt et lance `/start`, et l'envoi
+s'affiche sur la ligne du projet.
+
 ## Nommage
 
 - agent herdr : `slug(label)-main`

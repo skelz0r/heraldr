@@ -31,3 +31,4 @@ Issu de la session de cadrage du 2026-10-10.
 | Tap sur la notif | universal link `claude.ai/code/<session>` vers l'app Claude, repli sur Heraldr avec un bouton « Ouvrir dans Claude » | ouvrir Heraldr seulement |
 | Token APNs | envoyé par SSH exec (`dispatch.sh register-push`), qui installe aussi le hook | fichier édité à la main |
 | Logo | Voix et voies du premier tour, version noire (`5-voies-dark.svg`), palette vert d'eau ; trait épaissi de 60 à 80 px pour l'icône | Éventail et ses variantes, Troupeau |
+| Demande envoyée à `~` | l'agent de `~` identifie le projet (labels, cwd), demande si ambigu, relaie au `<slug>-main` du projet via `dispatch.sh relay` qui finit par /start ; sans projet, /start dans `~` | /start depuis `~` avec un tab dans le workspace du projet (faisait évoluer `/start`) |
