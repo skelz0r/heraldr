@@ -8,6 +8,14 @@ agent_json() {
 }
 
 case "$1 $2" in
+  "workspace get")
+    if [ -f "$world/workspaces/$3" ]; then
+      printf '{"result":{"workspace":{"workspace_id":"%s","label":"%s"}}}\n' "$3" "$(cat "$world/workspaces/$3")"
+    else
+      echo '{"error":{"code":"workspace_not_found"}}' >&2
+      exit 1
+    fi
+    ;;
   "agent get")
     if [ -d "$world/agents/$3" ]; then
       agent_json "$3"
