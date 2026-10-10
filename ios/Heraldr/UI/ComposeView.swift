@@ -10,7 +10,7 @@ struct ComposeView: View {
     enum Origin: Equatable {
         case written
         case pasted
-        case dictated(CleanedTranscript)
+        case dictated(DictatedText)
     }
 
     let request: ComposeRequest
@@ -24,6 +24,7 @@ struct ComposeView: View {
     @State private var dictation = Dictation()
     @State private var lexicon = DictationLexiconStore.load()
     @State private var dictationError: String?
+    @State private var dictatingFollowUp = false
     @State private var sending = false
     @State private var sendError: String?
     @State private var choosingTarget = false
@@ -112,10 +113,7 @@ struct ComposeView: View {
             }
             HStack(spacing: 40) {
                 Button {
-                    Task {
-                        await dictation.cancel()
-                        dismiss()
-                    }
+                    Task { await cancelDictation() }
                 } label: {
                     Image(systemName: "xmark").font(.system(size: 24, weight: .bold)).frame(width: 64, height: 64)
                 }
@@ -219,7 +217,18 @@ struct ComposeView: View {
                 .padding(12)
                 .glassEffect(.regular, in: .rect(cornerRadius: 22, style: .continuous))
 
-            originLine
+            HStack(spacing: 12) {
+                originLine
+                Button { dictateFollowUp() } label: {
+                    Label(text.isEmpty ? "Dicter" : "Dicter la suite", systemImage: "mic.fill")
+                        .font(.footnote.weight(.bold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .disabled(sending)
+            }
 
             if let sendError {
                 Text(sendError).font(.footnote).foregroundStyle(AgentStatus.blocked.color)
@@ -255,12 +264,16 @@ struct ComposeView: View {
                 Label("Écrit", systemImage: "pencil")
             case .pasted:
                 Label("Collé", systemImage: "doc.on.clipboard")
-            case .dictated(.cleaned):
-                Label("Dictée nettoyée", systemImage: "sparkles")
-                Button("Voir l'original") { showingRaw = true }.foregroundStyle(Color.heraldrAccent)
-            case .dictated(.raw(_, let reason)):
-                Label("Transcription brute : \(reason)", systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(AgentStatus.blocked.color)
+            case .dictated(let dictated):
+                if let reason = dictated.salves.lastRawReason {
+                    Label("Transcription brute : \(reason)", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(AgentStatus.blocked.color)
+                } else {
+                    Label("Dictée nettoyée", systemImage: "sparkles")
+                }
+                if dictated.salves.contains(where: \.isCleaned) {
+                    Button("Voir l'original") { showingRaw = true }.foregroundStyle(Color.heraldrAccent)
+                }
             }
             Spacer()
         }
@@ -269,6 +282,7 @@ struct ComposeView: View {
     }
 
     private func startDictation() async {
+        dictationError = nil
         do {
             try await dictation.start(vocabulary: lexicon.vocabulary)
         } catch {
@@ -284,8 +298,35 @@ struct ComposeView: View {
         }
         stage = .cleaning(raw: raw)
         let cleaned = await TranscriptCleaner.clean(raw, lexicon: lexicon)
-        text = cleaned.text
-        origin = .dictated(cleaned)
+        append(cleaned)
+        stage = .preview
+    }
+
+    private func append(_ salve: CleanedTranscript) {
+        let dictated = if case .dictated(let dictated) = origin {
+            dictated.appending(salve, after: text)
+        } else {
+            DictatedText(salve, after: text)
+        }
+        text = dictated.text
+        origin = .dictated(dictated)
+    }
+
+    private func dictateFollowUp() {
+        editorFocused = false
+        sendError = nil
+        dictatingFollowUp = true
+        stage = .recording
+        Task { await startDictation() }
+    }
+
+    private func cancelDictation() async {
+        await dictation.cancel()
+        guard dictatingFollowUp else {
+            dismiss()
+            return
+        }
+        dictationError = nil
         stage = .preview
     }
 
@@ -366,12 +407,29 @@ struct RawTranscriptSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Transcription originale").font(.headline)
-                if case .dictated(let transcript) = origin {
-                    Text(transcript.raw).textSelection(.enabled)
+                if case .dictated(let dictated) = origin {
+                    ForEach(Array(dictated.salves.enumerated()), id: \.offset) { index, salve in
+                        if index > 0 { Divider() }
+                        Text(salve.raw).textSelection(.enabled)
+                    }
                 }
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+private extension CleanedTranscript {
+    var isCleaned: Bool {
+        if case .cleaned = self { true } else { false }
+    }
+}
+
+private extension [CleanedTranscript] {
+    var lastRawReason: String? {
+        reversed().lazy.compactMap { salve -> String? in
+            if case .raw(_, let reason) = salve { reason } else { nil }
+        }.first
     }
 }

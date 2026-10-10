@@ -5,7 +5,7 @@ import Testing
 @Suite("Lexique des corrections de dictée")
 struct DictationLexiconTests {
     private func dictated(_ text: String) -> ComposeView.Origin {
-        .dictated(.cleaned(text, raw: text))
+        .dictated(DictatedText(.cleaned(text, raw: text)))
     }
 
     @Test("une substitution courte corrigée dans l'aperçu est retenue à l'envoi")
@@ -83,6 +83,34 @@ struct DictationLexiconTests {
         #expect(lexicon.corrections.count == 50)
         #expect(lexicon.corrections.first?.meant == "terme55 maintenant")
         #expect(lexicon.corrections.last?.meant == "terme6 maintenant")
+    }
+
+    @Test("une correction tapée entre deux salves est retenue à l'envoi, une seule fois")
+    func correctionBetweenSalvesIsLearnedOnce() {
+        var lexicon = DictationLexicon()
+        let first = DictatedText(.cleaned("Ensuite on push la branche.", raw: "Ensuite on push la branche."))
+        let second = first.appending(
+            .cleaned("Puis ouvre la pull request.", raw: "Puis ouvre la pull request."),
+            after: "Ensuite git push la branche.")
+
+        lexicon.learn(sent: second.text, origin: .dictated(second))
+
+        #expect(lexicon.promptLines == ["on push → git push"])
+        #expect(lexicon.corrections.first?.count == 1)
+    }
+
+    @Test("le texte écrit avant une salve n'est pas pris pour une correction")
+    func textWrittenBeforeSalveIsNotACorrection() {
+        var lexicon = DictationLexicon()
+        let dictated = DictatedText(
+            .cleaned("Ensuite on push la branche.", raw: "Ensuite on push la branche."),
+            after: "Corrige le bug de connexion sur la page de login.")
+
+        lexicon.learn(
+            sent: "Corrige le bug de connexion sur la page de login.\nEnsuite git push la branche.",
+            origin: .dictated(dictated))
+
+        #expect(lexicon.promptLines == ["on push → git push"])
     }
 
     @Test("le lexique survit à la relance de l'app")

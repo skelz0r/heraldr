@@ -147,9 +147,11 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 - « Préparation du micro… », puis « Parle, je t'écoute. », puis la
   transcription en direct (SpeechAnalyzer, sur l'appareil), onde de
   niveau et chrono
-- « Annuler » ferme sans rien garder ; « Arrêter la dictée »
-  enchaîne sur le nettoyage
-- rien d'entendu : « Rien n'a été entendu. »
+- « Annuler » ferme sans rien garder ; depuis une salve lancée de
+  l'aperçu (§5.2), il revient à l'aperçu avec son texte intact ;
+  « Arrêter la dictée » enchaîne sur le nettoyage
+- rien d'entendu : « Rien n'a été entendu. », on reste sur l'écran de
+  dictée
 - nettoyage par Foundation Models (« Nettoyage… », « Foundation
   Models, sur l'appareil ») : retire hésitations, répétitions et faux
   départs sans changer le sens ni ajouter de contenu
@@ -164,6 +166,8 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   contextuel, et les 20 paires « entendu → voulu » les plus récentes
   sont ajoutées à la consigne du nettoyage, à appliquer quand le
   contexte s'y prête ; aucun remplacement automatique dans le texte
+- le nettoyage ne porte que sur la salve qui vient d'être dictée,
+  jamais sur le texte déjà dans l'aperçu
 
 ### 5.2 Aperçu
 
@@ -173,15 +177,27 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 - l'état de la cible et le prochain envoi (§4.1)
 - le texte, éditable, placeholder « Que doit faire l'agent ? » ;
   clavier ouvert pour Écrire, pré-rempli pour Coller et la dictée
-- l'origine : « Écrit », « Collé », « Dictée nettoyée » avec « Voir
-  l'original », ou « Transcription brute : <raison> »
+- l'origine : « Écrit », « Collé », « Dictée nettoyée », ou
+  « Transcription brute : <raison> » ; dès qu'une salve a été dictée,
+  l'origine est la dictée, même si le texte vient d'Écrire ou Coller ;
+  « Transcription brute » l'emporte si une salve n'a pas été nettoyée,
+  avec la raison de la dernière ; « Voir l'original » dès qu'une salve
+  a été nettoyée, il montre la transcription brute de chaque salve,
+  séparées par un trait
+- « Dicter » (texte vide) ou « Dicter la suite » ouvre l'écran de
+  dictée (§5.1), quelle que soit l'origine ; la salve nettoyée s'ajoute
+  à la fin du texte, après un retour à la ligne, sans toucher au texte
+  déjà là, corrigé ou non
 - « Envoyer », désactivé tant que le texte est vide ou pendant
   l'envoi ; en cas d'échec, l'erreur s'affiche au-dessus et l'aperçu
   reste ouvert ; en cas de succès il se ferme
 - apprentissage des corrections, sans rien afficher : quand on tape
   Envoyer sur une dictée, le texte proposé (nettoyé, ou brut) est
   comparé mot à mot au texte envoyé, sans tenir compte de la casse,
-  des accents ni de la ponctuation en bord de mot. Chaque remplacement
+  des accents ni de la ponctuation en bord de mot. Avec plusieurs
+  salves, chaque texte proposé est comparé à ce qu'il était devenu
+  juste avant la salve suivante, le dernier au texte envoyé ; le texte
+  déjà là avant une salve fait partie du texte proposé. Chaque remplacement
   de 1 à 3 mots par 1 à 3 mots est retenu (« entendu → voulu ») ; un
   remplacement d'un seul mot par un seul mot garde le mot suivant (ou
   précédent) inchangé, « on push → git push » plutôt que
