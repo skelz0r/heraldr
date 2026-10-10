@@ -13,6 +13,7 @@ Référence du rendu de l'app Heraldr. Les valeurs vivent dans
 | `wallBlobOne` | `#A8EBD9` | `#0E3B32` | tache floue, en haut à gauche |
 | `wallBlobTwo` | `#C9D6F2` | `#151A2C` | tache floue, à droite |
 | `wallBlobThree` | `#9FE0F0` | `#0B2A33` | tache floue, en bas |
+| `aura` (1, 2, 3) | `#5FD3BA` `#2FA88F` `#0E7A66` | `#9FF0DD` `#5FD3BA` `#2FA88F` | anneau tournant de l'orbe voix |
 | `recording` | `#D70015` | `#FF453A` | bouton Arrêter de la dictée |
 
 L'accent vient du logo (`#9FF0DD`, `#5FD3BA`, `#2FA88F`) : `#5FD3BA` tel
@@ -64,9 +65,12 @@ SF Pro, sans police embarquée.
 
 ## Tailles
 
-- orbe voix : 128 pt, en saillie au-dessus de la barre, cerclé de 12 pt
-  de `wallBase` ; d'abord fixé à 180 pt, réduit car il masquait la
-  grille
+- orbe voix : 104 pt, en saillie au-dessus de la barre, détaché par
+  10 pt de `wallBase` ; fixé à 180 puis 128 pt, réduit car il masquait
+  la grille
+- autour de l'orbe, à la place d'un halo : un anneau en dégradé conique
+  des trois verts du logo (`aura`), qui tourne en 7 s avec une lueur
+  floue du même dégradé ; figé si « Réduire les animations » est actif
 - barre Écrire / Coller : capsule de 92 pt de haut, 12 pt des bords
 - grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
   workspace (`~`) occupe toute la largeur au-dessus

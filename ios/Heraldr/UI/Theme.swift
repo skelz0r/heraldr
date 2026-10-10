@@ -3,6 +3,9 @@ import SwiftUI
 extension Color {
     static let heraldrAccent = Color("AccentColor")
     static let onAccent = Color(light: 0xFFFFFF, dark: 0x04241D)
+    static let auraOne = Color(light: 0x5FD3BA, dark: 0x9FF0DD)
+    static let auraTwo = Color(light: 0x2FA88F, dark: 0x5FD3BA)
+    static let auraThree = Color(light: 0x0E7A66, dark: 0x2FA88F)
     static let recording = Color(light: 0xD70015, dark: 0xFF453A)
 
     init(light: UInt32, dark: UInt32) {

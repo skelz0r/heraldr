@@ -18,7 +18,7 @@ struct HomeView: View {
     @State private var compose: ComposeRequest?
     @State private var confirmingForget = false
 
-    private let orbSize: CGFloat = 128
+    private let orbSize: CGFloat = 104
     private let barHeight: CGFloat = 92
 
     var body: some View {
@@ -281,16 +281,33 @@ struct VoiceOrb: View {
         .buttonStyle(.plain)
         .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
         .background {
-            Circle()
-                .stroke(Color.wallBase, lineWidth: 12)
-                .shadow(color: Color.heraldrAccent.opacity(0.5), radius: 24, y: 14)
+            Circle().stroke(Color.wallBase, lineWidth: 10)
         }
         .overlay {
-            Circle()
-                .stroke(Color.heraldrAccent.opacity(0.35), lineWidth: 1.5)
-                .padding(-14)
-                .allowsHitTesting(false)
+            OrbAura(size: size).allowsHitTesting(false)
         }
         .accessibilityLabel("Dicter")
+    }
+}
+
+struct OrbAura: View {
+    let size: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let period: TimeInterval = 7
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion)) { timeline in
+            let turn = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
+            let sweep = AngularGradient(
+                colors: [.auraOne, .auraTwo, .auraThree, .auraThree.opacity(0), .auraOne.opacity(0), .auraOne],
+                center: .center,
+                angle: .degrees(turn * 360))
+            ZStack {
+                Circle().strokeBorder(sweep, lineWidth: 10).blur(radius: 9).opacity(0.75)
+                Circle().strokeBorder(sweep, lineWidth: 2.5)
+            }
+        }
+        .frame(width: size + 22, height: size + 22)
     }
 }
