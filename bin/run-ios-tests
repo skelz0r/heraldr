@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
@@ -21,7 +21,7 @@ xcodebuild test \
     -destination "platform=iOS Simulator,name=${SIMULATOR}" \
     -derivedDataPath "${DERIVED_DATA}" \
     "${ONLY_TESTING[@]}" \
-    -quiet
+    2>&1 | grep -E "✔|✘|Test run|error:|\*\* TEST"
 
 echo "Running dispatch script tests..."
 "${PROJECT_DIR}/mac/test/dispatch_test.sh"
