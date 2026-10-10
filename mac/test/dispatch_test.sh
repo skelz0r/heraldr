@@ -132,6 +132,7 @@ add_agent home-main w9 idle
 enqueue w1 home-main '~' "Mauvaise cible"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "l'envoi échoue sans rien envoyer" "$(job_states)|$(prompts_of home-main)" "failed |"
+check "l'app lit le workspace, l'agent, l'état et la raison de l'échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-)" "w1	home-main	failed	l'agent home-main appartient au workspace w9"
 teardown_world
 
 echo "l'iPhone enregistre son token et installe le hook de notification"
@@ -172,6 +173,17 @@ check "relais vers Home, le workspace 1, refusé" "$?" "2"
 relay w404 "Perdu"
 check "relais vers un workspace inconnu refusé" "$?" "2"
 check "aucun envoi créé" "$(job_states)" ""
+teardown_world
+
+echo "Home relaie au même agent que celui que l'app viserait pour ce workspace"
+setup_world
+number=2
+while IFS="$(printf '\t')" read -r label agent; do
+  add_workspace "w$number" "$number" "$label"
+  relay "w$number" "Demande"
+  check "$label → $agent" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | awk -F '\t' -v w="w$number" '$2 == w { print $3 }')" "$agent"
+  number=$((number + 1))
+done < "$here/agent-names.tsv"
 teardown_world
 
 if [ $failures -gt 0 ]; then

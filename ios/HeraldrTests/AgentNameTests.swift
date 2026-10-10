@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Heraldr
 
@@ -8,21 +9,32 @@ struct AgentNameTests {
         #expect(AgentName.forWorkspace(label: "~") == "home-main")
     }
 
-    @Test("un label déjà valide est gardé tel quel")
-    func validLabel() {
-        #expect(AgentName.forWorkspace(label: "acme_app") == "acme_app-main")
-    }
+    @Test("l'app et dispatch.sh relay donnent le même nom d'agent, valide pour herdr", arguments: AgentNameVectors.shared)
+    func sharedWithDispatchScript(vector: AgentNameVectors.Vector) {
+        let name = AgentName.forWorkspace(label: vector.label)
 
-    @Test("majuscules et espaces deviennent minuscules et tirets")
-    func labelWithSpacesAndCapitals() {
-        #expect(AgentName.forWorkspace(label: "Herdr ios companion") == "herdr-ios-companion-main")
-    }
-
-    @Test("un label long est tronqué pour rester un nom d'agent herdr valide")
-    func longLabel() {
-        let name = AgentName.forWorkspace(label: "Un workspace au nom vraiment beaucoup trop long")
-
-        #expect(name == "un-workspace-au-nom-vraimen-main")
+        #expect(name == vector.agent)
         #expect(name.wholeMatch(of: #/[a-z][a-z0-9_-]{0,31}/#) != nil)
     }
+}
+
+enum AgentNameVectors {
+    struct Vector: CustomTestStringConvertible, Sendable {
+        let label: String
+        let agent: String
+
+        var testDescription: String { "\(label) → \(agent)" }
+    }
+
+    static let shared: [Vector] = {
+        let url = Bundle(for: BundleMarker.self).url(forResource: "agent-names", withExtension: "tsv")!
+        return try! String(contentsOf: url, encoding: .utf8)
+            .split(separator: "\n")
+            .map { line in
+                let fields = line.split(separator: "\t").map(String.init)
+                return Vector(label: fields[0], agent: fields[1])
+            }
+    }()
+
+    private final class BundleMarker {}
 }
