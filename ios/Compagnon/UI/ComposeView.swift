@@ -183,8 +183,7 @@ struct ComposeView: View {
                     Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1)
                     Spacer()
                     if let target {
-                        StatusDot(status: target.agentStatus)
-                        Text(target.agentStatus.label).font(.footnote).foregroundStyle(.secondary)
+                        StatusDot(status: model.targetState(for: target).dotStatus)
                     }
                     Image(systemName: "chevron.down").font(.footnote.weight(.bold)).foregroundStyle(.secondary)
                 }
@@ -194,10 +193,11 @@ struct ComposeView: View {
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22, style: .continuous))
 
-            if let target, !target.agentStatus.isReady || !model.pendingJobs(for: target).isEmpty {
-                Label("Occupé : l'envoi partira dès qu'il aura fini.", systemImage: "clock")
+            if let target {
+                let state = model.targetState(for: target)
+                Label("\(state.headline). \(state.nextSend)", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(AgentStatus.working.color)
+                    .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 

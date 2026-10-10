@@ -72,16 +72,19 @@ struct HomeView: View {
                     .minimumScaleFactor(0.6)
                     .padding(.top, 6)
                     .contentTransition(.opacity)
-                HStack(spacing: 8) {
-                    StatusDot(status: target.agentStatus)
-                    Text("\(target.agentStatus.label) · \(target.agentStatus.dispatchHint)")
-                        .font(.callout)
+                let state = model.targetState(for: target)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        StatusDot(status: state.dotStatus)
+                        Text(state.headline)
+                            .font(.callout.weight(.semibold))
+                    }
+                    Text("\(AgentName.forWorkspace(label: target.label)) · \(state.nextSend)")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .padding(.leading, 18)
                 }
                 .padding(.top, 10)
-                if !model.pendingJobs(for: target).isEmpty {
-                    WaitBadge().padding(.top, 8)
-                }
             } else {
                 connectionState
             }

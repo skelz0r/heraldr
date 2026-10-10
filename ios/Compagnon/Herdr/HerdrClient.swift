@@ -42,6 +42,20 @@ struct Workspace: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+struct Agent: Decodable, Equatable, Sendable {
+    let name: String?
+    let workspaceId: String
+    let tabId: String
+    let agentStatus: AgentStatus
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case workspaceId = "workspace_id"
+        case tabId = "tab_id"
+        case agentStatus = "agent_status"
+    }
+}
+
 struct HerdrError: Error, LocalizedError, Decodable {
     let code: String
     let message: String
@@ -58,12 +72,21 @@ private struct WorkspaceList: Decodable {
     let workspaces: [Workspace]
 }
 
+private struct AgentList: Decodable {
+    let agents: [Agent]
+}
+
 struct HerdrClient: Sendable {
     let link: MacLink
 
     func workspaces() async throws -> [Workspace] {
         let list: WorkspaceList = try await call("workspace.list")
         return Workspace.ordered(list.workspaces)
+    }
+
+    func agents() async throws -> [Agent] {
+        let list: AgentList = try await call("agent.list")
+        return list.agents
     }
 
     private func call<Result: Decodable>(_ method: String) async throws -> Result {

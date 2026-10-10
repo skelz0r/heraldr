@@ -39,13 +39,29 @@ extension AgentStatus {
         case .unknown: "État inconnu"
         }
     }
+}
 
-    var dispatchHint: String {
+extension AppModel.TargetState {
+    var headline: String {
         switch self {
-        case .idle, .done: "prêt : contexte vidé puis envoi"
-        case .working: "l'envoi partira après son travail"
-        case .blocked: "attend une réponse : l'envoi patientera"
-        case .unknown: "l'envoi partira dès qu'il sera prêt"
+        case .missing: "Pas encore d'agent"
+        case .sending: "Envoi en cours…"
+        case .agent(.idle, _), .agent(.done, _): "Prêt"
+        case .agent(.working, true): "Travaille sur ta demande"
+        case .agent(.working, false): "Travaille"
+        case .agent(.blocked, _): "Te pose une question : réponds dans Claude mobile"
+        case .agent(.unknown, _): "État inconnu"
+        }
+    }
+
+    var nextSend: String {
+        switch self {
+        case .missing: "Un envoi lancera Claude dans le tab 1."
+        case .sending: "Un nouvel envoi partira juste après."
+        case .agent(.idle, _), .agent(.done, _): "Un envoi vide son contexte puis transmet la demande."
+        case .agent(.working, _): "Un nouvel envoi attendra la fin de son travail."
+        case .agent(.blocked, _): "Un nouvel envoi attendra que tu lui aies répondu."
+        case .agent(.unknown, _): "Un nouvel envoi attendra qu'il soit prêt."
         }
     }
 }

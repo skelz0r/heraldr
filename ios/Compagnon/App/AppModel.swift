@@ -19,10 +19,34 @@ final class AppModel {
         let detail: String
     }
 
+    enum TargetState: Equatable {
+        case missing
+        case sending
+        case agent(AgentStatus, workingOnOurRequest: Bool)
+
+        var acceptsImmediately: Bool {
+            switch self {
+            case .missing: true
+            case .sending: false
+            case .agent(let status, _): status.isReady
+            }
+        }
+
+        var dotStatus: AgentStatus {
+            switch self {
+            case .missing: .idle
+            case .sending: .working
+            case .agent(let status, _): status
+            }
+        }
+    }
+
     private(set) var mac: PairedMac?
     private(set) var connection: Connection = .unpaired
     private(set) var workspaces: [Workspace] = []
     private(set) var jobs: [DispatchJob] = []
+    private(set) var agents: [Agent] = []
+    private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
     var notice: Notice?
 
@@ -43,6 +67,16 @@ final class AppModel {
 
     func pendingJobs(for workspace: Workspace) -> [DispatchJob] {
         jobs.filter { $0.workspaceId == workspace.id && $0.isPending }
+    }
+
+    func targetState(for workspace: Workspace) -> TargetState {
+        if !pendingJobs(for: workspace).isEmpty { return .sending }
+        let name = AgentName.forWorkspace(label: workspace.label)
+        guard let agent = agents.first(where: { $0.name == name && $0.workspaceId == workspace.id }) else {
+            return .missing
+        }
+        let recentlySent = lastSentAt[workspace.id].map { Date.now.timeIntervalSince($0) < 3600 } ?? false
+        return .agent(agent.agentStatus, workingOnOurRequest: recentlySent)
     }
 
     func pair(code: String) async throws {
@@ -76,9 +110,11 @@ final class AppModel {
             let herdr = HerdrClient(link: link)
             let dispatcher = Dispatcher(link: link)
             let newWorkspaces = try await herdr.workspaces()
+            let newAgents = try await herdr.agents()
             let newJobs = try await dispatcher.jobs()
             announceFailures(previous: jobs, current: newJobs, workspaces: newWorkspaces)
             workspaces = newWorkspaces
+            agents = newAgents
             jobs = newJobs
             if selectedWorkspaceId == nil || !newWorkspaces.contains(where: { $0.id == selectedWorkspaceId }) {
                 resetTargetToHome()
@@ -92,12 +128,18 @@ final class AppModel {
 
     func send(_ text: String, to workspace: Workspace) async throws {
         guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
-        let ready = workspaces.first { $0.id == workspace.id }?.agentStatus.isReady ?? true
-        let busy = !ready || !pendingJobs(for: workspace).isEmpty
+        let state = targetState(for: workspace)
         _ = try await Dispatcher(link: link).send(text, to: workspace)
-        notice = busy
-            ? Notice(kind: .queued, title: "En file pour \(workspace.label)", detail: "L'agent travaille : l'envoi partira dès qu'il aura fini.")
-            : Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Contexte vidé, demande transmise à \(AgentName.forWorkspace(label: workspace.label)).")
+        lastSentAt[workspace.id] = .now
+        let agent = AgentName.forWorkspace(label: workspace.label)
+        switch state {
+        case .missing:
+            notice = Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Le Mac lance \(agent) dans le tab 1, puis lui transmet la demande.")
+        case .agent(let status, _) where status.isReady:
+            notice = Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Le Mac vide le contexte de \(agent), puis lui transmet la demande.")
+        default:
+            notice = Notice(kind: .queued, title: "En file pour \(workspace.label)", detail: "\(agent) est occupé : la demande partira dès qu'il aura fini.")
+        }
         await refresh()
     }
 
@@ -125,7 +167,7 @@ final class AppModel {
 
     private func schedulePolling() {
         pollTask?.cancel()
-        guard jobs.contains(where: \.isPending) || workspaces.contains(where: { $0.agentStatus == .working }) else { return }
+        guard jobs.contains(where: \.isPending) || agents.contains(where: { $0.name != nil && $0.agentStatus == .working }) else { return }
         pollTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }
