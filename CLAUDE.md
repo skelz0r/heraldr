@@ -36,7 +36,7 @@ ce chemin absolu.
 ```
 ios/Heraldr/
 ├── App/        # HeraldrApp, AppModel (@Observable, état de l'écran)
-├── Dispatch/   # AgentName (slug), PromptEnvelope (consignes), Dispatcher (exec dispatch.sh)
+├── Dispatch/   # AgentName (slug), PromptEnvelope (consignes), Dispatcher (exec dispatch.sh), SendHistory
 ├── Herdr/      # HerdrClient : API JSON sur herdr.sock, Workspace, Agent
 ├── Mac/        # MacLink (actor SSH, reconnexion), PairedMac
 ├── Pairing/    # PairingCode (HERDR-PAIR:1), PairingCeremony, DeviceKey (Keychain)

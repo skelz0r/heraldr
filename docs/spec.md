@@ -114,6 +114,30 @@ Un agent du même nom dans un autre workspace ne compte pas.
 presse-papier vide : notice d'échec « Presse-papier vide », « Copie
 d'abord le texte à envoyer. »
 
+### 4.4 Historique
+
+Bouton rond à droite de la pilule du Mac, « Historique des envois »
+pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») qui
+liste les envois gardés (§6), du plus récent au plus ancien :
+
+- label du workspace, date relative, statut (Envoi…, En file, Envoyé,
+  Échec)
+- le texte, sur quatre lignes au plus ; la raison sous un envoi en
+  échec
+- « Copier » met le texte dans le presse-papier, puis affiche
+  « Copié » deux secondes
+- « Renvoyer » ferme la feuille et renvoie le texte tel quel au
+  workspace d'origine, sans passer par l'aperçu : c'est un nouvel envoi
+  (§6), avec sa notice et sa propre entrée. Échecs, en notice :
+  - workspace d'origine absent de herdr : « <label> n'existe plus »,
+    « Copie le texte depuis l'historique pour l'envoyer ailleurs. »
+  - workspaces pas encore chargés : « Mac injoignable », « Renvoie la
+    demande une fois les workspaces chargés. »
+  - envoi refusé : « Échec de l'envoi vers <label> » et la raison
+- balayer une entrée la supprime (« Supprimer »)
+- sans envoi : « Aucun envoi », « Les 20 derniers envois s'afficheront
+  ici. »
+
 ## 5. Composer une demande
 
 Les trois boutons mènent au même aperçu, sur la cible du moment.
@@ -175,6 +199,21 @@ Notice après l'envoi (5 s, fermée au tap) :
 
 Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
 vers <label> » avec sa raison, une seule fois.
+
+Chaque envoi est enregistré sur l'iPhone dès qu'on tape Envoyer, avant
+la connexion au Mac : le texte tel que saisi (sans la consigne), le
+workspace et la date. Son statut :
+
+| Moment | Statut |
+| --- | --- |
+| le Mac n'a pas encore répondu | Envoi… |
+| job créé, `queued` ou `sending` | En file |
+| job `sent` | Envoyé |
+| échec avant le Mac, ou job `failed` | Échec, avec la raison |
+| encore « Envoi… » au lancement de l'app (crash pendant l'envoi) | Échec, « Envoi interrompu avant la réponse du Mac. » |
+
+Un job purgé par le Mac laisse l'envoi à son dernier statut. Seuls les
+20 envois les plus récents sont gardés.
 
 ### 6.1 Consigne standard
 
@@ -320,4 +359,3 @@ ignoré.
 - notif de fin de tâche
 - détail par agent
 - multi-machines, sessions herdr nommées
-- historique des envois

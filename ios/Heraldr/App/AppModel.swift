@@ -48,6 +48,9 @@ final class AppModel {
     private(set) var workspaces: [Workspace] = []
     private(set) var jobs: [DispatchJob] = []
     private(set) var agents: [Agent] = []
+    private(set) var history = SendHistoryStore.load() {
+        didSet { SendHistoryStore.save(history) }
+    }
     private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
     var notice: Notice?
@@ -60,6 +63,7 @@ final class AppModel {
     private var deviceKey: DeviceKey?
     private var pollTask: Task<Void, Never>?
     private var refreshing = false
+    private var refreshRequestedWhileRefreshing = false
 
     init() {
         if let mac = PairedMacStore.load(), let key = try? DeviceKeyStore.load() {
@@ -109,9 +113,20 @@ final class AppModel {
     }
 
     func refresh() async {
-        guard let link, !refreshing else { return }
+        guard !refreshing else {
+            refreshRequestedWhileRefreshing = true
+            return
+        }
         refreshing = true
         defer { refreshing = false }
+        repeat {
+            refreshRequestedWhileRefreshing = false
+            await refreshOnce()
+        } while refreshRequestedWhileRefreshing
+    }
+
+    private func refreshOnce() async {
+        guard let link else { return }
         if workspaces.isEmpty { connection = .connecting }
         do {
             let herdr = HerdrClient(link: link)
@@ -120,6 +135,7 @@ final class AppModel {
             let newAgents = try await herdr.agents()
             let newJobs = try await dispatcher.jobs()
             announceFailures(previous: jobs, current: newJobs, workspaces: newWorkspaces)
+            history.follow(newJobs)
             workspaces = newWorkspaces
             agents = newAgents
             jobs = newJobs
@@ -173,9 +189,16 @@ final class AppModel {
     }
 
     func send(_ text: String, to workspace: Workspace) async throws {
-        guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+        let entryId = history.record(text, to: workspace)
         let state = targetState(for: workspace)
-        _ = try await Dispatcher(link: link).send(text, to: workspace)
+        do {
+            guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+            let jobId = try await Dispatcher(link: link).send(text, to: workspace)
+            history.accept(entryId, jobId: jobId)
+        } catch {
+            history.fail(entryId, error: error.localizedDescription)
+            throw error
+        }
         lastSentAt[workspace.id] = .now
         let agent = AgentName.forWorkspace(label: workspace.label)
         switch state {
@@ -187,6 +210,29 @@ final class AppModel {
             notice = Notice(kind: .queued, title: "En file pour \(workspace.label)", detail: "\(agent) est occupé : la demande partira dès qu'il aura fini.")
         }
         await refresh()
+    }
+
+    func resend(_ entry: SentRequest) async {
+        await refresh()
+        guard !workspaces.isEmpty else {
+            notice = Notice(kind: .failed, title: "Mac injoignable", detail: "Renvoie la demande une fois les workspaces chargés.")
+            return
+        }
+        guard let workspace = workspaces.first(where: { $0.id == entry.workspaceId }) else {
+            notice = Notice(
+                kind: .failed, title: "\(entry.workspaceLabel) n'existe plus",
+                detail: "Copie le texte depuis l'historique pour l'envoyer ailleurs.")
+            return
+        }
+        do {
+            try await send(entry.text, to: workspace)
+        } catch {
+            notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(workspace.label)", detail: error.localizedDescription)
+        }
+    }
+
+    func removeFromHistory(_ id: SentRequest.ID) {
+        history.remove(id)
     }
 
     func pause() {

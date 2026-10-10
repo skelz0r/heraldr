@@ -43,6 +43,10 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
   remet en vert.
 - [ ] Lancer l'app réseau coupé : « Mac injoignable », puis
   « Réessayer » une fois le réseau revenu.
+- [ ] Envoyer une demande Mac injoignable : l'aperçu montre l'erreur ;
+  fermer l'aperçu, l'historique garde le texte en « Échec ». Une fois
+  le Mac revenu, « Renvoyer » : notice d'envoi, nouvelle entrée qui
+  passe « En file » puis « Envoyé ». « Copier » colle bien le texte.
 
 ## Quand l'appairage change
 

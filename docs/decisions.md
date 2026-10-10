@@ -33,3 +33,4 @@ Issu de la session de cadrage du 2026-10-10.
 | Token APNs | envoyé par SSH exec (`dispatch.sh register-push`), qui installe aussi le hook | fichier édité à la main |
 | Logo | Voix et voies du premier tour, version noire (`5-voies-dark.svg`), palette vert d'eau ; trait épaissi de 60 à 80 px pour l'icône | Éventail et ses variantes, Troupeau |
 | Demande envoyée à Home | l'agent de Home identifie le projet (labels, cwd), demande si ambigu, relaie au `<slug>-main` du projet via `dispatch.sh relay` qui finit par /start ; sans projet, /start dans Home | /start depuis Home avec un tab dans le workspace du projet (faisait évoluer `/start`) |
+| Historique des envois | 20 derniers envois sur l'iPhone, texte brut enregistré dès qu'on tape Envoyer puis statut suivi (en file, envoyé, échec) ; renvoi direct au workspace d'origine, erreur s'il n'existe plus ; copie vers le presse-papiers | historiser les seuls envois réussis, rouvrir l'aperçu prérempli, repli sur Home |
