@@ -59,6 +59,18 @@ fi
 
 "${PROJECT_DIR}/bin/generate-ios"
 
+ASC_KEY_ID="${ASC_KEY_ID:-KEYID12345}"
+ASC_KEY_ISSUER_ID="${ASC_KEY_ISSUER_ID:-00000000-0000-0000-0000-000000000000}"
+ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8}"
+AUTHENTICATION_ARGS=()
+if [ -f "$ASC_KEY_PATH" ]; then
+    AUTHENTICATION_ARGS=(
+        -authenticationKeyPath "$ASC_KEY_PATH"
+        -authenticationKeyID "$ASC_KEY_ID"
+        -authenticationKeyIssuerID "$ASC_KEY_ISSUER_ID"
+    )
+fi
+
 echo "Building for device..."
 
 if ! xcodebuild \
@@ -68,6 +80,7 @@ if ! xcodebuild \
     -configuration Debug \
     -derivedDataPath "${DERIVED_DATA}" \
     -allowProvisioningUpdates \
+    "${AUTHENTICATION_ARGS[@]}" \
     build; then
     echo "Build failed (see xcodebuild output above)"
     exit 1
