@@ -7,7 +7,7 @@ herdr, qui l'affine puis la dispatche dans un worktree via `/start`.
 Usage personnel, installation locale sur l'appareil, pas de TestFlight.
 
 - [Vision et positionnement](docs/vision.md)
-- [Spécification MVP](docs/mvp.md)
+- [Spécification](docs/spec.md)
 - [Architecture](docs/architecture.md)
 - [Toolchain](docs/toolchain.md)
 - [Design](docs/design.md)
