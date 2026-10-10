@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18264A"/>
+      <stop offset="1" stop-color="#04060E"/>
+    </linearGradient>
+    <linearGradient id="lane0" gradientUnits="userSpaceOnUse" x1="586" y1="0" x2="716" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#0A84FF"/>
+    </linearGradient>
+    <linearGradient id="lane1" gradientUnits="userSpaceOnUse" x1="586" y1="0" x2="716" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#28C840"/>
+    </linearGradient>
+    <linearGradient id="lane2" gradientUnits="userSpaceOnUse" x1="586" y1="0" x2="716" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FF9500"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g fill="none" stroke-width="72" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M546 512 C621 512 621 340 696 340 H790" stroke="url(#lane0)"/>
+    <path d="M546 512 C621 512 621 684 696 684 H740" stroke="url(#lane2)"/>
+    <path d="M546 512 H858" stroke="url(#lane1)"/>
+    <path d="M168 512 C187 453 205 400 224 400 C243 400 261 448 280 512 C301 584 322 660 343 660 C364 660 385 570 406 512 C422 468 438 456 454 456 C470 456 486 512 502 512 H546" stroke="#FFFFFF"/>
+  </g>
+</svg>

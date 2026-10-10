@@ -12,7 +12,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).parent
 LOGO_SOURCE = ROOT.parent / "branding" / "logo"
-DEFAULT_LOGO = "1-eventail"
+DEFAULT_LOGO = "eventail-v2-b-lames"
 DEFAULT_NAME = "Compagnon"
 
 TITLE = "Compagnon herdr : quatre directions pour l'écran principal"
@@ -955,7 +955,7 @@ def direction_e():
 def thumbnail(w):
     body = w.body_of("3-cible.html")
     body = re.sub(r' href="[^"]*"', "", body).replace("<a ", "<span ").replace("</a>", "</span>")
-    body = re.sub(r'<span class="marker[^"]*">\d+</span>', "", body)
+    body = re.sub(r'<span class="marker[^"]*">\d+</span>', "", body).replace('src="../logos/', 'src="logos/')
     return (f'<a class="thumbs" href="{w.first}"><span class="thumb">{phone(body, "light")}</span>'
             f'<span class="thumb">{phone(body, "dark")}</span></a>')
 

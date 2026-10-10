@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DDE4F0"/>
+    </linearGradient>
+    <linearGradient id="button" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3E7BFF"/>
+      <stop offset="1" stop-color="#1A3FB8"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="0.9" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <linearGradient id="blade0" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="982" y2="0">
+      <stop offset="0.3" stop-color="#0A84FF" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#0A84FF" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="edge0" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="982" y2="0">
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#64B0FF" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="blade1" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="982" y2="0">
+      <stop offset="0.3" stop-color="#FF9500" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#FF9500" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="edge1" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="982" y2="0">
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#FFC46B" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="blade2" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="982" y2="0">
+      <stop offset="0.3" stop-color="#28C840" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#28C840" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="edge2" gradientUnits="userSpaceOnUse" x1="512" y1="0" x2="982" y2="0">
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#7FE596" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="rotate(-138 512 700)">
+    <rect x="512" y="625" width="470" height="150" rx="75" fill="url(#blade0)"/>
+    <rect x="515" y="628" width="464" height="144" rx="72" fill="none" stroke="url(#edge0)" stroke-width="5"/>
+  </g>
+  <g transform="rotate(-42 512 700)">
+    <rect x="512" y="625" width="470" height="150" rx="75" fill="url(#blade1)"/>
+    <rect x="515" y="628" width="464" height="144" rx="72" fill="none" stroke="url(#edge1)" stroke-width="5"/>
+  </g>
+  <g transform="rotate(-90 512 700)">
+    <rect x="512" y="625" width="470" height="150" rx="75" fill="url(#blade2)"/>
+    <rect x="515" y="628" width="464" height="144" rx="72" fill="none" stroke="url(#edge2)" stroke-width="5"/>
+  </g>
+  <circle cx="512" cy="720" r="156" fill="#3A4A70" opacity="0.35" filter="url(#blur)"/>
+  <circle cx="512" cy="700" r="156" fill="url(#button)"/>
+  <ellipse cx="512" cy="614" rx="115" ry="69" fill="url(#shine)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round">
+    <rect x="482" y="612" width="60" height="112" rx="30" fill="#FFFFFF" stroke="none"/>
+    <path d="M454 694 A58 58 0 0 0 570 694"/>
+    <path d="M512 752 V782"/>
+  </g>
+</svg>
