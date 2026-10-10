@@ -26,4 +26,8 @@ Issu de la session de cadrage du 2026-10-10.
 | Direction UI | D (cible en haut, grille en bas) avec un bouton voix d'environ 180 pt en bas, à la place du 128 pt | A, B, C |
 | Intégration HeelerSSH | submodule git `Vendor/Heeler` épinglé, package local pour XcodeGen | copie vendorisée |
 | Nom | Heraldr (Herald + herdr), bundle id `com.skelz0r.heraldr.dev` | Compagnon (provisoire), Stentor, Heraldz0r, Cooee… |
+| Notifications | push au passage `blocked` des seuls agents `-main`, avec label, agent et question | notif `done`, Claude des worktrees |
+| Envoi APNs | plugin herdr local (`pane.agent_status_changed`) qui signe le JWT et poste à APNs depuis le Mac, en Node sans dépendance | relay Cloudflare Worker, chiffrement AES-GCM, Notification Service Extension |
+| Tap sur la notif | universal link `claude.ai/code/<session>` vers l'app Claude, repli sur Heraldr avec un bouton « Ouvrir dans Claude » | ouvrir Heraldr seulement |
+| Token APNs | envoyé par SSH exec (`dispatch.sh register-push`), qui installe aussi le hook | fichier édité à la main |
 | Logo | Voix et voies du premier tour, version noire (`5-voies-dark.svg`), palette vert d'eau ; trait épaissi de 60 à 80 px pour l'icône | Éventail et ses variantes, Troupeau |

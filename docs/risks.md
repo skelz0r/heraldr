@@ -103,5 +103,10 @@ d'écrire les push des questions des agents `-main`.
       `com.skelz0r.heraldr.dev` : sandbox et production répondent
       `BadDeviceToken` à un faux token, et non `InvalidProviderToken`.
       Une clé APNs vaut pour toutes les apps de l'équipe.
+    - Vérifié sur l'iPhone : une question AskUserQuestion de
+      `home-main` produit la notif (label, agent, question), et le tap
+      ouvre la session dans l'app Claude.
+    - `herdr plugin link` refuse `--enabled` suivi d'un chemin
+      (`unknown option`) ; le plugin lié est activé par défaut.
     - Piège : `~/.private_keys/AuthKey_KEYID12345.p8` est une clé App
       Store Connect API, refusée par APNs (`InvalidProviderToken`).

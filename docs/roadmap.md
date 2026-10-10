@@ -9,28 +9,26 @@ Voir [mvp.md](mvp.md).
 Objectif : savoir sans regarder qu'un agent attend, et savoir lequel et
 pourquoi.
 
-- push notification quand un agent passe `blocked`, ou `done` après un
-  envoi depuis l'app
-- contenu : workspace, tab (worktree), nom de l'agent, type d'attente
-  (question, permission, fin de tâche)
-- pastille de compteur sur la ligne du workspace et sur l'icône de l'app
-- tap sur la notif : ouvre l'app sur le workspace, avec la liste de ce
-  qui attend et qui attend (tab par tab)
+Livré, en version resserrée :
 
-Mécanique envisagée, sur le modèle de Heeler :
+- push notification quand un agent `<slug>-main` passe `blocked`
+  (question AskUserQuestion ou demande de permission), et seulement
+  eux : les Claude des worktrees lancés par `/start` sont ignorés
+- contenu : label du workspace, nom de l'agent, texte de la question
+- tap sur la notif : ouvre directement la session Remote Control de
+  l'agent dans l'app Claude, sinon Heraldr sur le workspace avec un
+  bouton « Ouvrir dans Claude »
+- envoi APNs direct depuis le Mac par un plugin herdr, sans relay ni
+  daemon (voir [architecture](architecture.md), Notifications)
 
-- hook herdr `pane.agent_status_changed` (plugin à nous, ou
-  réutilisation de `notify-hook.js` de Heeler) avec debounce, revérif
-  de l'état et dédup
-- payload chiffré AES-256-GCM avec une clé par machine générée sur le
-  téléphone
-- relay APNs à nous (Cloudflare Worker, ~3 fichiers repris de
-  `relay/` de Heeler) avec notre clé `.p8` et notre bundle id : le relay
-  de Heeler ne signe que pour son app
-- Notification Service Extension pour déchiffrer
+Écartés pour l'instant :
 
-Prérequis : compte développeur payant (déjà le cas pour local_events),
-capability Push.
+- notif de fin de tâche (`done`)
+- tab (worktree) et agents hors `-main`
+- pastille de compteur sur la ligne du workspace et sur l'icône
+- relay Cloudflare Worker à la Heeler, payload chiffré AES-256-GCM et
+  Notification Service Extension : le payload transite en clair par
+  APNs (label, nom d'agent, texte de la question)
 
 Question ouverte : répondre aux questions directement depuis la notif ou
 l'app (lecture de l'écran de l'agent puis `send-keys`) ou continuer à

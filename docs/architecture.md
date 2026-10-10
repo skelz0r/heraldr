@@ -21,7 +21,19 @@ Prérequis déjà en place :
 - plugin `heeler` installé et activé
 - herdr 0.9.3
 
-Rien d'autre à installer pour le MVP.
+Rien d'autre à installer pour le MVP. Les notifications (V2) ajoutent
+un prérequis :
+
+- Node dans le PATH de herdr (déjà requis par le plugin Heeler)
+- la clé APNs `.p8` de l'équipe `ABCDE12345`, copiée telle que la
+  télécharge Apple dans `~/.config/heraldr/AuthKey_<KEYID>.p8`
+  (mode 600) : le key id vient du nom du fichier. Aujourd'hui celle de
+  local_events, `KEYID67890` ; une clé APNs vaut pour toutes les apps
+  de l'équipe
+
+Le reste vient de l'app : bundle id (`com.skelz0r.heraldr.dev`),
+équipe, environnement APNs (sandbox en Debug, production sinon) et le
+plugin herdr lui-même.
 
 ## Pairing
 
@@ -103,6 +115,52 @@ Un second envoi vers un agent occupé ne lance pas de deuxième runner :
 le verrou est pris, son job attend que le runner en place le traite.
 Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
 
+## Notifications
+
+```text
+herdr ──pane.agent_status_changed──> plugin heraldr (node notify-hook.mjs)
+                                      └─ HTTP/2 + JWT ES256 → APNs → iPhone
+```
+
+Enregistrement : au premier rafraîchissement réussi de chaque
+lancement, l'app (autorisation accordée) fait un exec SSH
+`dispatch.sh register-push <token> <sandbox|production> <topic>
+<team_id>`, avec `mac/notify-hook.mjs` sur stdin. Le script :
+
+1. écrit le hook et un manifeste `herdr-plugin.toml` dans
+   `~/.local/state/heraldr/plugin/` (toujours la version de l'app)
+2. le lie une fois avec `herdr plugin link`, s'il n'est pas déjà dans
+   `herdr plugin list`
+3. retient l'appareil dans `~/.local/state/heraldr/push-device.json`
+   (un seul iPhone)
+
+Le hook, un process court par changement d'état lancé par herdr :
+
+1. ne fait rien si l'état reçu ne change pas le marqueur du pane
+   (`~/.local/state/heraldr/notified/<pane>`) : `blocked` déjà notifié,
+   ou autre état sans notif en cours
+2. debounce de 3 s, puis `herdr agent get <pane>` : l'état doit tenir,
+   sinon un événement plus récent s'en charge. Un état autre que
+   `blocked` qui tient efface le marqueur et réarme le pane
+3. ignore tout agent dont le nom ne finit pas par `-main`
+4. URL de session : `~/.claude/sessions/*.json` dont le `sessionId` est
+   `agent_session.value`, `https://claude.ai/code/<bridgeSessionId>`
+5. question : dernier `tool_use` du transcript
+   `~/.claude/projects/*/<sessionId>.jsonl` (512 Ko de fin), texte de
+   l'`AskUserQuestion` ou nom de l'outil qui demande une permission
+6. JWT ES256 signé avec la `.p8`, POST
+   `/3/device/<token>` sur `api.sandbox.push.apple.com` ou
+   `api.push.apple.com`, `apns-collapse-id` = nom de l'agent
+7. 200 : marqueur posé. 410 ou `BadDeviceToken` : l'appareil est oublié
+   jusqu'au prochain lancement de l'app. Les erreurs sortent sur stderr,
+   lisibles par `herdr plugin log list --plugin heraldr`
+
+Payload : `aps.alert` (titre = label du workspace, sous-titre = agent,
+corps = question), `workspace_id`, `agent`, `session_url`. Au tap,
+l'app cible le workspace, ouvre `session_url` en
+`universalLinksOnly`, et affiche une carte « Ouvrir dans Claude » si
+l'ouverture échoue ou que l'URL manque.
+
 ## App iOS
 
 - Swift 6, SwiftUI, iOS 26 minimum (Liquid Glass, SpeechAnalyzer,
@@ -113,6 +171,7 @@ Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
   - `HerdrClient` : requêtes JSON sur streamlocal, modèles Codable
   - `Dispatch` : enveloppe du prompt, slug, exec du script
   - `Voice` : SpeechAnalyzer + nettoyage Foundation Models
+  - `Push` : autorisation, token APNs, tap sur les notifications
   - `UI` : liste, boutons, aperçu
 - Foundation Models indisponible (Apple Intelligence off, modèle pas
   prêt) : on garde la transcription brute et on le signale dans l'aperçu

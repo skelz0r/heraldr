@@ -102,7 +102,8 @@ Pairing par QR via l'action `heeler.pair` du plugin Heeler déjà installé
 ## Hors MVP
 
 - réponse aux questions de l'agent depuis l'app
-- push notifications
+- push notifications : livrées après le MVP, pour les seules questions
+  des agents `-main` (voir [roadmap](roadmap.md), V2)
 - détail par agent
 - multi-machines
 - historique des envois
