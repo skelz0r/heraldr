@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22252F"/>
+      <stop offset="1" stop-color="#0B0C10"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <path d="M140 610 L 420 500" stroke="#FFFFFF" stroke-width="48" stroke-linecap="round"/>
+  <g stroke-width="48" stroke-linecap="round">
+    <path d="M600 500 L 880 330" stroke="#5AC8FA"/>
+    <path d="M600 510 L 890 520" stroke="#30D158"/>
+    <path d="M600 520 L 880 710" stroke="#FF9F0A"/>
+  </g>
+  <path d="M512 240 L 760 700 L 264 700 Z" fill="#14161D" stroke="none" stroke-linejoin="round"/>
+  <path d="M512 240 L 760 700 L 264 700 Z" fill="url(#glass)" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M512 300 L 330 650" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="10" stroke-linecap="round"/>
+</svg>

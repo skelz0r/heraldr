@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logo concepts</title>
+<style>
+  :root { --radius: 22.37%; }
+  body { margin: 0; font: 15px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; background: #F2F2F7; color: #1C1C1E; }
+  h1 { font-size: 22px; margin: 24px 16px 8px; }
+  p.lead { margin: 0 16px 24px; color: #6C6C70; }
+  section { margin: 0 0 32px; }
+  h2 { font-size: 17px; margin: 0 16px 8px; }
+  .row { display: flex; flex-wrap: wrap; }
+  .pane { flex: 1 1 420px; display: flex; align-items: flex-end; gap: 24px; padding: 24px 16px; }
+  .light { background: #FFFFFF; }
+  .dark { background: #000000; color: #EBEBF5; }
+  .icon { display: block; border-radius: var(--radius); }
+  .s180 { width: 180px; height: 180px; }
+  .s60 { width: 60px; height: 60px; }
+  .s1024 { width: 1024px; max-width: calc(100vw - 32px); height: auto; }
+  details { margin: 0 16px; }
+  summary { cursor: pointer; padding: 8px 0; color: #0A63D6; }
+</style>
+</head>
+<body>
+<h1>Propositions de logo</h1>
+<p class="lead">Chaque icône est montrée à 180 et 60 px sur fond clair et sombre, masque squircle iOS appliqué. Dépliez pour la taille 1024.</p>
+<div id="list"></div>
+<script>
+  const icons = [
+    ["1-eventail.svg", "1. Éventail (recommandé)"],
+    ["1-eventail-dark.svg", "1. Éventail, apparence sombre"],
+    ["1-eventail-tinted.svg", "1. Éventail, apparence teintée"],
+    ["5-voies.svg", "5. Voix et voies"],
+    ["5-voies-dark.svg", "5. Voix et voies, apparence sombre"],
+    ["5-voies-tinted.svg", "5. Voix et voies, apparence teintée"],
+    ["4-troupeau.svg", "4. Troupeau"],
+    ["2-onde.svg", "2. Onde"],
+    ["3-prisme.svg", "3. Prisme"]
+  ];
+  const list = document.getElementById("list");
+  for (const [file, label] of icons) {
+    const pane = (theme) => `<div class="pane ${theme}"><img class="icon s180" src="${file}" alt=""><img class="icon s60" src="${file}" alt=""></div>`;
+    list.insertAdjacentHTML("beforeend", `<section><h2>${label}</h2><div class="row">${pane("light")}${pane("dark")}</div><details><summary>1024 px</summary><img class="icon s1024" src="${file}" alt="${label}"></details></section>`);
+  }
+</script>
+</body>
+</html>
