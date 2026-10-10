@@ -1,0 +1,67 @@
+#!/bin/sh
+world="$FAKE_HERDR_WORLD"
+
+agent_json() {
+  name="$1"
+  printf '{"result":{"agent":{"name":"%s","workspace_id":"%s","agent_status":"%s","agent_session":{"value":"%s"}}}}\n' \
+    "$name" "$(cat "$world/agents/$name/workspace_id")" "$(cat "$world/agents/$name/status")" "$(cat "$world/agents/$name/session")"
+}
+
+case "$1 $2" in
+  "agent get")
+    if [ -d "$world/agents/$3" ]; then
+      agent_json "$3"
+    else
+      echo '{"error":{"code":"agent_not_found"}}' >&2
+      exit 1
+    fi
+    ;;
+  "agent wait")
+    name="$3"
+    while :; do
+      [ -d "$world/agents/$name" ] || { echo '{"error":{"code":"agent_not_found"}}' >&2; exit 1; }
+      case "$(cat "$world/agents/$name/status")" in
+        idle|done) agent_json "$name"; exit 0 ;;
+      esac
+      sleep 0.2
+    done
+    ;;
+  "agent prompt")
+    name="$3"
+    printf '%s|%s\n' "$(cat "$world/agents/$name/status")" "$4" >> "$world/agents/$name/prompts"
+    if [ "$4" = "/clear" ]; then
+      echo "session-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')" > "$world/agents/$name/session"
+    fi
+    echo '{"result":{"type":"agent_prompted"}}'
+    ;;
+  "tab list")
+    printf '{"result":{"tabs":[{"tab_id":"%s:t2","number":2},{"tab_id":"%s:t1","number":1}]}}\n' "$4" "$4"
+    ;;
+  "pane list")
+    printf '{"result":{"panes":[{"pane_id":"%s:p9","tab_id":"%s:t2","cwd":"/elsewhere"},{"pane_id":"%s:p1","tab_id":"%s:t1","cwd":"/work/project"}]}}\n' "$4" "$4" "$4" "$4"
+    ;;
+  "pane split")
+    printf '%s\n' "$*" >> "$world/splits"
+    workspace_id="${3%%:*}"
+    printf '{"result":{"pane":{"pane_id":"%s:p2"}}}\n' "$workspace_id"
+    ;;
+  "agent start")
+    name="$3"
+    shift 3
+    printf '%s\n' "$*" >> "$world/starts"
+    pane=""
+    while [ $# -gt 0 ]; do
+      [ "$1" = "--pane" ] && pane="$2"
+      shift
+    done
+    mkdir -p "$world/agents/$name"
+    echo "${pane%%:*}" > "$world/agents/$name/workspace_id"
+    echo idle > "$world/agents/$name/status"
+    echo session-initial > "$world/agents/$name/session"
+    agent_json "$name"
+    ;;
+  *)
+    echo "fake-herdr: unsupported $*" >&2
+    exit 2
+    ;;
+esac
