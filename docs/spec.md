@@ -173,6 +173,20 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 - « Envoyer », désactivé tant que le texte est vide ou pendant
   l'envoi ; en cas d'échec, l'erreur s'affiche au-dessus et l'aperçu
   reste ouvert ; en cas de succès il se ferme
+- apprentissage des corrections, sans rien afficher : quand on tape
+  Envoyer sur une dictée, le texte proposé (nettoyé, ou brut) est
+  comparé mot à mot au texte envoyé, sans tenir compte de la casse,
+  des accents ni de la ponctuation en bord de mot. Chaque remplacement
+  de 1 à 3 mots par 1 à 3 mots est retenu (« entendu → voulu ») ; un
+  remplacement d'un seul mot par un seul mot garde le mot suivant (ou
+  précédent) inchangé, « on push → git push » plutôt que
+  « on → git ». Rien n'est retenu quand plus de la moitié des mots
+  proposés ont changé (réécriture), ni pour un ajout ou une
+  suppression seuls, ni pour un envoi écrit ou collé
+- le lexique est gardé sur l'iPhone : une erreur déjà connue prend la
+  nouvelle correction et remonte en tête ; au-delà de 50 corrections,
+  les plus anciennes sont oubliées. Pas d'écran pour le consulter ni
+  le vider
 
 ## 6. Ce que fait un envoi
 

@@ -22,6 +22,7 @@ struct ComposeView: View {
     @State private var origin: Origin = .written
     @State private var workspaceId: String = ""
     @State private var dictation = Dictation()
+    @State private var lexicon = DictationLexiconStore.load()
     @State private var dictationError: String?
     @State private var sending = false
     @State private var sendError: String?
@@ -293,6 +294,8 @@ struct ComposeView: View {
         sending = true
         sendError = nil
         defer { sending = false }
+        lexicon.learn(sent: text, origin: origin)
+        DictationLexiconStore.save(lexicon)
         do {
             try await model.send(text, to: target)
             UINotificationFeedbackGenerator().notificationOccurred(.success)

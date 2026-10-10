@@ -41,7 +41,7 @@ ios/Heraldr/
 ├── Mac/        # MacLink (actor SSH, reconnexion), PairedMac
 ├── Pairing/    # PairingCode (HERDR-PAIR:1), PairingCeremony, DeviceKey (Keychain)
 ├── Push/       # PushDevice, QuestionNotification, AppDelegate
-├── Voice/      # Dictation (SpeechAnalyzer), TranscriptCleaner (Foundation Models)
+├── Voice/      # Dictation (SpeechAnalyzer), TranscriptCleaner (Foundation Models), DictationLexicon
 └── UI/
 ios/HeraldrTests/   # Swift Testing
 mac/                # dispatch.sh, notify-hook.mjs
