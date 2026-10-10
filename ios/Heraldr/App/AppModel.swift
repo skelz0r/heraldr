@@ -200,6 +200,10 @@ final class AppModel {
         await refresh()
     }
 
+    func removeFromHistory(_ id: SentRequest.ID) {
+        history.remove(id)
+    }
+
     func pause() {
         pollTask?.cancel()
         pollTask = nil

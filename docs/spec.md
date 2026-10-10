@@ -114,6 +114,22 @@ Un agent du même nom dans un autre workspace ne compte pas.
 presse-papier vide : notice d'échec « Presse-papier vide », « Copie
 d'abord le texte à envoyer. »
 
+### 4.4 Historique
+
+Bouton rond à droite de la pilule du Mac, « Historique des envois »
+pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») qui
+liste les envois gardés (§6), du plus récent au plus ancien :
+
+- label du workspace, date relative, statut (Envoi…, En file, Envoyé,
+  Échec)
+- le texte, sur quatre lignes au plus ; la raison sous un envoi en
+  échec
+- « Copier » met le texte dans le presse-papier, puis affiche
+  « Copié » deux secondes
+- balayer une entrée la supprime (« Supprimer »)
+- sans envoi : « Aucun envoi », « Les 20 derniers envois s'afficheront
+  ici. »
+
 ## 5. Composer une demande
 
 Les trois boutons mènent au même aperçu, sur la cible du moment.
@@ -335,4 +351,3 @@ ignoré.
 - notif de fin de tâche
 - détail par agent
 - multi-machines, sessions herdr nommées
-- historique des envois
