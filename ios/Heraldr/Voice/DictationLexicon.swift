@@ -24,9 +24,11 @@ struct DictationLexicon: Codable, Equatable, Sendable {
     }
 
     mutating func learn(sent: String, origin: ComposeView.Origin, at date: Date = .now) {
-        guard case .dictated(let transcript) = origin else { return }
-        for (heard, meant) in Self.substitutions(from: transcript.text, to: sent) {
-            remember(heard: heard, meant: meant, at: date)
+        guard case .dictated(let dictated) = origin else { return }
+        for revision in dictated.revisions(sentAs: sent) {
+            for (heard, meant) in Self.substitutions(from: revision.proposed, to: revision.edited) {
+                remember(heard: heard, meant: meant, at: date)
+            }
         }
     }
 
