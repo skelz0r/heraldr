@@ -18,7 +18,7 @@ struct HomeView: View {
     @State private var compose: ComposeRequest?
     @State private var confirmingForget = false
 
-    private let orbSize: CGFloat = 180
+    private let orbSize: CGFloat = 128
     private let barHeight: CGFloat = 92
 
     var body: some View {
@@ -146,15 +146,13 @@ struct HomeView: View {
 
     private var workspaceGrid: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                ForEach(model.workspaces) { workspace in
-                    WorkspaceTile(
-                        workspace: workspace,
-                        isSelected: workspace.id == model.selectedWorkspace?.id,
-                        isQueued: !model.pendingJobs(for: workspace).isEmpty
-                    ) {
-                        withAnimation(.snappy) { model.selectedWorkspaceId = workspace.id }
-                        UISelectionFeedbackGenerator().selectionChanged()
+            VStack(spacing: 8) {
+                if let first = model.workspaces.first {
+                    tile(for: first)
+                }
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    ForEach(model.workspaces.dropFirst()) { workspace in
+                        tile(for: workspace)
                     }
                 }
             }
@@ -165,6 +163,17 @@ struct HomeView: View {
         .scrollIndicators(.hidden)
         .scrollEdgeEffectHidden(true, for: .top)
         .refreshable { await model.refresh() }
+    }
+
+    private func tile(for workspace: Workspace) -> some View {
+        WorkspaceTile(
+            workspace: workspace,
+            isSelected: workspace.id == model.selectedWorkspace?.id,
+            isQueued: !model.pendingJobs(for: workspace).isEmpty
+        ) {
+            withAnimation(.snappy) { model.selectedWorkspaceId = workspace.id }
+            UISelectionFeedbackGenerator().selectionChanged()
+        }
     }
 
     private var actionBar: some View {
