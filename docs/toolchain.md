@@ -18,7 +18,7 @@ Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
 | `bin/generate-ios` | `xcodegen generate`, applique `Vendor/patches/*.patch` au submodule |
 | `bin/build-ios [simulator\|device]` | build |
 | `bin/run-ios` | build et lancement simulateur |
-| `bin/run-ios-device [uuid]` | build, install et lancement sur l'iPhone (attente device busy, déverrouillage keychain CI comme local_events) |
+| `bin/run-ios-device [uuid]` | build puis install sur l'iPhone par le skill global `ios-device-install` : `devicectl` si l'iPhone est joignable, sinon page d'install OTA via Tailscale (attente device busy, déverrouillage keychain CI comme local_events) |
 | `bin/run-ios-tests [suite]` | tests unitaires en simulateur (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro par défaut), puis `bin/run-mac-tests` |
 | `bin/run-mac-tests` | tests du script de dispatch (`mac/test/dispatch_test.sh`, faux herdr) et du hook de notification (`node --test mac/test/notify_hook_test.mjs`, faux APNs) |
 | `bin/local-ci [push]` | tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse le HEAD validé et pose le statut « Local CI » |
@@ -37,6 +37,16 @@ Xcode n'a pas de compte Apple sur ce Mac : `bin/run-ios-device` passe
 UUID CoreDevice de l'iPhone par défaut dans `bin/run-ios-device` :
 `00000000-0000-0000-0000-000000000001`, surchargeable par argument ou
 `IOS_DEVICE_UUID`. Signature automatique avec l'équipe `ABCDE12345`.
+
+`devicectl` ne voit l'iPhone qu'en USB ou sur le même LAN (Bonjour, qui
+ne traverse pas Tailscale) : ailleurs il le liste `unavailable` et
+l'install échouait (« unable to locate a device matching the requested
+device identifier »). `bin/run-ios-device` confie donc l'install à
+`~/.agents/skills/ios-device-install/scripts/install-ios-app`, qui publie
+alors le build sur
+`https://<mac>.<tailnet>.ts.net/ios-ota/com.skelz0r.heraldr.dev/`, à
+ouvrir dans Safari sur l'iPhone. Le profil de dev contient déjà l'UDID
+de l'iPhone : pas d'archive ni d'export.
 
 Deux écarts avec Heeler, qui compile avec Xcode 26.6 :
 
