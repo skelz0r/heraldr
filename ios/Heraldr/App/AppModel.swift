@@ -48,6 +48,9 @@ final class AppModel {
     private(set) var workspaces: [Workspace] = []
     private(set) var jobs: [DispatchJob] = []
     private(set) var agents: [Agent] = []
+    private(set) var history = SendHistoryStore.load() {
+        didSet { SendHistoryStore.save(history) }
+    }
     private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
     var notice: Notice?
@@ -120,6 +123,7 @@ final class AppModel {
             let newAgents = try await herdr.agents()
             let newJobs = try await dispatcher.jobs()
             announceFailures(previous: jobs, current: newJobs, workspaces: newWorkspaces)
+            history.follow(newJobs)
             workspaces = newWorkspaces
             agents = newAgents
             jobs = newJobs
@@ -173,9 +177,16 @@ final class AppModel {
     }
 
     func send(_ text: String, to workspace: Workspace) async throws {
-        guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+        let entryId = history.record(text, to: workspace)
         let state = targetState(for: workspace)
-        _ = try await Dispatcher(link: link).send(text, to: workspace)
+        do {
+            guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+            let jobId = try await Dispatcher(link: link).send(text, to: workspace)
+            history.accept(entryId, jobId: jobId)
+        } catch {
+            history.fail(entryId, error: error.localizedDescription)
+            throw error
+        }
         lastSentAt[workspace.id] = .now
         let agent = AgentName.forWorkspace(label: workspace.label)
         switch state {

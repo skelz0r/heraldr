@@ -176,6 +176,21 @@ Notice après l'envoi (5 s, fermée au tap) :
 Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
 vers <label> » avec sa raison, une seule fois.
 
+Chaque envoi est enregistré sur l'iPhone dès qu'on tape Envoyer, avant
+la connexion au Mac : le texte tel que saisi (sans la consigne), le
+workspace et la date. Son statut :
+
+| Moment | Statut |
+| --- | --- |
+| le Mac n'a pas encore répondu | Envoi… |
+| job créé, `queued` ou `sending` | En file |
+| job `sent` | Envoyé |
+| échec avant le Mac, ou job `failed` | Échec, avec la raison |
+| encore « Envoi… » au lancement de l'app (crash pendant l'envoi) | Échec, « Envoi interrompu avant la réponse du Mac. » |
+
+Un job purgé par le Mac laisse l'envoi à son dernier statut. Seuls les
+20 envois les plus récents sont gardés.
+
 ### 6.1 Consigne standard
 
 ```text
