@@ -1,0 +1,4 @@
+[submodule "Vendor/Heeler"]
+	path = Vendor/Heeler
+	url = https://github.com/ZingerLittleBee/Heeler
+	ignore = dirty

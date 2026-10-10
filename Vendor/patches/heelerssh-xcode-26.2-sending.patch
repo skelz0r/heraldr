@@ -1,0 +1,15 @@
+diff --git a/Packages/HeelerSSH/Sources/HeelerSSH/SessionDriver.swift b/Packages/HeelerSSH/Sources/HeelerSSH/SessionDriver.swift
+index 10d7528b..6046ca0e 100644
+--- a/Packages/HeelerSSH/Sources/HeelerSSH/SessionDriver.swift
++++ b/Packages/HeelerSSH/Sources/HeelerSSH/SessionDriver.swift
+@@ -2791,8 +2791,9 @@ actor SessionDriver {
+         activity.install(on: createdSession)
+         try configureAlgorithms(createdSession)
+ 
++        nonisolated(unsafe) let handshakeSession = createdSession
+         let handshakeResult = try await repeatUntilComplete(deadline: deadline) {
+-            libssh2_session_handshake(createdSession, descriptor)
++            libssh2_session_handshake(handshakeSession, descriptor)
+         }
+         guard handshakeResult == 0 else {
+ #if DEBUG
