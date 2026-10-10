@@ -32,6 +32,10 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
 - [ ] Dicter « on push la branche », corriger en « git push » dans
   l'aperçu et envoyer, puis redicter la même phrase : l'aperçu propose
   « git push ».
+- [ ] Après une dictée, corriger un mot au clavier, puis « Dicter la
+  suite » : la nouvelle salve s'ajoute à la ligne, la correction reste ;
+  « Voir l'original » montre les deux salves. Relancer « Dicter la
+  suite » puis « Annuler » : retour à l'aperçu, texte intact.
 - [ ] Coller une demande depuis le presse-papier, puis avec un
   presse-papier vide : notice « Presse-papier vide ».
 - [ ] Envoyer à Home une demande qui vise un projet ouvert : Home la
