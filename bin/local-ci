@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+BASE_BRANCH="origin/main"
+SPEC="docs/spec.md"
+BEHAVIOUR_PATHS=(ios/Heraldr mac/dispatch.sh mac/notify-hook.mjs)
+
+step_durations=""
+ios_tests_skipped=false
+
+run_check() {
+    local name="$1"
+    local started_at="$SECONDS"
+
+    printf '\n=== %s ===\n' "$name"
+    shift
+    "$@"
+    step_durations+="$(printf '%-16s %4ss' "$name" "$(( SECONDS - started_at ))")"$'\n'
+}
+
+worktree_is_clean() {
+    git diff --quiet && git diff --cached --quiet &&
+        [[ -z "$(git ls-files --others --exclude-standard)" ]]
+}
+
+is_documentation_path() {
+    case "$1" in
+        docs/* | .claude/*) return 0 ;;
+        ios/* | mac/*) return 1 ;;
+        *.md) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+changes_only_documentation() {
+    local base
+    local changed_paths
+    local path
+
+    worktree_is_clean || return 1
+    base="$(git merge-base HEAD "$BASE_BRANCH" 2>/dev/null)" || return 1
+    changed_paths="$(git -c core.quotePath=false diff --name-only --no-renames "$base" HEAD)" || return 1
+    [[ -n "$changed_paths" ]] || return 1
+
+    while IFS= read -r path; do
+        is_documentation_path "$path" || return 1
+    done <<< "$changed_paths"
+}
+
+run_tests() {
+    if changes_only_documentation; then
+        ios_tests_skipped=true
+        printf '\n=== iOS tests ===\nSkipped: only documentation changed since main\n'
+        run_check "Mac tests" ./bin/run-mac-tests
+        return
+    fi
+
+    run_check "iOS + Mac tests" ./bin/run-ios-tests
+}
+
+warn_on_stale_spec() {
+    local base
+
+    base="$(git merge-base HEAD "$BASE_BRANCH" 2>/dev/null)" || return 0
+
+    if ! git diff --quiet "$base" -- "${BEHAVIOUR_PATHS[@]}" &&
+        git diff --quiet "$base" -- "$SPEC"; then
+        printf '\nWarning: app or Mac scripts changed since main but %s did not, check whether the spec needs an update\n' "$SPEC"
+    fi
+}
+
+run_local_ci() {
+    run_tests
+    warn_on_stale_spec
+    printf '\n=== Durations ===\n%s' "$step_durations"
+    printf '\nLocal CI passed\n'
+}
+
+ensure_pushable_branch() {
+    local branch="$1"
+
+    if [[ -z "$branch" ]]; then
+        printf 'Cannot push from a detached HEAD\n' >&2
+        return 1
+    fi
+
+    if [[ "$branch" == "main" ]]; then
+        printf 'Local CI push is forbidden on main\n' >&2
+        return 1
+    fi
+}
+
+ensure_clean_worktree() {
+    if ! worktree_is_clean; then
+        printf 'Commit or discard local changes before pushing\n' >&2
+        return 1
+    fi
+}
+
+push_after_local_ci() {
+    local branch
+    local repository
+    local remote_revision
+    local revision
+    local started_at
+    local description
+
+    branch="$(git branch --show-current)"
+    ensure_pushable_branch "$branch"
+    ensure_clean_worktree
+    repository="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+    remote_revision="$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)"
+    revision="$(git rev-parse HEAD)"
+    started_at="$(date +%s)"
+
+    run_local_ci
+    ensure_clean_worktree
+
+    if [[ "$(git rev-parse HEAD)" != "$revision" ]]; then
+        printf 'HEAD changed while local CI was running\n' >&2
+        return 1
+    fi
+
+    description="All checks passed locally in $(( $(date +%s) - started_at ))s"
+
+    if [[ "$ios_tests_skipped" == true ]]; then
+        description+=" (iOS skipped: docs only)"
+    fi
+
+    git push \
+        --force-with-lease="refs/heads/$branch:$remote_revision" \
+        --set-upstream origin \
+        "$revision:refs/heads/$branch"
+    gh api "repos/$repository/statuses/$revision" \
+        -f state=success \
+        -f context="Local CI" \
+        -f description="$description" \
+        --silent
+
+    printf 'Pushed %s after successful local CI\n' "$branch"
+}
+
+usage() {
+    printf 'Usage: %s [push]\n' "$0"
+}
+
+case "${1:-}" in
+    "")
+        run_local_ci
+        ;;
+    push)
+        if [[ $# -ne 1 ]]; then
+            usage >&2
+            exit 2
+        fi
+        push_after_local_ci
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
