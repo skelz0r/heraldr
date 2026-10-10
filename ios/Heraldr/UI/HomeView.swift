@@ -281,33 +281,10 @@ struct VoiceOrb: View {
         .buttonStyle(.plain)
         .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
         .background {
-            Circle().stroke(Color.wallBase, lineWidth: 10)
-        }
-        .overlay {
-            OrbAura(size: size).allowsHitTesting(false)
+            Circle()
+                .stroke(Color.wallBase, lineWidth: 10)
+                .shadow(color: Color.heraldrAccent.opacity(0.35), radius: 16, y: 8)
         }
         .accessibilityLabel("Dicter")
-    }
-}
-
-struct OrbAura: View {
-    let size: CGFloat
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private let period: TimeInterval = 7
-
-    var body: some View {
-        TimelineView(.animation(paused: reduceMotion)) { timeline in
-            let turn = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
-            let sweep = AngularGradient(
-                colors: [.auraOne, .auraTwo, .auraThree, .auraThree.opacity(0), .auraOne.opacity(0), .auraOne],
-                center: .center,
-                angle: .degrees(turn * 360))
-            ZStack {
-                Circle().strokeBorder(sweep, lineWidth: 10).blur(radius: 9).opacity(0.75)
-                Circle().strokeBorder(sweep, lineWidth: 2.5)
-            }
-        }
-        .frame(width: size + 22, height: size + 22)
     }
 }
