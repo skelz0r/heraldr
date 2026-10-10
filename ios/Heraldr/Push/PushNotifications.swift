@@ -62,13 +62,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         model?.notice = AppModel.Notice(kind: .failed, title: "Notifications indisponibles", detail: error.localizedDescription)
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        guard let tap = QuestionNotification(userInfo: response.notification.request.content.userInfo) else { return }
-        await received(tap)
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping @Sendable () -> Void) {
+        let tap = QuestionNotification(userInfo: response.notification.request.content.userInfo)
+        Task { @MainActor in
+            if let tap { received(tap) }
+            completionHandler()
+        }
     }
 
     private func received(_ tap: QuestionNotification) {
