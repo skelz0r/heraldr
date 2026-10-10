@@ -29,6 +29,9 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
   « en attente », la demande part quand il a fini.
 - [ ] Dicter une demande avec des hésitations : « Dictée nettoyée »,
   « Voir l'original » montre la transcription brute.
+- [ ] Dicter « on push la branche », corriger en « git push » dans
+  l'aperçu et envoyer, puis redicter la même phrase : l'aperçu propose
+  « git push ».
 - [ ] Coller une demande depuis le presse-papier, puis avec un
   presse-papier vide : notice « Presse-papier vide ».
 - [ ] Envoyer à Home une demande qui vise un projet ouvert : Home la
