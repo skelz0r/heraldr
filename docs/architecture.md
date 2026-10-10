@@ -60,41 +60,48 @@ session herdr par défaut).
 
 ## Dispatch
 
-L'app embarque un script shell versionné (`mac/dispatch.sh`), envoyé sur
-stdin à chaque envoi :
+L'app embarque un script shell versionné (`mac/dispatch.sh`). Chaque
+envoi fait deux exec SSH :
 
-```text
-ssh exec: nohup sh -s -- <workspace_id> <payload_id> < dispatch.sh &
-```
+1. `install` : le script est écrit sur stdin dans
+   `~/.local/state/herdr-compagnon/dispatch.sh` (toujours la version de
+   l'app installée)
+2. `enqueue <workspace_id> <agent> <label_base64>` : le prompt enveloppé
+   arrive brut sur stdin et devient un job
+   `~/.local/state/herdr-compagnon/jobs/<horodatage>-<id>/`, puis le
+   script lance son runner détaché :
+   `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
 
-Le prompt est d'abord déposé dans
-`~/.local/state/herdr-compagnon/queue/<payload_id>.json` (via exec et
-stdin, encodé en base64 pour éviter tout problème d'échappement).
+Un job est un dossier de fichiers texte : `workspace_id`, `agent`,
+`label`, `prompt`, `state` (`queued`, `sending`, `sent`, `failed`) et
+`error`. `dispatch.sh status` les liste en lignes tabulées pour l'app.
 
-Le script, détaché, survit à la mise en veille du téléphone :
+Le runner, détaché, survit à la mise en veille du téléphone (spike 7).
+Il fixe son PATH (`/opt/homebrew/bin` absent en exec SSH), prend le
+verrou de l'agent (`mkdir` atomique, pid dedans pour reprendre un verrou
+mort) et traite les jobs de l'agent dans l'ordre d'horodatage :
 
-1. résout le tab 1 du workspace (`herdr tab list --workspace`, premier
-   tab)
-2. cherche l'agent `<slug>-main` (`herdr agent list`)
-3. s'il manque : `herdr pane split` dans le tab 1 avec le cwd du
-   workspace, puis
-   `herdr agent start <slug>-main --kind claude --pane <pane> --
+1. résout le tab 1 du workspace (`herdr tab list --workspace`, numéro 1)
+2. cherche l'agent `<agent>` (`herdr agent get`)
+3. s'il manque : `herdr pane split` du premier pane du tab 1, avec le
+   cwd de ce pane, puis
+   `herdr agent start <agent> --kind claude --pane <pane> --
    --dangerously-skip-permissions --remote-control "<label>—main"`
    (équivalent de `dclaude`, en gardant la détection de readiness herdr)
-4. `herdr agent wait <slug>-main --until idle,done` (la file : attend
-   aussi longtemps que nécessaire si l'agent travaille ou est bloqué)
-5. `herdr agent prompt <slug>-main "/clear" --wait`
-6. `herdr agent prompt <slug>-main "<prompt enveloppé>"` sans attendre la
+4. `herdr agent wait <agent> --until idle --until done`, sans timeout :
+   c'est la file, qui attend aussi longtemps que l'agent travaille ou
+   est bloqué
+5. `herdr agent prompt <agent> "/clear"` sans `--wait` (spike 1 :
+   `--wait` échoue en `agent_prompt_stalled`), puis attente du
+   changement de `agent_session.value`
+6. `herdr agent prompt <agent> "<prompt enveloppé>"` sans attendre la
    fin du travail
-7. met à jour le fichier d'état (`queued` → `sent` ou `failed` avec
-   l'erreur), puis le supprime après un délai
+7. `state` passe à `sent`, ou `failed` avec l'erreur ; les jobs `sent`
+   sont supprimés après une heure, les `failed` après un jour
 
-L'app lit ces fichiers d'état pour afficher le badge « en attente » et
-les échecs.
-
-Deux envois successifs vers le même workspace occupé sont sérialisés par
-un verrou (`mkdir` atomique par agent) : ils partent dans l'ordre, chacun
-précédé de son `/clear`.
+Un second envoi vers un agent occupé ne lance pas de deuxième runner :
+le verrou est pris, son job attend que le runner en place le traite.
+Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
 
 ## App iOS
 
