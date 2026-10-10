@@ -10,6 +10,7 @@ Usage personnel, installation locale sur l'appareil, pas de TestFlight.
 - [Spécification MVP](docs/mvp.md)
 - [Architecture](docs/architecture.md)
 - [Toolchain](docs/toolchain.md)
+- [Design](docs/design.md)
 - [Roadmap](docs/roadmap.md)
 - [Journal des décisions](docs/decisions.md)
 - [Risques et points à vérifier](docs/risks.md)
