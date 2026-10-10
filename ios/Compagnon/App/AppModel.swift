@@ -92,7 +92,8 @@ final class AppModel {
 
     func send(_ text: String, to workspace: Workspace) async throws {
         guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
-        let busy = !(workspaces.first { $0.id == workspace.id }?.agentStatus.isReady ?? true)
+        let ready = workspaces.first { $0.id == workspace.id }?.agentStatus.isReady ?? true
+        let busy = !ready || !pendingJobs(for: workspace).isEmpty
         _ = try await Dispatcher(link: link).send(text, to: workspace)
         notice = busy
             ? Notice(kind: .queued, title: "En file pour \(workspace.label)", detail: "L'agent travaille : l'envoi partira dès qu'il aura fini.")
