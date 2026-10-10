@@ -14,4 +14,5 @@ Usage personnel, installation locale sur l'appareil, pas de TestFlight.
 - [Roadmap](docs/roadmap.md)
 - [Journal des décisions](docs/decisions.md)
 - [Risques et points à vérifier](docs/risks.md)
+- [QA manuelle sur l'iPhone](QA.md)
 - Livrables de création : [nom et logo](docs/branding/), [protos UI](docs/protos/)
