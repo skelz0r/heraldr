@@ -80,7 +80,7 @@ struct NoticeToast: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.onAccent)
                 .frame(width: 36, height: 36)
                 .background(color, in: .circle)
             VStack(alignment: .leading, spacing: 2) {

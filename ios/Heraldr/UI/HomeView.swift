@@ -236,7 +236,7 @@ struct WorkspaceTile: View {
             HStack(spacing: 10) {
                 StatusDot(status: workspace.agentStatus)
                     .overlay {
-                        if isSelected { Circle().stroke(.white.opacity(0.9), lineWidth: 2).padding(-2) }
+                        if isSelected { Circle().stroke(Color.onAccent, lineWidth: 2).padding(-2) }
                     }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(workspace.label)
@@ -250,7 +250,7 @@ struct WorkspaceTile: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-            .foregroundStyle(isSelected ? .white : .primary)
+            .foregroundStyle(isSelected ? Color.onAccent : Color.primary)
             .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
@@ -274,7 +274,7 @@ struct VoiceOrb: View {
         Button(action: action) {
             Image(systemName: "mic.fill")
                 .font(.system(size: size * 0.36, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.onAccent)
                 .frame(width: size, height: size)
                 .contentShape(.circle)
         }

@@ -2,6 +2,8 @@ import SwiftUI
 
 extension Color {
     static let heraldrAccent = Color("AccentColor")
+    static let onAccent = Color(light: 0xFFFFFF, dark: 0x04241D)
+    static let recording = Color(light: 0xD70015, dark: 0xFF453A)
 
     init(light: UInt32, dark: UInt32) {
         self.init(uiColor: UIColor { traits in
@@ -14,19 +16,19 @@ extension Color {
         })
     }
 
-    static let wallBase = Color(light: 0xEEF0F6, dark: 0x06070B)
-    static let wallBlobOne = Color(light: 0xFFB98A, dark: 0x7A2C6A)
-    static let wallBlobTwo = Color(light: 0xB9A4FF, dark: 0x2B2F9E)
-    static let wallBlobThree = Color(light: 0x8FE3D0, dark: 0x0D6E66)
+    static let wallBase = Color(light: 0xEEF3F1, dark: 0x050607)
+    static let wallBlobOne = Color(light: 0xA8EBD9, dark: 0x0E3B32)
+    static let wallBlobTwo = Color(light: 0xC9D6F2, dark: 0x151A2C)
+    static let wallBlobThree = Color(light: 0x9FE0F0, dark: 0x0B2A33)
 }
 
 extension AgentStatus {
     var color: Color {
         switch self {
-        case .idle, .unknown: Color(light: 0x8E8E93, dark: 0x8E8E93)
-        case .working: Color(light: 0x0A84FF, dark: 0x3B9BFF)
-        case .blocked: Color(light: 0xFF9500, dark: 0xFF9F0A)
-        case .done: Color(light: 0x28C840, dark: 0x32D74B)
+        case .idle, .unknown: Color(light: 0x6B7075, dark: 0x8E9399)
+        case .working: Color(light: 0x005FCC, dark: 0x4DA3FF)
+        case .blocked: Color(light: 0xA84F00, dark: 0xFF9F0A)
+        case .done: Color(light: 0x3F8A12, dark: 0x8BD450)
         }
     }
 

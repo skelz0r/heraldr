@@ -129,7 +129,7 @@ struct ComposeView: View {
                         .frame(width: 112, height: 112)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.tint(Color(light: 0xFF3B30, dark: 0xFF453A)).interactive(), in: .circle)
+                .glassEffect(.regular.tint(.recording).interactive(), in: .circle)
                 .disabled(dictation.phase != .recording)
                 .accessibilityLabel("Arrêter la dictée")
 
@@ -229,11 +229,11 @@ struct ComposeView: View {
                 Task { await send() }
             } label: {
                 HStack(spacing: 10) {
-                    if sending { ProgressView().tint(.white) } else { Image(systemName: "arrow.up") }
+                    if sending { ProgressView().tint(Color.onAccent) } else { Image(systemName: "arrow.up") }
                     Text("Envoyer")
                 }
                 .font(.title3.weight(.bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.onAccent)
                 .frame(maxWidth: .infinity, minHeight: 64)
                 .contentShape(.capsule)
             }
