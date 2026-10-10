@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOGO_DIR="${PROJECT_DIR}/docs/branding/logo"
+ASSETS="${PROJECT_DIR}/ios/Heraldr/Resources/Assets.xcassets"
+ICON_STROKE_WIDTH=80
+
+if ! command -v rsvg-convert &> /dev/null; then
+    echo "rsvg-convert missing: brew install librsvg"
+    exit 1
+fi
+
+thickened() {
+    sed "s/stroke-width=\"60\"/stroke-width=\"${ICON_STROKE_WIDTH}\"/" "${LOGO_DIR}/$1"
+}
+
+render() {
+    thickened "$1" | rsvg-convert -w 1024 -h 1024 -b black -o "${ASSETS}/AppIcon.appiconset/$2"
+}
+
+render 5-voies-dark.svg AppIcon.png
+render 5-voies-dark.svg AppIcon-dark.png
+render 5-voies-tinted.svg AppIcon-tinted.png
+thickened 5-voies-dark.svg > "${ASSETS}/Logo.imageset/Logo.svg"
+
+echo "App icon rendered from ${LOGO_DIR}/5-voies-dark.svg (stroke ${ICON_STROKE_WIDTH})"

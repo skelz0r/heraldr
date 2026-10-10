@@ -26,4 +26,4 @@ Issu de la session de cadrage du 2026-10-10.
 | Direction UI | D (cible en haut, grille en bas) avec un bouton voix d'environ 180 pt en bas, à la place du 128 pt | A, B, C |
 | Intégration HeelerSSH | submodule git `Vendor/Heeler` épinglé, package local pour XcodeGen | copie vendorisée |
 | Nom | Heraldr (Herald + herdr), bundle id `com.skelz0r.heraldr.dev` | Compagnon (provisoire), Stentor, Heraldz0r, Cooee… |
-| Logo | Voix et voies du premier tour, version noire (`5-voies-dark.svg`), palette vert d'eau | Éventail et ses variantes, Troupeau |
+| Logo | Voix et voies du premier tour, version noire (`5-voies-dark.svg`), palette vert d'eau ; trait épaissi de 60 à 80 px pour l'icône | Éventail et ses variantes, Troupeau |

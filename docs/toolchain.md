@@ -21,6 +21,7 @@ Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
 | `bin/run-ios-device [uuid]` | build, install et lancement sur l'iPhone (attente device busy, déverrouillage keychain CI comme local_events) |
 | `bin/run-ios-tests [suite]` | tests unitaires en simulateur, puis tests du script de dispatch (`mac/test/dispatch_test.sh`) |
 | `bin/open-ios-xcode` | génère puis ouvre le projet |
+| `bin/render-ios-icon` | régénère AppIcon et logo depuis `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
 
 Environnement constaté : Xcode 26.2, macOS 26.4.1, iPhone 16 Pro
 (`iphone` sur Tailscale) compatible Apple Intelligence.
