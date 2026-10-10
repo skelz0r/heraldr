@@ -19,7 +19,9 @@ Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
 | `bin/build-ios [simulator\|device]` | build |
 | `bin/run-ios` | build et lancement simulateur |
 | `bin/run-ios-device [uuid]` | build, install et lancement sur l'iPhone (attente device busy, déverrouillage keychain CI comme local_events) |
-| `bin/run-ios-tests [suite]` | tests unitaires en simulateur, puis tests du script de dispatch (`mac/test/dispatch_test.sh`) et du hook de notification (`node --test mac/test/notify_hook_test.mjs`) |
+| `bin/run-ios-tests [suite]` | tests unitaires en simulateur (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro par défaut), puis `bin/run-mac-tests` |
+| `bin/run-mac-tests` | tests du script de dispatch (`mac/test/dispatch_test.sh`, faux herdr) et du hook de notification (`node --test mac/test/notify_hook_test.mjs`, faux APNs) |
+| `bin/local-ci [push]` | tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse le HEAD validé et pose le statut « Local CI » |
 | `bin/open-ios-xcode` | génère puis ouvre le projet |
 | `bin/render-ios-icon` | régénère AppIcon et logo depuis `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
 
