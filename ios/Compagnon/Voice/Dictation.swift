@@ -8,6 +8,8 @@ enum DictationError: Error, LocalizedError {
     case localeUnsupported
     case noAudioFormat
     case audioEngine(String)
+    case noMicrophone
+    case step(String, any Error)
 
     var errorDescription: String? {
         switch self {
@@ -19,6 +21,12 @@ enum DictationError: Error, LocalizedError {
             "Aucun format audio compatible avec la transcription"
         case .audioEngine(let detail):
             "Micro indisponible : \(detail)"
+        case .noMicrophone:
+            "Aucun micro disponible"
+        case .step(let step, let error as DictationError):
+            "\(step) : \(error.localizedDescription)"
+        case .step(let step, let error):
+            "\(step) : \(error.localizedDescription) (\((error as NSError).domain) \((error as NSError).code))"
         }
     }
 }
@@ -100,24 +108,34 @@ final class Dictation {
             throw DictationError.localeUnsupported
         }
 
-        if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
-            try await request.downloadAndInstall()
+        try await Self.step("Téléchargement du modèle de transcription") {
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
+                try await request.downloadAndInstall()
+            }
         }
 
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .spokenAudio, options: [.duckOthers])
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        try Self.step("Configuration de la session audio") {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+        }
 
         let engine = AVAudioEngine()
         let inputFormat = engine.inputNode.outputFormat(forBus: 0)
+        guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else { throw DictationError.noMicrophone }
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module], considering: inputFormat) else {
             throw DictationError.noAudioFormat
         }
-        let feeder = try AudioFeeder(from: inputFormat, to: analyzerFormat) { [weak self] level in
-            Task { @MainActor in self?.level = level }
+        let feeder = try Self.step("Conversion audio") {
+            try AudioFeeder(from: inputFormat, to: analyzerFormat) { [weak self] level in
+                Task { @MainActor in self?.level = level }
+            }
         }
         let analyzer = SpeechAnalyzer(modules: [module])
-        try await analyzer.start(inputSequence: feeder.stream)
+        try await Self.step("Démarrage de la transcription") {
+            try await analyzer.prepareToAnalyze(in: analyzerFormat)
+            try await analyzer.start(inputSequence: feeder.stream)
+        }
 
         resultsTask = Task { [weak self] in
             do {
@@ -129,10 +147,8 @@ final class Dictation {
 
         feeder.attach(to: engine.inputNode, format: inputFormat)
         engine.prepare()
-        do {
+        try Self.step("Démarrage du micro") {
             try engine.start()
-        } catch {
-            throw DictationError.audioEngine(error.localizedDescription)
         }
 
         self.engine = engine
@@ -160,6 +176,22 @@ final class Dictation {
         startedAt = nil
         level = 0
         phase = .idle
+    }
+
+    private static func step<T>(_ name: String, _ operation: () throws -> T) throws -> T {
+        do {
+            return try operation()
+        } catch {
+            throw DictationError.step(name, error)
+        }
+    }
+
+    private static func step<T>(_ name: String, _ operation: () async throws -> T) async throws -> T {
+        do {
+            return try await operation()
+        } catch {
+            throw DictationError.step(name, error)
+        }
     }
 
     private static func stream<Results: AsyncSequence & Sendable>(
