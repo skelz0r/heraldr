@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+echo "Running dispatch script tests..."
+"${PROJECT_DIR}/mac/test/dispatch_test.sh"
+
+echo "Running notify hook tests..."
+node --test "${PROJECT_DIR}/mac/test/notify_hook_test.mjs"
