@@ -22,7 +22,7 @@ teardown_world() {
 
 add_workspace() {
   mkdir -p "$FAKE_HERDR_WORLD/workspaces"
-  printf '%s' "$2" > "$FAKE_HERDR_WORLD/workspaces/$1"
+  printf '%s\t%s' "$2" "$3" > "$FAKE_HERDR_WORLD/workspaces/$1"
 }
 
 relay() {
@@ -148,7 +148,7 @@ teardown_world
 
 echo "Home relaie une demande au -main du workspace du projet, avec la consigne standard"
 setup_world
-add_workspace w5 'Vidéo studio'
+add_workspace w5 5 'Vidéo studio'
 relay w5 "Ajoute un sous-titre"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "l'agent du projet est créé dans son workspace, nommé comme le fait l'app" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Vidéo studio—main"
@@ -166,9 +166,9 @@ teardown_world
 
 echo "un relais vers Home ou un workspace inconnu est refusé"
 setup_world
-add_workspace w1 '~'
+add_workspace w1 1 'Home'
 relay w1 "Boucle"
-check "relais vers Home refusé" "$?" "2"
+check "relais vers Home, le workspace 1, refusé" "$?" "2"
 relay w404 "Perdu"
 check "relais vers un workspace inconnu refusé" "$?" "2"
 check "aucun envoi créé" "$(job_states)" ""

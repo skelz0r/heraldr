@@ -7,13 +7,14 @@ Chaque workspace herdr suit la même organisation :
 - tab 1 : un ou plusieurs Claude et un shell
 - tabs suivants : un worktree chacun
 
-Le workspace principal est celui dont le label est `~`.
+Le workspace principal, Home, est le workspace numéro 1 de herdr,
+quel que soit son label (`~`, `Home`…).
 
 ## Écran principal
 
 Liste de tous les workspaces herdr :
 
-- `~` en premier, puis les autres dans l'ordre herdr (`number`)
+- Home en premier, puis les autres dans l'ordre herdr (`number`)
 - une ligne par workspace : label, et un dot d'état agrégé
   (`agent_status` de `herdr workspace list`)
   - gris : idle
@@ -26,7 +27,7 @@ Liste de tous les workspaces herdr :
 - tap sur une ligne : elle devient la cible des envois (sélection
   visuelle forte). C'est le seul sens de « focus » : rien ne bouge sur le
   Mac
-- au lancement de l'app, la cible est toujours `~`
+- au lancement de l'app, la cible est toujours Home
 - rafraîchissement : au retour au premier plan, en pull-to-refresh, après
   chaque envoi
 
@@ -82,9 +83,9 @@ Consignes :
 - termine obligatoirement en dispatchant le travail avec /start
 ```
 
-### Envoi vers `~`
+### Envoi vers Home
 
-`~` est la cible par défaut, donc beaucoup de demandes y arrivent alors
+Home est la cible par défaut, donc beaucoup de demandes y arrivent alors
 qu'elles visent un projet. Son agent `home-main` reçoit une consigne à
 part :
 

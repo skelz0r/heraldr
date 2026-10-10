@@ -22,8 +22,9 @@ struct Workspace: Codable, Identifiable, Equatable, Sendable {
     let agentStatus: AgentStatus
 
     static let homeLabel = "~"
+    static let homeNumber = 1
 
-    var isHome: Bool { label == Self.homeLabel }
+    var isHome: Bool { number == Self.homeNumber }
 
     var displayName: String { label }
 
