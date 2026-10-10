@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IOS_DIR="${PROJECT_DIR}/ios"
+PROJECT_NAME="Compagnon"
+SCHEME="Compagnon"
+
+CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "")
+if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then
+    echo "Error: xcode-select points to Command Line Tools, run bin/setup-ios"
+    exit 1
+fi
+
+BUILD_TYPE="${1:-simulator}"
+
+case "${BUILD_TYPE}" in
+    simulator)
+        echo "Building for iOS Simulator..."
+        DESTINATION="generic/platform=iOS Simulator"
+        DERIVED_DATA="${PROJECT_DIR}/build/ios-simulator"
+        ;;
+    device)
+        echo "Building for iOS Device..."
+        DESTINATION="generic/platform=iOS"
+        DERIVED_DATA="${PROJECT_DIR}/build/ios-device"
+        ;;
+    *)
+        echo "Usage: bin/build-ios [simulator|device]"
+        exit 1
+        ;;
+esac
+
+"${PROJECT_DIR}/bin/generate-ios"
+
+BUILD_ARGS=(
+    -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj"
+    -scheme "${SCHEME}"
+    -destination "${DESTINATION}"
+    -configuration Debug
+    -derivedDataPath "${DERIVED_DATA}"
+)
+
+if [[ "${BUILD_TYPE}" == "device" ]]; then
+    BUILD_ARGS+=(-allowProvisioningUpdates)
+fi
+
+xcodebuild build "${BUILD_ARGS[@]}"
+
+echo "Build complete: ${DERIVED_DATA}/Build/Products"

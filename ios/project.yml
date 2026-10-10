@@ -1,0 +1,77 @@
+name: Compagnon
+
+options:
+  bundleIdPrefix: com.skelz0r
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: ABCDE12345
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+
+packages:
+  HeelerSSH:
+    path: ../Vendor/Heeler/Packages/HeelerSSH
+
+targets:
+  Compagnon:
+    type: application
+    platform: iOS
+    sources:
+      - path: Compagnon
+      - path: ../mac/dispatch.sh
+        buildPhase: resources
+    dependencies:
+      - package: HeelerSSH
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.compagnon.dev
+        PRODUCT_NAME: Compagnon
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Compagnon
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_NSCameraUsageDescription: "La caméra sert à scanner le QR d'appairage affiché par herdr sur le Mac."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Le micro sert à dicter les demandes envoyées aux agents herdr."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "La dictée est transcrite sur l'iPhone, sans quitter l'appareil."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Le réseau local sert à joindre le Mac en SSH."
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+
+  CompagnonTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: CompagnonTests
+      - path: ../Vendor/Heeler/plugin/test-vectors/pairing-code-v1.json
+        buildPhase: resources
+    dependencies:
+      - target: Compagnon
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.compagnon.dev.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Compagnon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Compagnon
+        BUNDLE_LOADER: $(TEST_HOST)
+
+schemes:
+  Compagnon:
+    build:
+      targets:
+        Compagnon: all
+        CompagnonTests: [test]
+    test:
+      targets:
+        - CompagnonTests

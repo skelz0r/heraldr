@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if ! command -v xcodegen &> /dev/null; then
+    echo "Error: xcodegen not found, run bin/setup-ios"
+    exit 1
+fi
+
+if [ ! -f "${PROJECT_DIR}/Vendor/Heeler/Packages/HeelerSSH/Package.swift" ]; then
+    git -C "${PROJECT_DIR}" submodule update --init Vendor/Heeler
+fi
+
+for patch in "${PROJECT_DIR}"/Vendor/patches/*.patch; do
+    if ! git -C "${PROJECT_DIR}/Vendor/Heeler" apply --reverse --check "$patch" 2>/dev/null; then
+        git -C "${PROJECT_DIR}/Vendor/Heeler" apply "$patch"
+    fi
+done
+
+xcodegen generate --spec "${PROJECT_DIR}/ios/project.yml" --use-cache --quiet

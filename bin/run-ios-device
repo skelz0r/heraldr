@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IOS_DIR="${PROJECT_DIR}/ios"
+PROJECT_NAME="Compagnon"
+SCHEME="Compagnon"
+DEVICE_UUID="${1:-${IOS_DEVICE_UUID:-00000000-0000-0000-0000-000000000001}}"
+BUNDLE_ID="com.skelz0r.compagnon.dev"
+DERIVED_DATA="${PROJECT_DIR}/build/ios-device-run"
+
+if [[ -f "${PROJECT_DIR}/.env.local" ]]; then
+    set -a
+    source "${PROJECT_DIR}/.env.local"
+    set +a
+fi
+
+CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "")
+if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then
+    echo "Error: xcode-select points to Command Line Tools, run bin/setup-ios"
+    exit 1
+fi
+
+CI_KEYCHAIN="${HOME}/Library/Keychains/ci.keychain-db"
+if [[ -f "$CI_KEYCHAIN" ]]; then
+    if [[ -n "${CI_KEYCHAIN_PASSWORD:-}" ]]; then
+        echo "Unlocking CI keychain..."
+        security list-keychains -d user -s "$CI_KEYCHAIN" "${HOME}/Library/Keychains/login.keychain-db"
+        security unlock-keychain -p "${CI_KEYCHAIN_PASSWORD}" "$CI_KEYCHAIN"
+    else
+        echo "CI keychain present but CI_KEYCHAIN_PASSWORD not set."
+        echo "If codesign fails, unlock it first:"
+        echo "  security unlock-keychain ~/Library/Keychains/ci.keychain-db"
+    fi
+fi
+
+echo "Using device: ${DEVICE_UUID}"
+echo "Waiting for device to be ready..."
+
+MAX_RETRIES=30
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    DEVICE_STATUS=$(xcrun xctrace list devices 2>&1 | grep "${DEVICE_UUID}" || echo "")
+
+    if echo "$DEVICE_STATUS" | grep -q "error:Device is busy"; then
+        echo "Device busy, waiting... (${RETRY_COUNT}/${MAX_RETRIES})"
+        sleep 2
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+    else
+        break
+    fi
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo "Device still busy after ${MAX_RETRIES} retries: unlock the iPhone, reconnect it or close Xcode"
+    exit 1
+fi
+
+"${PROJECT_DIR}/bin/generate-ios"
+
+echo "Building for device..."
+
+if ! xcodebuild \
+    -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
+    -scheme "${SCHEME}" \
+    -destination "generic/platform=iOS" \
+    -configuration Debug \
+    -derivedDataPath "${DERIVED_DATA}" \
+    -allowProvisioningUpdates \
+    build; then
+    echo "Build failed (see xcodebuild output above)"
+    exit 1
+fi
+
+APP_BUNDLE="${DERIVED_DATA}/Build/Products/Debug-iphoneos/${PROJECT_NAME}.app"
+
+if [ ! -d "$APP_BUNDLE" ]; then
+    echo "Could not find built app bundle ${APP_BUNDLE}"
+    exit 1
+fi
+
+echo "Installing on device..."
+
+if ! xcrun devicectl device install app --device "${DEVICE_UUID}" "${APP_BUNDLE}"; then
+    echo "Install failed (see devicectl output above)"
+    exit 1
+fi
+
+echo "Launching app..."
+
+xcrun devicectl device process launch --device "${DEVICE_UUID}" "${BUNDLE_ID}" || \
+    echo "Could not auto-launch, open the app manually on the device"
+
+echo "Done"

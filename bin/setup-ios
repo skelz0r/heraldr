@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+XCODE_PATH="/Applications/Xcode.app"
+CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "not set")
+
+echo "iOS setup check"
+echo ""
+
+if [ ! -d "$XCODE_PATH" ]; then
+    echo "Xcode not installed: install Xcode 26 from the App Store, launch it once, then run this script again"
+    exit 1
+fi
+echo "ok: Xcode installed at $XCODE_PATH"
+
+if [[ "$CURRENT_DEV_DIR" != "$XCODE_PATH/Contents/Developer" ]]; then
+    echo "Xcode path needs to be configured:"
+    echo ""
+    echo "  sudo xcode-select --switch $XCODE_PATH/Contents/Developer"
+    exit 1
+fi
+echo "ok: xcode-select points to $CURRENT_DEV_DIR"
+
+XCODE_VERSION=$(xcodebuild -version | head -n 1)
+XCODE_MAJOR=$(echo "$XCODE_VERSION" | sed -E 's/Xcode ([0-9]+).*/\1/')
+if [ "$XCODE_MAJOR" -lt 26 ]; then
+    echo "$XCODE_VERSION is too old: iOS 26 SDK (Xcode 26) required"
+    exit 1
+fi
+echo "ok: $XCODE_VERSION"
+
+if ! command -v xcodegen &> /dev/null; then
+    echo "XcodeGen missing:"
+    echo ""
+    echo "  brew install xcodegen"
+    exit 1
+fi
+echo "ok: $(xcodegen --version)"
+
+if [ ! -f "${PROJECT_DIR}/Vendor/Heeler/Packages/HeelerSSH/Package.swift" ]; then
+    echo "Initializing the Heeler submodule..."
+    git -C "${PROJECT_DIR}" submodule update --init Vendor/Heeler
+fi
+echo "ok: Heeler submodule at $(git -C "${PROJECT_DIR}/Vendor/Heeler" log -1 --format='%h %s')"
+
+echo ""
+echo "iOS development environment ready"
+echo ""
+echo "Next steps:"
+echo "  bin/run-ios          build and launch in the simulator"
+echo "  bin/run-ios-device   build, install and launch on the iPhone"

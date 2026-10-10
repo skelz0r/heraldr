@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ ! -d "/Applications/Xcode.app" ]; then
+    echo "Xcode not found, run bin/setup-ios"
+    exit 1
+fi
+
+"${PROJECT_DIR}/bin/generate-ios"
+open "${PROJECT_DIR}/ios/Compagnon.xcodeproj"

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IOS_DIR="${PROJECT_DIR}/ios"
+PROJECT_NAME="Compagnon"
+SCHEME="Compagnon"
+SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-iPhone 17 Pro}"
+DERIVED_DATA="${PROJECT_DIR}/build/ios-tests"
+
+"${PROJECT_DIR}/bin/generate-ios"
+
+ONLY_TESTING=()
+if [ -n "${1:-}" ]; then
+    ONLY_TESTING=(-only-testing:"CompagnonTests/$1")
+fi
+
+xcodebuild test \
+    -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
+    -scheme "${SCHEME}" \
+    -destination "platform=iOS Simulator,name=${SIMULATOR}" \
+    -derivedDataPath "${DERIVED_DATA}" \
+    "${ONLY_TESTING[@]}" \
+    -quiet
+
+echo "Running dispatch script tests..."
+"${PROJECT_DIR}/mac/test/dispatch_test.sh"
