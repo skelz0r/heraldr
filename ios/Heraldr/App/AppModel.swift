@@ -200,6 +200,25 @@ final class AppModel {
         await refresh()
     }
 
+    func resend(_ entry: SentRequest) async {
+        await refresh()
+        guard !workspaces.isEmpty else {
+            notice = Notice(kind: .failed, title: "Mac injoignable", detail: "Renvoie la demande une fois les workspaces chargés.")
+            return
+        }
+        guard let workspace = workspaces.first(where: { $0.id == entry.workspaceId }) else {
+            notice = Notice(
+                kind: .failed, title: "\(entry.workspaceLabel) n'existe plus",
+                detail: "Copie le texte depuis l'historique pour l'envoyer ailleurs.")
+            return
+        }
+        do {
+            try await send(entry.text, to: workspace)
+        } catch {
+            notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(workspace.label)", detail: error.localizedDescription)
+        }
+    }
+
     func removeFromHistory(_ id: SentRequest.ID) {
         history.remove(id)
     }

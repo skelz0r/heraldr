@@ -126,6 +126,14 @@ liste les envois gardés (§6), du plus récent au plus ancien :
   échec
 - « Copier » met le texte dans le presse-papier, puis affiche
   « Copié » deux secondes
+- « Renvoyer » ferme la feuille et renvoie le texte tel quel au
+  workspace d'origine, sans passer par l'aperçu : c'est un nouvel envoi
+  (§6), avec sa notice et sa propre entrée. Échecs, en notice :
+  - workspace d'origine absent de herdr : « <label> n'existe plus »,
+    « Copie le texte depuis l'historique pour l'envoyer ailleurs. »
+  - workspaces pas encore chargés : « Mac injoignable », « Renvoie la
+    demande une fois les workspaces chargés. »
+  - envoi refusé : « Échec de l'envoi vers <label> » et la raison
 - balayer une entrée la supprime (« Supprimer »)
 - sans envoi : « Aucun envoi », « Les 20 derniers envois s'afficheront
   ici. »

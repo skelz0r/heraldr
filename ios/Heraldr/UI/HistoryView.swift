@@ -55,6 +55,9 @@ struct HistoryView: View {
                     .lineLimit(3)
             }
             HStack(spacing: 8) {
+                Button("Renvoyer", systemImage: "arrow.clockwise") {
+                    resend(entry)
+                }
                 Button(copiedId == entry.id ? "Copié" : "Copier", systemImage: copiedId == entry.id ? "checkmark" : "doc.on.doc") {
                     copy(entry)
                 }
@@ -64,6 +67,11 @@ struct HistoryView: View {
             .font(.footnote.weight(.semibold))
         }
         .padding(.vertical, 4)
+    }
+
+    private func resend(_ entry: SentRequest) {
+        dismiss()
+        Task { await model.resend(entry) }
     }
 
     private func copy(_ entry: SentRequest) {
