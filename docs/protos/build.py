@@ -12,8 +12,8 @@ import sys
 
 ROOT = pathlib.Path(__file__).parent
 LOGO_SOURCE = ROOT.parent / "branding" / "logo"
-DEFAULT_LOGO = "eventail-v2-b-lames"
-DEFAULT_NAME = "Compagnon"
+DEFAULT_LOGO = "5-voies-dark"
+DEFAULT_NAME = "Heraldr"
 
 TITLE = "Compagnon herdr : quatre directions pour l'écran principal"
 INTRO = """
