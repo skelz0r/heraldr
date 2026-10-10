@@ -181,7 +181,12 @@ l'ouverture échoue ou que l'URL manque.
   - `HerdrClient` : requêtes JSON sur streamlocal, modèles Codable
   - `Dispatch` : enveloppe du prompt, slug, exec du script, historique
     des 20 derniers envois (UserDefaults)
-  - `Voice` : SpeechAnalyzer + nettoyage Foundation Models
+  - `Voice` : SpeechAnalyzer + nettoyage Foundation Models, lexique
+    des corrections de dictée (UserDefaults) ; le vocabulaire passe
+    par `AnalysisContext.contextualStrings`, que seul
+    `DictationTranscriber` exploite aujourd'hui, pas
+    `SpeechTranscriber` : il reste fourni aux deux, le nettoyage
+    porte l'essentiel de la correction
   - `Push` : autorisation, token APNs, tap sur les notifications
   - `UI` : liste, boutons, aperçu
 - Foundation Models indisponible (Apple Intelligence off, modèle pas

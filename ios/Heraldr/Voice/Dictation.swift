@@ -56,13 +56,13 @@ final class Dictation {
         (finalizedText + volatileText).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func start(locale requested: Locale = Locale(identifier: "fr-FR")) async throws {
+    func start(locale requested: Locale = Locale(identifier: "fr-FR"), vocabulary: [String] = []) async throws {
         guard phase == .idle else { return }
         phase = .preparing
         finalizedText = ""
         volatileText = ""
         do {
-            try await begin(locale: requested)
+            try await begin(locale: requested, vocabulary: vocabulary)
         } catch {
             teardown()
             throw error
@@ -91,7 +91,7 @@ final class Dictation {
         teardown()
     }
 
-    private func begin(locale requested: Locale) async throws {
+    private func begin(locale requested: Locale, vocabulary: [String]) async throws {
         guard await AVAudioApplication.requestRecordPermission() else { throw DictationError.microphoneDenied }
 
         let module: any SpeechModule
@@ -133,6 +133,11 @@ final class Dictation {
         }
         let analyzer = SpeechAnalyzer(modules: [module])
         try await Self.step("Démarrage de la transcription") {
+            if !vocabulary.isEmpty {
+                let context = AnalysisContext()
+                context.contextualStrings[.general] = vocabulary
+                try? await analyzer.setContext(context)
+            }
             try await analyzer.prepareToAnalyze(in: analyzerFormat)
             try await analyzer.start(inputSequence: feeder.stream)
         }
