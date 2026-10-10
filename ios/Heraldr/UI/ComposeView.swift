@@ -270,7 +270,7 @@ struct ComposeView: View {
 
     private func startDictation() async {
         do {
-            try await dictation.start()
+            try await dictation.start(vocabulary: lexicon.vocabulary)
         } catch {
             dictationError = error.localizedDescription
         }
@@ -283,7 +283,7 @@ struct ComposeView: View {
             return
         }
         stage = .cleaning(raw: raw)
-        let cleaned = await TranscriptCleaner.clean(raw)
+        let cleaned = await TranscriptCleaner.clean(raw, lexicon: lexicon)
         text = cleaned.text
         origin = .dictated(cleaned)
         stage = .preview

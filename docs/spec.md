@@ -159,6 +159,11 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   Apple Intelligence »), que la dictée est trop longue, ou que le
   résultat fait 40 % ou moins, ou 130 % ou plus, de la longueur brute
   (« nettoyage écarté : il s'éloignait trop de la dictée »)
+- les corrections apprises (§5.2) servent à la dictée suivante : le
+  texte corrigé est fourni à la transcription comme vocabulaire
+  contextuel, et les 20 paires « entendu → voulu » les plus récentes
+  sont ajoutées à la consigne du nettoyage, à appliquer quand le
+  contexte s'y prête ; aucun remplacement automatique dans le texte
 
 ### 5.2 Aperçu
 

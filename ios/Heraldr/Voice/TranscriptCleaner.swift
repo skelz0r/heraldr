@@ -36,7 +36,18 @@ enum TranscriptCleaner {
         Réponds uniquement avec le texte nettoyé, sans guillemets ni préambule.
         """
 
-    static func clean(_ raw: String) async -> CleanedTranscript {
+    static func instructions(correcting lexicon: DictationLexicon) -> String {
+        let lines = lexicon.promptLines
+        guard !lines.isEmpty else { return instructions }
+        return instructions + """
+
+            La dictée mêle français et anglais technique. Erreurs de transcription \
+            déjà corrigées par l'utilisateur (entendu → voulu), à corriger de même \
+            quand le contexte s'y prête :
+            """ + lines.map { "\n- \($0)" }.joined()
+    }
+
+    static func clean(_ raw: String, lexicon: DictationLexicon = DictationLexicon()) async -> CleanedTranscript {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .raw(trimmed, reason: "dictée vide") }
 
@@ -54,7 +65,7 @@ enum TranscriptCleaner {
             return .raw(trimmed, reason: "Apple Intelligence indisponible")
         }
 
-        let session = LanguageModelSession(model: model, instructions: instructions)
+        let session = LanguageModelSession(model: model, instructions: instructions(correcting: lexicon))
         do {
             let response = try await session.respond(
                 to: "Transcription brute :\n\(trimmed)",

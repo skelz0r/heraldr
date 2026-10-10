@@ -94,4 +94,14 @@ struct DictationLexiconTests {
 
         #expect(DictationLexiconStore.load(from: defaults) == lexicon)
     }
+
+    @Test("le nettoyage reçoit les corrections apprises, et rien de plus quand le lexique est vide")
+    func cleanerInstructionsCarryCorrections() {
+        var lexicon = DictationLexicon()
+        #expect(TranscriptCleaner.instructions(correcting: lexicon) == TranscriptCleaner.instructions)
+
+        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+
+        #expect(TranscriptCleaner.instructions(correcting: lexicon).hasSuffix("\n- on push → git push"))
+    }
 }
