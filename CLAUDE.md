@@ -18,12 +18,16 @@ bin/setup-ios                # Xcode, XcodeGen, submodule Heeler
 bin/generate-ios             # ios/project.yml -> .xcodeproj, patches Heeler
 bin/build-ios [simulator|device]
 bin/run-ios                  # simulateur
-bin/run-ios-device [uuid]    # iPhone, signature par clé App Store Connect
+bin/run-ios-device [uuid]    # iPhone, signature par clé App Store Connect, install OTA hors LAN
 bin/run-ios-tests [suite]    # tests de l'app (iPhone 17 Pro), puis bin/run-mac-tests
 bin/run-mac-tests            # dispatch.sh (faux herdr) et hook (faux APNs), sans Xcode
 bin/local-ci                 # tous les contrôles (iOS sauté si diff docs only)
 bin/local-ci push            # contrôles puis push sans CI distante
 ```
+
+L'install sur l'iPhone suit le skill global `ios-device-install`
+(`devicectl` sur le LAN, OTA via Tailscale ailleurs) : en OTA,
+`bin/run-ios-device` affiche l'URL à ouvrir dans Safari sur l'iPhone.
 
 Lancer les commandes longues avec un chemin absolu
 (`$PWD/bin/local-ci push`, `$PWD/bin/run-ios-tests`) : plusieurs
