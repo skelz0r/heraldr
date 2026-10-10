@@ -25,3 +25,6 @@ xcodebuild test \
 
 echo "Running dispatch script tests..."
 "${PROJECT_DIR}/mac/test/dispatch_test.sh"
+
+echo "Running notify hook tests..."
+node --test "${PROJECT_DIR}/mac/test/notify_hook_test.mjs"

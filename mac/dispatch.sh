@@ -8,6 +8,8 @@ STATE_DIR="${HERALDR_STATE_DIR:-$HOME/.local/state/heraldr}"
 JOBS_DIR="$STATE_DIR/jobs"
 LOCKS_DIR="$STATE_DIR/locks"
 SCRIPT_PATH="$STATE_DIR/dispatch.sh"
+PLUGIN_DIR="$STATE_DIR/plugin"
+PUSH_DEVICE_PATH="$STATE_DIR/push-device.json"
 SENT_RETENTION_MINUTES=60
 FAILED_RETENTION_MINUTES=1440
 CLEAR_TIMEOUT_SECONDS=20
@@ -18,7 +20,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | run <agent> | status" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
   exit 2
 }
 
@@ -233,6 +235,36 @@ print_status() {
   done
 }
 
+install_notify_plugin() {
+  mkdir -p "$PLUGIN_DIR"
+  cat > "$PLUGIN_DIR/notify-hook.mjs.tmp" && mv "$PLUGIN_DIR/notify-hook.mjs.tmp" "$PLUGIN_DIR/notify-hook.mjs"
+  cat > "$PLUGIN_DIR/herdr-plugin.toml" <<'MANIFEST'
+id = "heraldr"
+name = "Heraldr"
+version = "0.1.0"
+min_herdr_version = "0.9.3"
+description = "Push Heraldr quand un agent -main attend une réponse"
+platforms = ["macos"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "notify-hook.mjs"]
+MANIFEST
+  herdr plugin list 2>/dev/null | grep -q '^- heraldr ' && return 0
+  linked="$(herdr plugin link "$PLUGIN_DIR" 2>&1)" || { echo "plugin link: $linked" >&2; return 1; }
+}
+
+register_push_device() {
+  printf '%s' "$1" | grep -Eq '^[0-9a-f]{64,200}$' || { echo "invalid token" >&2; exit 2; }
+  case "$2" in sandbox|production) ;; *) echo "invalid environment: $2" >&2; exit 2 ;; esac
+  printf '%s' "$3" | grep -Eq '^[A-Za-z0-9.-]+$' || { echo "invalid topic: $3" >&2; exit 2; }
+  printf '%s' "$4" | grep -Eq '^[A-Z0-9]{10}$' || { echo "invalid team id: $4" >&2; exit 2; }
+  install_notify_plugin || exit 1
+  mkdir -p "$STATE_DIR"
+  printf '{"token":"%s","env":"%s","topic":"%s","team":"%s"}\n' "$1" "$2" "$3" "$4" > "$PUSH_DEVICE_PATH.tmp"
+  mv "$PUSH_DEVICE_PATH.tmp" "$PUSH_DEVICE_PATH"
+}
+
 [ $# -ge 1 ] || fail_usage
 command="$1"
 shift
@@ -241,5 +273,6 @@ case "$command" in
   enqueue) [ $# -eq 3 ] || fail_usage; enqueue_job "$@" ;;
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
+  register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;
   *) fail_usage ;;
 esac

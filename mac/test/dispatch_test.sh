@@ -125,6 +125,18 @@ wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "l'envoi échoue sans rien envoyer" "$(job_states)|$(prompts_of home-main)" "failed |"
 teardown_world
 
+echo "l'iPhone enregistre son token et installe le hook de notification"
+setup_world
+token="$(printf 'ab%.0s' $(seq 32))"
+echo "// hook" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push "$token" sandbox com.skelz0r.heraldr.dev ABCDE12345
+echo "// hook v2" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push "$token" sandbox com.skelz0r.heraldr.dev ABCDE12345
+check "le token, l'environnement APNs, le topic et l'équipe sont retenus" "$(cat "$HERALDR_STATE_DIR/push-device.json")" "{\"token\":\"$token\",\"env\":\"sandbox\",\"topic\":\"com.skelz0r.heraldr.dev\",\"team\":\"ABCDE12345\"}"
+check "le hook est toujours la version envoyée par l'app" "$(cat "$HERALDR_STATE_DIR/plugin/notify-hook.mjs")" "// hook v2"
+check "le plugin herdr n'est lié qu'une fois" "$(cat "$FAKE_HERDR_WORLD/plugin_links")" "plugin link $HERALDR_STATE_DIR/plugin"
+check "un token mal formé est refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push 'abc;rm' sandbox t ABCDE12345 2>&1; echo $?)" "invalid token
+2"
+teardown_world
+
 if [ $failures -gt 0 ]; then
   echo "$failures échec(s)"
   exit 1

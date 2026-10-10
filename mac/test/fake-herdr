@@ -60,6 +60,13 @@ case "$1 $2" in
     echo session-initial > "$world/agents/$name/session"
     agent_json "$name"
     ;;
+  "plugin list")
+    [ -f "$world/plugin_links" ] && printf -- '- heraldr (Heraldr) enabled [local]\n'
+    exit 0
+    ;;
+  "plugin link")
+    printf '%s\n' "$*" >> "$world/plugin_links"
+    ;;
   *)
     echo "fake-herdr: unsupported $*" >&2
     exit 2
