@@ -3,8 +3,8 @@ set -eo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
-PROJECT_NAME="Compagnon"
-SCHEME="Compagnon"
+PROJECT_NAME="Heraldr"
+SCHEME="Heraldr"
 SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-iPhone 17 Pro}"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-tests"
 
@@ -12,7 +12,7 @@ DERIVED_DATA="${PROJECT_DIR}/build/ios-tests"
 
 ONLY_TESTING=()
 if [ -n "${1:-}" ]; then
-    ONLY_TESTING=(-only-testing:"CompagnonTests/$1")
+    ONLY_TESTING=(-only-testing:"HeraldrTests/$1")
 fi
 
 xcodebuild test \

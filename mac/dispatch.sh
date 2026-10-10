@@ -4,7 +4,7 @@ set -u
 PATH="$PATH:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.cargo/bin"
 export PATH
 
-STATE_DIR="${HERDR_COMPAGNON_STATE_DIR:-$HOME/.local/state/herdr-compagnon}"
+STATE_DIR="${HERALDR_STATE_DIR:-$HOME/.local/state/heraldr}"
 JOBS_DIR="$STATE_DIR/jobs"
 LOCKS_DIR="$STATE_DIR/locks"
 SCRIPT_PATH="$STATE_DIR/dispatch.sh"

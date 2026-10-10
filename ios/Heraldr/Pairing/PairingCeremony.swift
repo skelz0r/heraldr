@@ -29,7 +29,7 @@ enum PairingError: Error, LocalizedError {
 }
 
 enum PairingCeremony {
-    static let deviceKeyComment = "herdr-compagnon-ios"
+    static let deviceKeyComment = "heraldr-ios"
     private static let maximumResponseBytes = 1024
 
     static func pair(code rawCode: String, deviceKey: DeviceKey, now: Date = .now) async throws -> PairedMac {
@@ -72,7 +72,7 @@ enum PairingCeremony {
         let response: Data
         do {
             response = try await connection.executeResponseLine(
-                "compagnon-enroll",
+                "heraldr-enroll",
                 input: Data((line + "\n").utf8),
                 maximumResponseBytes: maximumResponseBytes,
                 timeout: .seconds(20))

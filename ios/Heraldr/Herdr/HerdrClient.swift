@@ -90,7 +90,7 @@ struct HerdrClient: Sendable {
     }
 
     private func call<Result: Decodable>(_ method: String) async throws -> Result {
-        let request = "{\"id\":\"compagnon:\(UUID().uuidString)\",\"method\":\"\(method)\",\"params\":{}}\n"
+        let request = "{\"id\":\"heraldr:\(UUID().uuidString)\",\"method\":\"\(method)\",\"params\":{}}\n"
         let response = try await link.exchangeWithHerdr(Data(request.utf8))
         let envelope = try JSONDecoder().decode(HerdrEnvelope<Result>.self, from: response)
         if let error = envelope.error { throw error }

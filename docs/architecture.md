@@ -64,11 +64,11 @@ L'app embarque un script shell versionné (`mac/dispatch.sh`). Chaque
 envoi fait deux exec SSH :
 
 1. `install` : le script est écrit sur stdin dans
-   `~/.local/state/herdr-compagnon/dispatch.sh` (toujours la version de
+   `~/.local/state/heraldr/dispatch.sh` (toujours la version de
    l'app installée)
 2. `enqueue <workspace_id> <agent> <label_base64>` : le prompt enveloppé
    arrive brut sur stdin et devient un job
-   `~/.local/state/herdr-compagnon/jobs/<horodatage>-<id>/`, puis le
+   `~/.local/state/heraldr/jobs/<horodatage>-<id>/`, puis le
    script lance son runner détaché :
    `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
 

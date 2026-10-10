@@ -13,7 +13,7 @@ struct PairingView: View {
             VStack(spacing: 20) {
                 HStack(spacing: 10) {
                     BrandMark(size: 34)
-                    Text("Compagnon").font(.title2.weight(.heavy))
+                    Text("Heraldr").font(.title2.weight(.heavy))
                 }
                 .padding(.top, 12)
 

@@ -8,7 +8,7 @@ failures=0
 setup_world() {
   sandbox="$(mktemp -d)"
   export FAKE_HERDR_WORLD="$sandbox/world"
-  export HERDR_COMPAGNON_STATE_DIR="$sandbox/state"
+  export HERALDR_STATE_DIR="$sandbox/state"
   mkdir -p "$sandbox/bin" "$FAKE_HERDR_WORLD/agents"
   ln -s "$here/fake-herdr" "$sandbox/bin/herdr"
   export PATH="$sandbox/bin:$ORIGINAL_PATH"
@@ -16,7 +16,7 @@ setup_world() {
 }
 
 teardown_world() {
-  pkill -f "$HERDR_COMPAGNON_STATE_DIR/dispatch.sh" 2>/dev/null
+  pkill -f "$HERALDR_STATE_DIR/dispatch.sh" 2>/dev/null
   rm -rf "$sandbox"
 }
 
@@ -36,11 +36,11 @@ prompts_of() {
 }
 
 enqueue() {
-  printf '%s' "$4" | /bin/sh "$HERDR_COMPAGNON_STATE_DIR/dispatch.sh" enqueue "$1" "$2" "$(printf '%s' "$3" | base64)" > /dev/null
+  printf '%s' "$4" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue "$1" "$2" "$(printf '%s' "$3" | base64)" > /dev/null
 }
 
 job_states() {
-  /bin/sh "$HERDR_COMPAGNON_STATE_DIR/dispatch.sh" status | cut -f4 | tr '\n' ' '
+  /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4 | tr '\n' ' '
 }
 
 wait_until() {

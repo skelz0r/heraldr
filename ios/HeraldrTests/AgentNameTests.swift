@@ -1,5 +1,5 @@
 import Testing
-@testable import Compagnon
+@testable import Heraldr
 
 @Suite("Nom de l'agent herdr visé dans un workspace")
 struct AgentNameTests {

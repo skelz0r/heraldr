@@ -9,4 +9,4 @@ if [ ! -d "/Applications/Xcode.app" ]; then
 fi
 
 "${PROJECT_DIR}/bin/generate-ios"
-open "${PROJECT_DIR}/ios/Compagnon.xcodeproj"
+open "${PROJECT_DIR}/ios/Heraldr.xcodeproj"

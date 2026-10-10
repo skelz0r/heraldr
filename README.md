@@ -1,4 +1,4 @@
-# herdr iOS compagnon (nom provisoire)
+# Heraldr
 
 Télécommande de dispatch pour herdr : depuis l'iPhone, envoyer une
 intention (écrite, dictée ou collée) au Claude principal d'un workspace

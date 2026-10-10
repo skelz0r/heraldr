@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension Color {
-    static let compagnonAccent = Color("AccentColor")
+    static let heraldrAccent = Color("AccentColor")
 
     init(light: UInt32, dark: UInt32) {
         self.init(uiColor: UIColor { traits in

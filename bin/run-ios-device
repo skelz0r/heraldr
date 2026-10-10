@@ -3,10 +3,10 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
-PROJECT_NAME="Compagnon"
-SCHEME="Compagnon"
+PROJECT_NAME="Heraldr"
+SCHEME="Heraldr"
 DEVICE_UUID="${1:-${IOS_DEVICE_UUID:-00000000-0000-0000-0000-000000000001}}"
-BUNDLE_ID="com.skelz0r.compagnon.dev"
+BUNDLE_ID="com.skelz0r.heraldr.dev"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-device-run"
 
 if [[ -f "${PROJECT_DIR}/.env.local" ]]; then

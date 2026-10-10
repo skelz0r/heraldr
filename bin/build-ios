@@ -3,8 +3,8 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
-PROJECT_NAME="Compagnon"
-SCHEME="Compagnon"
+PROJECT_NAME="Heraldr"
+SCHEME="Heraldr"
 
 CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "")
 if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then

@@ -3,8 +3,8 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
-PROJECT_NAME="Compagnon"
-SCHEME="Compagnon"
+PROJECT_NAME="Heraldr"
+SCHEME="Heraldr"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-run"
 SIMULATOR="${1:-iPhone 17 Pro}"
 

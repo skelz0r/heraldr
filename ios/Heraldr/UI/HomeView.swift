@@ -121,7 +121,7 @@ struct HomeView: View {
         } label: {
             HStack(spacing: 8) {
                 BrandMark(size: 20)
-                Text("Compagnon").font(.subheadline.weight(.heavy))
+                Text("Heraldr").font(.subheadline.weight(.heavy))
                 Rectangle().fill(.secondary.opacity(0.4)).frame(width: 1, height: 14)
                 StatusDot(status: macStatus, size: 8)
                 Text(macName).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
@@ -255,7 +255,7 @@ struct WorkspaceTile: View {
         }
         .buttonStyle(.plain)
         .glassEffect(
-            isSelected ? .regular.tint(.compagnonAccent).interactive() : .regular.interactive(),
+            isSelected ? .regular.tint(.heraldrAccent).interactive() : .regular.interactive(),
             in: .rect(cornerRadius: 20, style: .continuous))
         .overlay {
             if isSelected {
@@ -279,15 +279,15 @@ struct VoiceOrb: View {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(.compagnonAccent).interactive(), in: .circle)
+        .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
         .background {
             Circle()
                 .stroke(Color.wallBase, lineWidth: 12)
-                .shadow(color: Color.compagnonAccent.opacity(0.5), radius: 24, y: 14)
+                .shadow(color: Color.heraldrAccent.opacity(0.5), radius: 24, y: 14)
         }
         .overlay {
             Circle()
-                .stroke(Color.compagnonAccent.opacity(0.35), lineWidth: 1.5)
+                .stroke(Color.heraldrAccent.opacity(0.35), lineWidth: 1.5)
                 .padding(-14)
                 .allowsHitTesting(false)
         }

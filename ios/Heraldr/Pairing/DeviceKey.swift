@@ -32,7 +32,7 @@ enum SSHFingerprint {
 }
 
 enum DeviceKeyStore {
-    private static let service = "com.skelz0r.compagnon.device-key"
+    private static let service = "com.skelz0r.heraldr.device-key"
     private static let account = "ed25519"
 
     enum StoreError: Error {

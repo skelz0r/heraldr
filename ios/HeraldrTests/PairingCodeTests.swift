@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Compagnon
+@testable import Heraldr
 
 struct PairingCodeVectors: Decodable {
     let valid: [Valid]

@@ -179,7 +179,7 @@ struct ComposeView: View {
 
             Button { choosingTarget = true } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "arrow.right").font(.title3.weight(.heavy)).foregroundStyle(Color.compagnonAccent)
+                    Image(systemName: "arrow.right").font(.title3.weight(.heavy)).foregroundStyle(Color.heraldrAccent)
                     Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1)
                     Spacer()
                     if let target {
@@ -238,7 +238,7 @@ struct ComposeView: View {
                 .contentShape(.capsule)
             }
             .buttonStyle(.plain)
-            .glassEffect(.regular.tint(.compagnonAccent).interactive(), in: .capsule)
+            .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .capsule)
             .disabled(sending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil)
             .opacity(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
@@ -256,7 +256,7 @@ struct ComposeView: View {
                 Label("Collé", systemImage: "doc.on.clipboard")
             case .dictated(.cleaned):
                 Label("Dictée nettoyée", systemImage: "sparkles")
-                Button("Voir l'original") { showingRaw = true }.foregroundStyle(Color.compagnonAccent)
+                Button("Voir l'original") { showingRaw = true }.foregroundStyle(Color.heraldrAccent)
             case .dictated(.raw(_, let reason)):
                 Label("Transcription brute : \(reason)", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(AgentStatus.blocked.color)
@@ -316,7 +316,7 @@ struct LevelWave: View {
                     let phase = sin(time * 6 + Double(index) * 0.7) * 0.5 + 0.5
                     let height = 8 + CGFloat(level) * 56 * CGFloat(0.35 + 0.65 * phase)
                     Capsule()
-                        .fill(Color.compagnonAccent)
+                        .fill(Color.heraldrAccent)
                         .frame(width: 5, height: height)
                 }
             }
@@ -343,7 +343,7 @@ struct TargetPicker: View {
                         Spacer()
                         if !model.pendingJobs(for: workspace).isEmpty { WaitBadge(compact: true) }
                         if workspace.id == selectedId {
-                            Image(systemName: "checkmark").foregroundStyle(Color.compagnonAccent)
+                            Image(systemName: "checkmark").foregroundStyle(Color.heraldrAccent)
                         }
                     }
                     .frame(minHeight: 44)

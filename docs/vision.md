@@ -26,7 +26,7 @@ composer, uploads, diffs, push. Il est déjà installé côté Mac.
 Ce projet ne le remplace pas, il le complète :
 
 - Heeler sert à inspecter et piloter finement
-- le compagnon sert à lancer du travail en quelques secondes, à la voix
+- Heraldr sert à lancer du travail en quelques secondes, à la voix
 
 Les deux cohabitent sur le même Mac en réutilisant le même plugin herdr
 (pairing Heeler) : chaque app enrôle sa propre clé SSH.

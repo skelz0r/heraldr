@@ -30,8 +30,8 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
 struct Dispatcher: Sendable {
     let link: MacLink
 
-    private static let stateDirectory = "\"$HOME/.local/state/herdr-compagnon\""
-    private static let script = "\"$HOME/.local/state/herdr-compagnon/dispatch.sh\""
+    private static let stateDirectory = "\"$HOME/.local/state/heraldr\""
+    private static let script = "\"$HOME/.local/state/heraldr/dispatch.sh\""
 
     static let bundledScript: Data = {
         guard

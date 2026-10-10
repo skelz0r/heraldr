@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CompagnonApp: App {
+struct HeraldrApp: App {
     @State private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -15,7 +15,7 @@ struct CompagnonApp: App {
                 }
             }
             .environment(model)
-            .tint(.compagnonAccent)
+            .tint(.heraldrAccent)
             .task {
                 model.resetTargetToHome()
                 await model.refresh()
