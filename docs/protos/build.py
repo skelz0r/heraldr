@@ -13,7 +13,7 @@ import sys
 ROOT = pathlib.Path(__file__).parent
 LOGO_SOURCE = ROOT.parent / "branding" / "logo"
 DEFAULT_LOGO = "1-eventail"
-DEFAULT_NAME = "Cooee"
+DEFAULT_NAME = "Compagnon"
 
 TITLE = "Compagnon herdr : quatre directions pour l'écran principal"
 INTRO = """
@@ -100,9 +100,17 @@ OPTIONS = {
     "direction-d": {
         "label": "Direction D",
         "title": "Une main, tout en bas",
-        "where": "recommandée",
+        "where": "base de E",
         "scenario": "La moitié haute se lit (la cible en 40 pt, son état), la moitié basse se touche : grille de workspaces à deux colonnes, puis une barre où le bouton voix fait saillie comme un déclencheur photo.",
         "requires": "Une grille et une barre sur mesure, simples. Les noms longs passent sur deux lignes.",
+        "reco": False,
+    },
+    "direction-e": {
+        "label": "Direction E",
+        "title": "D avec l'orbe de B",
+        "where": "retenue, provisoire",
+        "scenario": "La disposition de D (cible en lecture en haut, grille à deux colonnes en bas) avec l'orbe de B à la place du bouton de 128 pt : environ 180 pt, en saillie au-dessus de la barre Écrire / Coller, qui déborde sur la grille.",
+        "requires": "Les mêmes composants que D, un orbe plus grand, et une marge sous la grille pour qu'il ne masque pas la dernière rangée.",
         "reco": True,
     },
 }
@@ -113,48 +121,56 @@ CRITERIA = [
         "direction-b": ("weak", "Non, carrousel : trois ou quatre sur sept"),
         "direction-c": ("good", "Oui, en bord de carte"),
         "direction-d": ("good", "Oui, grille à deux colonnes"),
+        "direction-e": ("good", "Oui, grille à deux colonnes"),
     }),
     ("Force de la sélection", {
         "direction-a": ("good", "Ligne remplie, coche, rappel au-dessus du dock"),
         "direction-b": ("info", "Pastille remplie, nom géant"),
         "direction-c": ("good", "La carte s'ouvre et s'entoure"),
         "direction-d": ("good", "Tuile remplie et nom en 40 pt"),
+        "direction-e": ("good", "Tuile remplie et nom en 40 pt"),
     }),
     ("Dominance de la voix", {
         "direction-a": ("weak", "92 pt dans un dock, l'œil va à la liste"),
         "direction-b": ("good", "224 pt au centre"),
         "direction-c": ("info", "Tuile plus haute, peu plus grande"),
         "direction-d": ("good", "128 pt en saillie"),
+        "direction-e": ("good", "180 pt en saillie, orbe de B"),
     }),
     ("Une main, en marchant", {
         "direction-a": ("info", "Haut de liste hors du pouce"),
         "direction-b": ("weak", "Balayer le carrousel pour changer de cible"),
         "direction-c": ("weak", "Haut de pile hors du pouce"),
         "direction-d": ("good", "Tout ce qui se touche est en bas"),
+        "direction-e": ("good", "Tout ce qui se touche est en bas"),
     }),
     ("Écart au look natif", {
         "direction-a": ("weak", "Proche d'une List iOS"),
         "direction-b": ("good", "Très marqué"),
         "direction-c": ("good", "Très marqué"),
         "direction-d": ("good", "Marqué"),
+        "direction-e": ("good", "Très marqué"),
     }),
     ("Coût SwiftUI", {
         "direction-a": ("good", "List et glassEffect"),
         "direction-b": ("info", "Carrousel et orbe"),
         "direction-c": ("weak", "Pile sur mesure, VoiceOver à refaire"),
         "direction-d": ("info", "LazyVGrid et barre sur mesure"),
+        "direction-e": ("info", "LazyVGrid, barre et orbe"),
     }),
     ("Passage à quinze workspaces", {
         "direction-a": ("good", "Défilement natif"),
         "direction-b": ("weak", "Carrousel interminable"),
         "direction-c": ("weak", "Pile très haute"),
         "direction-d": ("info", "La grille défile sous la zone de lecture"),
+        "direction-e": ("info", "La grille défile, l'orbe en masque un peu le bas"),
     }),
 ]
 
 RECOMMENDATION = """
     <div class="reco-box">
-      <p><b>Recommandation : direction D.</b> C'est la seule qui coche en même temps les trois principes de la vision : utilisable d'une main en marchant, bouton voix dominant, pas un look natif standard. Elle garde l'état des sept workspaces sous les yeux, ce que B sacrifie.</p>
+      <p><b>Retenue pour démarrer : direction E</b>, la disposition de D avec le gros orbe de B. Nom et logo restent provisoires.</p>
+      <p><b>Recommandation initiale : direction D.</b> C'est la seule qui coche en même temps les trois principes de la vision : utilisable d'une main en marchant, bouton voix dominant, pas un look natif standard. Elle garde l'état des sept workspaces sous les yeux, ce que B sacrifie.</p>
       <p>Repli : <b>direction A</b> si le coût doit être minimal ; on peut lui emprunter la zone de lecture de D plus tard. B et C sont plus spectaculaires mais perdent sur la lisibilité des états (B) ou le coût et l'accessibilité (C).</p>
     </div>
 """
@@ -344,7 +360,11 @@ def main_c(selected, hrefs, queued=frozenset(), toast=False, marks=None):
 </div>{toast_queued(marks.get("toast", "")) if toast else ""}"""
 
 
-def main_d(selected, hrefs, queued=frozenset(), toast=False, marks=None):
+def main_e(selected, hrefs, queued=frozenset(), toast=False, marks=None):
+    return main_d(selected, hrefs, queued, toast, marks, orb=True)
+
+
+def main_d(selected, hrefs, queued=frozenset(), toast=False, marks=None, orb=False):
     marks = marks or {}
     tiles = []
     items = state(queued)
@@ -372,14 +392,14 @@ def main_d(selected, hrefs, queued=frozenset(), toast=False, marks=None):
 {f'<div class="st">{wait_badge()}</div>' if target_queued else ""}
 <div class="spacer"></div>
 </div>
-<div class="d-grid">{marks.get("grid", "")}
+<div class="d-grid{" e-grid" if orb else ""}">{marks.get("grid", "")}
 {chr(10).join(tiles)}
 </div>
-<div class="d-bar g">
+<div class="d-bar g{" e-bar" if orb else ""}">
 <a class="d-side" href="{href(hrefs, "write")}">{icon("pencil", 28)}Écrire</a>
 <span></span>
 <a class="d-side" href="{href(hrefs, "paste")}">{icon("clip", 28)}Coller</a>
-<a class="d-voice tint" href="{href(hrefs, "voice")}">{icon("mic", 56, 2)}{marks.get("voice", "")}</a>
+<a class="d-voice tint{" e-orb" if orb else ""}" href="{href(hrefs, "voice")}">{icon("mic", 76 if orb else 56, 1.8 if orb else 2)}{marks.get("voice", "")}</a>
 </div>
 </div>{toast_queued(marks.get("toast", "")) if toast else ""}"""
 
@@ -903,6 +923,32 @@ def direction_d():
     })
 
 
+def direction_e():
+    return walkthrough("direction-e", main_e, {
+        "accueil": ({"voice": m(1, "good"), "row:freebox-delta-vm": m(2, "good"), "read": m(3)}, [
+            ("good", "La voix domine sans quitter le pouce",
+             "L'orbe de B, environ 180 pt, posé en saillie sur la barre : c'est l'élément le plus gros de l'écran et il reste en bas, sous le pouce."),
+            ("good", "Tous les états sous les yeux",
+             "La grille de D est conservée : on voit les sept workspaces, ce que le carrousel de B sacrifiait."),
+            ("info", "Zone haute en lecture seule",
+             "La cible en 40 pt, comme dans D."),
+        ]),
+        "cible": ({f"row:{TARGET}": m(1, "good"), "status": m(2), "row:herdr-plugin-space-agents": m(3, "weak")}, [
+            ("good", "Double signal",
+             "La tuile se remplit et la zone haute change de nom."),
+            ("info", "L'état de la cible est annoncé",
+             "« travaille · l'envoi partira après son travail » avant même d'ouvrir l'aperçu."),
+            ("weak", "L'orbe mord sur la grille",
+             "La dernière rangée garde une marge pour rester lisible ; au-delà d'une dizaine de workspaces, la grille défile derrière l'orbe."),
+        ]),
+        "envoye": ({"toast": m(1), "status": m(2, "good")}, [
+            QUEUED_NOTE,
+            ("good", "Badge dans la tuile et sous la cible",
+             "« en attente » apparaît aux deux endroits."),
+        ]),
+    })
+
+
 # ---------- Index ----------
 
 
@@ -995,7 +1041,7 @@ def check_links():
 if __name__ == "__main__":
     clean()
     copy_logos()
-    for build in (direction_a, direction_b, direction_c, direction_d):
+    for build in (direction_a, direction_b, direction_c, direction_d, direction_e):
         build().write()
     index()
     check_links()

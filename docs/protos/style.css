@@ -347,3 +347,9 @@ footer .in { max-width: 84rem; margin: 0 auto; }
 .launch-ico { width: 132px; height: 132px; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
 .launch-name { font-size: 36px; letter-spacing: -.02em; }
 .launch-sub { color: var(--ink2); font-size: 15px; margin-top: -10px; }
+
+/* Direction E: layout D with the big orb of B */
+.e-grid { padding-bottom: 30px; }
+.e-bar { margin-top: 44px; grid-template-columns: 1fr 196px 1fr; }
+.d-voice.e-orb { width: 180px; height: 180px; bottom: 6px; }
+.d-voice.e-orb::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--accent) 35%, transparent); pointer-events: none; }
