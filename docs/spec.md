@@ -53,7 +53,7 @@ autres restent en secours (LAN puis Tailscale).
 - Mac injoignable avant la première liste : « Mac injoignable », le
   détail, bouton « Réessayer ». Une fois une liste arrivée, l'app garde
   la dernière liste et la cible, seule la pastille du Mac passe en
-  orange. Messages :
+  ambre. Messages :
   - clé hôte différente : « La clé du Mac a changé (…) : refais
     l'appairage »
   - clé de l'iPhone refusée : « Le Mac refuse la clé de cet iPhone :
@@ -61,7 +61,7 @@ autres restent en secours (LAN puis Tailscale).
   - Tailscale SSH a répondu : « Tailscale SSH a répondu à la place du
     sshd du Mac : désactive-le (RunSSH: false) »
 - pastille du Mac en haut (`<user>@<adresse>`, dot : vert en ligne,
-  bleu en connexion, orange injoignable), menu :
+  bleu en connexion, ambre injoignable), menu :
   - « Rafraîchir »
   - « Oublier ce Mac », confirmé par « Oublier et réappairer » ; la
     clé reste autorisée sur le Mac tant qu'elle n'est pas retirée de
@@ -74,8 +74,8 @@ autres restent en secours (LAN puis Tailscale).
 
 Disposition : direction D des [protos](protos/), cible en haut sur
 environ 38 % de l'écran, grille des workspaces dessous qui défile sous
-la cible, orbe voix d'environ 104 pt en saillie au-dessus de la barre
-Écrire / Coller.
+la cible, en bas une goutte voix d'environ 92 pt entre deux ronds
+Écrire et Coller.
 
 ### 4.1 Cible
 
@@ -101,20 +101,22 @@ Un agent du même nom dans un autre workspace ne compte pas.
   colonnes dans l'ordre herdr (`number`)
 - par workspace : label, dot de l'état agrégé (`agent_status` de
   `workspace.list`) :
-  - gris : idle
+  - anneau gris : idle (et état inconnu)
+  - pastille grise : done
   - bleu animé : working
-  - orange : blocked
-  - vert : done
+  - ambre avec halo : blocked
 - badge « en attente » quand un envoi vers ce workspace est en file ou
   en cours
-- tap : le workspace devient la cible (sélection visuelle forte). C'est
-  le seul sens de « focus » : rien ne bouge sur le Mac
+- tap : le workspace devient la cible (verre plus clair, nom en gras,
+  sans couleur). C'est le seul sens de « focus » : rien ne bouge sur
+  le Mac
 
 ### 4.3 Boutons
 
-Écrire, voix (orbe), Coller, désactivés sans cible. Coller avec un
-presse-papier vide : notice d'échec « Presse-papier vide », « Copie
-d'abord le texte à envoyer. »
+Écrire, voix (goutte), Coller, désactivés sans cible. Écrire et
+Coller n'affichent que leur icône, libellée pour VoiceOver. Coller
+avec un presse-papier vide : notice d'échec « Presse-papier vide »,
+« Copie d'abord le texte à envoyer. »
 
 ### 4.4 Historique
 

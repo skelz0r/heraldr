@@ -21,8 +21,6 @@ struct HomeView: View {
     @State private var showingSettings = false
     @State private var targetBottom: CGFloat = 0
 
-    private let orbSize: CGFloat = 104
-    private let barHeight: CGFloat = 92
     private let targetShare: CGFloat = 0.38
     private let gridFadeHeight: CGFloat = 56
 
@@ -143,7 +141,7 @@ struct HomeView: View {
                 BrandMark(size: 20)
                 Text("Heraldr").font(.subheadline.weight(.heavy))
                 Rectangle().fill(.secondary.opacity(0.4)).frame(width: 1, height: 14)
-                StatusDot(status: macStatus, size: 8)
+                macDot
                 Text(macName).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             }
             .padding(.horizontal, 12)
@@ -178,12 +176,13 @@ struct HomeView: View {
         return "\(mac.username)@\(mac.addresses.first ?? "?")"
     }
 
-    private var macStatus: AgentStatus {
+    @ViewBuilder
+    private var macDot: some View {
         switch model.connection {
-        case .online: .done
-        case .connecting: .working
-        case .unreachable: .blocked
-        case .unpaired: .idle
+        case .online: Circle().fill(Color.macOnline).frame(width: 8, height: 8).accessibilityLabel("En ligne")
+        case .connecting: StatusDot(status: .working, size: 8)
+        case .unreachable: StatusDot(status: .blocked, size: 8)
+        case .unpaired: StatusDot(status: .idle, size: 8)
         }
     }
 
@@ -230,35 +229,25 @@ struct HomeView: View {
     }
 
     private var actionBar: some View {
-        ZStack(alignment: .bottom) {
-            HStack(spacing: 0) {
-                sideButton("Écrire", systemImage: "pencil") { open(.write) }
-                Spacer().frame(width: orbSize + 12)
-                sideButton("Coller", systemImage: "doc.on.clipboard") { paste() }
-            }
-            .frame(height: barHeight)
-            .glassEffect(.regular, in: .capsule)
-            .padding(.horizontal, 12)
-
-            VoiceOrb(size: orbSize) { open(.voice) }
-                .padding(.bottom, 10)
+        HStack(spacing: 16) {
+            sideButton("Écrire", systemImage: "pencil") { open(.write) }
+            VoiceDrop { open(.voice) }
+            sideButton("Coller", systemImage: "doc.on.clipboard") { paste() }
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, 8)
         .disabled(model.selectedWorkspace == nil)
     }
 
     private func sideButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 26, weight: .semibold))
-                    .frame(height: 32)
-                Text(title).font(.subheadline.weight(.semibold))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(.rect)
+            Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 54, height: 54)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(title)
     }
 
     private func open(_ source: ComposeRequest.Source) {
@@ -285,12 +274,9 @@ struct WorkspaceTile: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 StatusDot(status: workspace.agentStatus)
-                    .overlay {
-                        if isSelected { Circle().stroke(Color.onAccent, lineWidth: 2).padding(-2) }
-                    }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(workspace.label)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15, weight: isSelected ? .bold : .semibold))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     if isQueued { WaitBadge(compact: true) }
@@ -300,41 +286,39 @@ struct WorkspaceTile: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-            .foregroundStyle(isSelected ? Color.onAccent : Color.primary)
             .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
         .glassEffect(
-            isSelected ? .regular.tint(.heraldrAccent).interactive() : .regular.interactive(),
+            isSelected ? .regular.tint(.selectedGlass).interactive() : .regular.tint(.restingGlass).interactive(),
             in: .rect(cornerRadius: 20, style: .continuous))
-        .overlay {
-            if isSelected {
-                RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.primary, lineWidth: 2.5)
-            }
-        }
+        .shadow(color: isSelected ? .selectedGlow : .clear, radius: 13, y: 6)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
-struct VoiceOrb: View {
-    let size: CGFloat
+struct VoiceDrop: View {
     let action: () -> Void
+    private let size: CGFloat = 92
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "mic.fill")
-                .font(.system(size: size * 0.36, weight: .semibold))
-                .foregroundStyle(Color.onAccent)
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(Color.voiceInk)
+                .shadow(color: Color.voiceGlow.opacity(0.7), radius: 4)
                 .frame(width: size, height: size)
+                .background {
+                    Circle().fill(RadialGradient(
+                        colors: [Color.voiceGlow.opacity(0.55), Color.voiceGlow.opacity(0)],
+                        center: UnitPoint(x: 0.5, y: 1.15),
+                        startRadius: 0,
+                        endRadius: size * 0.78))
+                }
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
-        .background {
-            Circle()
-                .stroke(Color.wallBase, lineWidth: 10)
-                .shadow(color: Color.heraldrAccent.opacity(0.35), radius: 16, y: 8)
-        }
+        .glassEffect(.clear.interactive(), in: .circle)
         .accessibilityLabel("Dicter")
     }
 }

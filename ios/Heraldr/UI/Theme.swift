@@ -2,34 +2,45 @@ import SwiftUI
 
 extension Color {
     static let heraldrAccent = Color("AccentColor")
-    static let onAccent = Color(light: 0xFFFFFF, dark: 0x04241D)
-    static let recording = Color(light: 0xD70015, dark: 0xFF453A)
+    static let onAccent = Color.white
+    static let onStatus = Color(light: 0xFFFFFF, dark: 0x121214)
+    static let macOnline = Color(light: 0x1F8A4C, dark: 0x6EDB8F)
 
-    init(light: UInt32, dark: UInt32) {
+    static let selectedGlass = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.92, darkOpacity: 0.2)
+    static let restingGlass = Color(light: 0x8A8D96, dark: 0x000000, lightOpacity: 0.12, darkOpacity: 0)
+    static let selectedGlow = Color(light: 0x000000, dark: 0xFFFFFF, lightOpacity: 0.1, darkOpacity: 0.1)
+    static let voiceInk = Color(light: 0xC2321A, dark: 0xFF7A5C)
+    static let voiceGlow = Color(light: 0xFF5A3C, dark: 0xFF5A3C)
+
+    init(light: UInt32, dark: UInt32, lightOpacity: CGFloat = 1, darkOpacity: CGFloat = 1) {
         self.init(uiColor: UIColor { traits in
-            let hex = traits.userInterfaceStyle == .dark ? dark : light
+            let isDark = traits.userInterfaceStyle == .dark
+            let hex = isDark ? dark : light
             return UIColor(
                 red: CGFloat((hex >> 16) & 0xFF) / 255,
                 green: CGFloat((hex >> 8) & 0xFF) / 255,
                 blue: CGFloat(hex & 0xFF) / 255,
-                alpha: 1)
+                alpha: isDark ? darkOpacity : lightOpacity)
         })
     }
 
-    static let wallBase = Color(light: 0xEEF3F1, dark: 0x050607)
-    static let wallBlobOne = Color(light: 0xA8EBD9, dark: 0x0E3B32)
-    static let wallBlobTwo = Color(light: 0xC9D6F2, dark: 0x151A2C)
-    static let wallBlobThree = Color(light: 0x9FE0F0, dark: 0x0B2A33)
+    static let wallBase = Color(light: 0xF1F1F3, dark: 0x0B0B0D)
+    static let wallBlobOne = Color(light: 0xD8DAE0, dark: 0x26282E)
+    static let wallBlobTwo = Color(light: 0xE4E7EE, dark: 0x1A1D24)
+    static let wallBlobThree = Color(light: 0xF4D3CB, dark: 0x3A1712)
 }
 
 extension AgentStatus {
     var color: Color {
         switch self {
-        case .idle, .unknown: Color(light: 0x6B7075, dark: 0x8E9399)
-        case .working: Color(light: 0x005FCC, dark: 0x4DA3FF)
-        case .blocked: Color(light: 0xA84F00, dark: 0xFF9F0A)
-        case .done: Color(light: 0x3F8A12, dark: 0x8BD450)
+        case .idle, .unknown, .done: Color(light: 0x6A6C73, dark: 0xD7D8DD)
+        case .working: Color(light: 0x0A63C9, dark: 0x64C8FF)
+        case .blocked: Color(light: 0x8F5400, dark: 0xFFC23D)
         }
+    }
+
+    var isHollow: Bool {
+        self == .idle || self == .unknown
     }
 
     var label: String {
