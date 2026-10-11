@@ -117,8 +117,10 @@ SF Pro, sans police embarquée.
 
 Logo « Voix et voies », source unique dans `docs/branding/logo/` :
 
-- défaut et sombre : `5-voies-dark.svg`
-- teintée : `5-voies-tinted.svg`
+- défaut et sombre : `5-voies-dark.svg`, recoloré pour la palette :
+  onde et voie haute `#FFFFFF`, voie du milieu `#C9CBD1`, voie basse
+  `#FF5A3C`, sur un dégradé graphite `#1A1B1F` → `#08090A`
+- teintée : `5-voies-tinted.svg`, inchangée (niveaux de gris)
 - trait épaissi de 60 à 80 px au rendu, pour rester lisible à 60 px ;
   le tracé n'est pas modifié
 
