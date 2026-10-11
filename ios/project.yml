@@ -34,12 +34,29 @@ targets:
         buildPhase: resources
     dependencies:
       - package: HeelerSSH
+    postBuildScripts:
+      - name: Stamp build version
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        script: |
+          set -e
+          plist="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          commit=$(git -C "${SRCROOT}" rev-parse --short HEAD 2>/dev/null || echo "inconnu")
+          if [ -n "$(git -C "${SRCROOT}" status --porcelain 2>/dev/null)" ]; then
+            commit="${commit}-dirty"
+          fi
+          date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          /usr/libexec/PlistBuddy -c "Set :HeraldrBuildCommit ${commit}" "$plist"
+          /usr/libexec/PlistBuddy -c "Set :HeraldrBuildDate ${date}" "$plist"
     info:
       path: Heraldr/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         HeraldrTeamID: $(DEVELOPMENT_TEAM)
+        HeraldrBuildCommit: ""
+        HeraldrBuildDate: ""
     entitlements:
       path: Heraldr/Heraldr.entitlements
       properties:
@@ -48,6 +65,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.heraldr.dev
         PRODUCT_NAME: Heraldr
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
