@@ -18,18 +18,18 @@ struct HerdrResponseTests {
             """)
 
         #expect(workspaces == [
-            Workspace(id: "wA", number: 1, label: "Home", agentStatus: .done),
-            Workspace(id: "wE", number: 5, label: "Video studio", agentStatus: .working),
+            Workspace(id: "wA", number: 1, label: "Home"),
+            Workspace(id: "wE", number: 5, label: "Video studio"),
         ])
     }
 
     @Test("un état d'agent apparu dans une future version de herdr s'affiche inconnu sans casser la liste")
     func unknownAgentStatus() throws {
-        let workspaces = try decode([Workspace].self, """
-            [{"agent_status":"compacting","label":"Morris","number":2,"workspace_id":"w8"}]
+        let agents = try decode([Agent].self, """
+            [{"agent":"claude","agent_status":"compacting","name":"morris-main","tab_id":"w8:t1","workspace_id":"w8"}]
             """)
 
-        #expect(workspaces.first?.agentStatus == .unknown)
+        #expect(agents.first?.agentStatus == .unknown)
     }
 
     @Test("un Claude lancé à la main, sans nom d'agent, ne casse pas la liste des agents")
@@ -47,9 +47,9 @@ struct HerdrResponseTests {
     @Test("Home, le workspace numéro 1, passe en tête quel que soit son label, puis l'ordre herdr")
     func homeFirst() {
         let ordered = Workspace.ordered([
-            Workspace(id: "w9", number: 3, label: "apistration", agentStatus: .idle),
-            Workspace(id: "w8", number: 2, label: "Morris", agentStatus: .idle),
-            Workspace(id: "wA", number: 1, label: "Home", agentStatus: .idle),
+            Workspace(id: "w9", number: 3, label: "apistration"),
+            Workspace(id: "w8", number: 2, label: "Morris"),
+            Workspace(id: "wA", number: 1, label: "Home"),
         ])
 
         #expect(ordered.map(\.id) == ["wA", "w8", "w9"])

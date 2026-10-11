@@ -4,7 +4,7 @@ import Testing
 
 @Suite("Historique des envois")
 struct SendHistoryTests {
-    private let workspace = Workspace(id: "w1", number: 2, label: "heraldr", agentStatus: .idle)
+    private let workspace = Workspace(id: "w1", number: 2, label: "heraldr")
 
     @Test("on ne garde que les 20 derniers envois, du plus récent au plus ancien")
     func keepsOnlyTheTwentyLatestSends() {

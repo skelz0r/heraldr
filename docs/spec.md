@@ -366,8 +366,8 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 
 ### 8.1 API herdr (`herdr.sock`)
 
-- `workspace.list` : `workspace_id`, `number`, `label`,
-  `agent_status`
+- `workspace.list` : `workspace_id`, `number`, `label` ; son
+  `agent_status`, agrégé sur tous les tabs, n'est pas lu
 - `agent.list` : `name` (absent pour un Claude lancé à la main),
   `workspace_id`, `tab_id`, `agent_status`
 - tolérance : tout autre champ est ignoré, un `agent_status` inconnu

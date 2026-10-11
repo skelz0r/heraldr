@@ -19,7 +19,6 @@ struct Workspace: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let number: Int
     let label: String
-    let agentStatus: AgentStatus
 
     static let homeLabel = "~"
     static let homeNumber = 1
@@ -32,7 +31,6 @@ struct Workspace: Codable, Identifiable, Equatable, Sendable {
         case id = "workspace_id"
         case number
         case label
-        case agentStatus = "agent_status"
     }
 
     static func ordered(_ workspaces: [Workspace]) -> [Workspace] {
