@@ -103,7 +103,7 @@ Un agent du même nom dans un autre workspace ne compte pas.
   même source que la cible (§4.1) ; les autres tabs du workspace n'y
   comptent pas :
   - anneau gris : idle, état inconnu, ou aucun agent `<slug>-main`
-  - pastille grise : done
+  - pastille verte : done
   - bleu animé : working, ou envoi en file ou en cours
   - ambre avec halo : blocked
 - badge « en attente » quand un envoi vers ce workspace est en file ou
