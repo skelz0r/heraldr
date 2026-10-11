@@ -85,7 +85,7 @@ agent `<slug>-main` et ce que fera le prochain envoi :
 
 | État | Titre | Prochain envoi |
 | --- | --- | --- |
-| aucun agent `<slug>-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1. |
+| aucun agent `<slug>-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1, nommé `<slug>-main`. |
 | envoi en file ou en cours vers ce workspace | Envoi en cours… | Un nouvel envoi partira juste après. |
 | `idle` ou `done` | Prêt | Un envoi vide son contexte puis transmet la demande. |
 | `working`, envoi de l'app depuis moins d'une heure | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
@@ -94,6 +94,10 @@ agent `<slug>-main` et ce que fera le prochain envoi :
 | état inconnu de herdr | État inconnu | Un nouvel envoi attendra qu'il soit prêt. |
 
 Un agent du même nom dans un autre workspace ne compte pas.
+
+Le nom `<slug>-main` n'est affiché que tant que l'agent n'existe
+pas : ailleurs, l'app dit « Claude ». Même règle pour la ligne
+d'état de l'aperçu (§5) et les notices après envoi (§6).
 
 ### 4.2 Grille
 
@@ -250,9 +254,9 @@ Notice après l'envoi (5 s, fermée au tap) :
 
 | Agent au moment de l'envoi | Notice |
 | --- | --- |
-| absent | Envoyé à <label> — Le Mac lance <agent> dans le tab 1, puis lui transmet la demande. |
-| `idle` ou `done` | Envoyé à <label> — Le Mac vide le contexte de <agent>, puis lui transmet la demande. |
-| autre, ou envoi déjà en file | En file pour <label> — <agent> est occupé : la demande partira dès qu'il aura fini. |
+| absent | Envoyé à <label> — Le Mac lance Claude dans le tab 1, nommé <agent>, puis lui transmet la demande. |
+| `idle` ou `done` | Envoyé à <label> — Le Mac vide le contexte de Claude, puis lui transmet la demande. |
+| autre, ou envoi déjà en file | En file pour <label> — Claude est occupé : la demande partira dès qu'il aura fini. |
 
 Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
 vers <label> » avec sa raison, une seule fois.

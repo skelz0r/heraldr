@@ -194,7 +194,7 @@ struct ComposeView: View {
 
             if let target {
                 let state = model.targetState(for: target)
-                Label("\(state.headline). \(state.nextSend)", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
+                Label("\(state.headline). \(state.nextSend(to: target))", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
