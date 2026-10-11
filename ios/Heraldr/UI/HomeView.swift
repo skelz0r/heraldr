@@ -19,20 +19,17 @@ struct HomeView: View {
     @State private var confirmingForget = false
     @State private var showingHistory = false
     @State private var showingSettings = false
+    @State private var targetBottom: CGFloat = 0
 
     private let orbSize: CGFloat = 104
     private let barHeight: CGFloat = 92
-    private let gridFadeHeight: CGFloat = 32
+    private let targetShare: CGFloat = 0.38
+    private let gridFadeHeight: CGFloat = 56
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Wallpaper()
-            VStack(spacing: 0) {
-                readArea
-                    .frame(maxHeight: .infinity)
-                workspaceGrid
-                    .frame(maxHeight: .infinity)
-            }
+            workspaceGrid
         }
         .overlay(alignment: .top) {
             if let question = model.unopenedQuestion {
@@ -87,7 +84,7 @@ struct HomeView: View {
                     .tracking(1.2)
                     .foregroundStyle(.secondary)
                 Text(target.label)
-                    .font(.system(size: target.isHome ? 88 : 44, weight: .heavy, design: .rounded))
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
                     .tracking(-1)
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
@@ -114,6 +111,8 @@ struct HomeView: View {
         .padding(.horizontal, 24)
         .padding(.top, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .containerRelativeFrame(.vertical, alignment: .top) { height, _ in height * targetShare }
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { targetBottom = $0 }
     }
 
     @ViewBuilder
@@ -203,16 +202,18 @@ struct HomeView: View {
             .padding(.horizontal, 16)
         }
         .scrollIndicators(.hidden)
-        .contentMargins(.top, gridFadeHeight, for: .scrollContent)
         .mask {
             VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: max(targetBottom - gridFadeHeight, 0))
                 LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
                     .frame(height: gridFadeHeight)
                 Color.black
             }
             .ignoresSafeArea()
         }
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .scrollEdgeEffectStyle(.soft, for: .vertical)
+        .safeAreaBar(edge: .top) { readArea }
         .safeAreaBar(edge: .bottom) { actionBar }
         .refreshable { await model.refresh() }
     }

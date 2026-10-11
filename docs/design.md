@@ -55,7 +55,7 @@ SF Pro, sans police embarquée.
 
 | Élément | Style |
 | --- | --- |
-| Nom de la cible | SF Pro Rounded heavy 44 pt, 88 pt pour Home, tracking -1 |
+| Nom de la cible | SF Pro Rounded heavy 44 pt pour tous, tracking -1 |
 | Libellé « CIBLE » | caption heavy, capitales, tracking 1,2 |
 | État de la cible | callout semibold, puis footnote secondaire |
 | Tuile workspace | 15 pt semibold, deux lignes au plus |
@@ -73,9 +73,12 @@ SF Pro, sans police embarquée.
 - barre Écrire / Coller : capsule de 92 pt de haut, 12 pt des bords
 - grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
   workspace (Home) occupe toute la largeur au-dessus
-- bords de la grille au défilement : fondu sur 32 pt en haut, contre la
-  cible ; en bas, les tuiles passent floutées sous la barre Écrire /
-  Coller (effet de bord `.soft` d'iOS 26)
+- cible : 38 % de la hauteur de l'écran, en `safeAreaBar` du haut de
+  la grille
+- bords de la grille au défilement : effet de bord `.soft` d'iOS 26 en
+  haut et en bas ; en haut, les tuiles s'effacent aussi en fondu sur
+  les 56 derniers points de la cible, pour ne jamais passer derrière
+  son texte
 - tuile : 58 pt de haut minimum, coins de 20 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
 - aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt

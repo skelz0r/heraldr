@@ -72,13 +72,15 @@ autres restent en secours (LAN puis Tailscale).
 
 ## 4. Écran principal
 
-Disposition : direction D des [protos](protos/), cible en grand dans la
-moitié haute, grille des workspaces en bas, orbe voix d'environ 104 pt
-en saillie au-dessus de la barre Écrire / Coller.
+Disposition : direction D des [protos](protos/), cible en haut sur
+environ 38 % de l'écran, grille des workspaces dessous qui défile sous
+la cible, orbe voix d'environ 104 pt en saillie au-dessus de la barre
+Écrire / Coller.
 
 ### 4.1 Cible
 
-« CIBLE », puis le label (plus grand pour Home), puis l'état de son
+« CIBLE », puis le label (même taille pour tous les workspaces), puis
+l'état de son
 agent `<slug>-main` et ce que fera le prochain envoi :
 
 | État | Titre | Prochain envoi |
