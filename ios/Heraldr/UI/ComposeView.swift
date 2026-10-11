@@ -17,6 +17,7 @@ struct ComposeView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var stage: Stage = .preview
     @State private var text = ""
     @State private var origin: Origin = .written
@@ -35,6 +36,10 @@ struct ComposeView: View {
         model.workspaces.first { $0.id == workspaceId }
     }
 
+    private var keepsScreenAwake: Bool {
+        dictation.phase != .idle && scenePhase == .active
+    }
+
     var body: some View {
         ZStack {
             Wallpaper()
@@ -46,6 +51,10 @@ struct ComposeView: View {
         }
         .animation(.smooth, value: stage)
         .onAppear(perform: configure)
+        .onChange(of: keepsScreenAwake, initial: true) { _, awake in
+            UIApplication.shared.isIdleTimerDisabled = awake
+        }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .sheet(isPresented: $choosingTarget) {
             TargetPicker(selectedId: $workspaceId)
                 .presentationDetents([.medium, .large])
