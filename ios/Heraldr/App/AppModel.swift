@@ -34,6 +34,18 @@ final class AppModel {
             }
         }
 
+        static func resolve(
+            for workspace: Workspace, agents: [Agent], jobs: [DispatchJob], lastSentAt: Date?, now: Date
+        ) -> TargetState {
+            if jobs.contains(where: { $0.workspaceId == workspace.id && $0.isPending }) { return .sending }
+            let name = AgentName.forWorkspace(label: workspace.label)
+            guard let agent = agents.first(where: { $0.name == name && $0.workspaceId == workspace.id }) else {
+                return .missing
+            }
+            let recentlySent = lastSentAt.map { now.timeIntervalSince($0) < 3600 } ?? false
+            return .agent(agent.agentStatus, workingOnOurRequest: recentlySent)
+        }
+
         var dotStatus: AgentStatus {
             switch self {
             case .missing: .idle
@@ -80,13 +92,7 @@ final class AppModel {
     }
 
     func targetState(for workspace: Workspace) -> TargetState {
-        if !pendingJobs(for: workspace).isEmpty { return .sending }
-        let name = AgentName.forWorkspace(label: workspace.label)
-        guard let agent = agents.first(where: { $0.name == name && $0.workspaceId == workspace.id }) else {
-            return .missing
-        }
-        let recentlySent = lastSentAt[workspace.id].map { Date.now.timeIntervalSince($0) < 3600 } ?? false
-        return .agent(agent.agentStatus, workingOnOurRequest: recentlySent)
+        .resolve(for: workspace, agents: agents, jobs: jobs, lastSentAt: lastSentAt[workspace.id], now: .now)
     }
 
     func pair(code: String) async throws {

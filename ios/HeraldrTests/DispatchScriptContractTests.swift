@@ -35,15 +35,15 @@ struct DispatchScriptContractTests {
     func relayEnvelopeMatchesApp() throws {
         let script = String(decoding: Dispatcher.bundledScript, as: UTF8.self)
         let heredoc = try #require(script.firstMatch(of: #/standard_envelope\(\) \{\n  cat <<EOF\n(?<body>.*?)\nEOF\n/#.dotMatchesNewlines()))
-        let project = Workspace(id: "w5", number: 5, label: "Video studio", agentStatus: .idle)
+        let project = Workspace(id: "w5", number: 5, label: "Video studio")
 
         #expect(PromptEnvelope.wrap("Ajoute un sous-titre", for: project) == heredoc.body.replacingOccurrences(of: "$1", with: "Ajoute un sous-titre"))
     }
 
     @Test("Home, quel que soit son label, reçoit la consigne qui relaie au projet ; un projet ne la reçoit jamais")
     func homeEnvelope() {
-        let home = Workspace(id: "wA", number: 1, label: "Home", agentStatus: .idle)
-        let project = Workspace(id: "w5", number: 5, label: "Video studio", agentStatus: .idle)
+        let home = Workspace(id: "wA", number: 1, label: "Home")
+        let project = Workspace(id: "w5", number: 5, label: "Video studio")
 
         #expect(PromptEnvelope.wrap("x", for: home).contains("dispatch.sh\" relay"))
         #expect(!PromptEnvelope.wrap("x", for: project).contains("relay"))

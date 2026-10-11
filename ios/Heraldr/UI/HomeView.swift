@@ -220,6 +220,7 @@ struct HomeView: View {
     private func tile(for workspace: Workspace) -> some View {
         WorkspaceTile(
             workspace: workspace,
+            status: model.targetState(for: workspace).dotStatus,
             isSelected: workspace.id == model.selectedWorkspace?.id,
             isQueued: !model.pendingJobs(for: workspace).isEmpty
         ) {
@@ -266,6 +267,7 @@ struct HomeView: View {
 
 struct WorkspaceTile: View {
     let workspace: Workspace
+    let status: AgentStatus
     let isSelected: Bool
     let isQueued: Bool
     let action: () -> Void
@@ -273,7 +275,7 @@ struct WorkspaceTile: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                StatusDot(status: workspace.agentStatus)
+                StatusDot(status: status)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(workspace.label)
                         .font(.system(size: 15, weight: isSelected ? .bold : .semibold))
