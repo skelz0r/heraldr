@@ -182,7 +182,7 @@ struct HomeView: View {
         case .online: Circle().fill(Color.macOnline).frame(width: 8, height: 8).accessibilityLabel("En ligne")
         case .connecting: StatusDot(status: .working, size: 8)
         case .unreachable: StatusDot(status: .blocked, size: 8)
-        case .unpaired: StatusDot(status: .idle, size: 8)
+        case .unpaired: StatusDot(status: .unknown, size: 8)
         }
     }
 

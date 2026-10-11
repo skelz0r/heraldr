@@ -48,7 +48,7 @@ final class AppModel {
 
         var dotStatus: AgentStatus {
             switch self {
-            case .missing: .idle
+            case .missing: .unknown
             case .sending: .working
             case .agent(let status, _): status
             }
