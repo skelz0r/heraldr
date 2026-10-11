@@ -55,10 +55,10 @@ SF Pro, sans police embarquée.
 
 | Élément | Style |
 | --- | --- |
-| Nom de la cible | SF Pro Rounded heavy 44 pt, 88 pt pour Home, tracking -1 |
+| Nom de la cible | SF Pro Rounded heavy 34 pt pour tous, tracking -0,5 |
 | Libellé « CIBLE » | caption heavy, capitales, tracking 1,2 |
 | État de la cible | callout semibold, puis footnote secondaire |
-| Tuile workspace | 15 pt semibold, deux lignes au plus |
+| Tuile workspace | callout semibold, deux lignes au plus, puis l'état en footnote secondaire |
 | Dictée en direct | SF Pro Rounded semibold 26 pt, mots provisoires en secondaire |
 | Aperçu | 19 pt medium |
 
@@ -71,12 +71,14 @@ SF Pro, sans police embarquée.
   rayon 16 pt, décalée de 8 pt vers le bas ; ni anneau ni animation,
   l'anneau tournant puis le halo à cercle fin chargeaient trop l'écran
 - barre Écrire / Coller : capsule de 92 pt de haut, 12 pt des bords
-- grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
-  workspace (Home) occupe toute la largeur au-dessus
-- bords de la grille au défilement : fondu sur 32 pt en haut, contre la
-  cible ; en bas, les tuiles passent floutées sous la barre Écrire /
-  Coller (effet de bord `.soft` d'iOS 26)
-- tuile : 58 pt de haut minimum, coins de 20 pt
+- en-tête cible : environ un quart de l'écran, pilule du Mac comprise,
+  en `safeAreaBar` du haut de la grille, texte posé sur le fond
+- grille : deux colonnes, 10 pt d'écart, 16 pt de marge, Home comme
+  les autres
+- bords de la grille au défilement : les tuiles passent floutées sous
+  l'en-tête et sous la barre Écrire / Coller (effet de bord `.soft`
+  d'iOS 26, en haut comme en bas)
+- tuile : 80 pt de haut minimum, coins de 20 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
 - aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt
 - toute cible tactile fait au moins 44 pt
@@ -86,12 +88,14 @@ SF Pro, sans police embarquée.
 `glassEffect` d'iOS 26, sans matériau imité.
 
 - verre simple `.regular` : barre Écrire / Coller, tuiles, pilule du
-  Mac, bandeau cible et texte de l'aperçu, notices
+  Mac, texte de l'aperçu, notices
 - verre teinté accent : orbe voix, tuile cible, Envoyer
 - verre teinté `recording` : bouton Arrêter
 - `.interactive()` sur tout ce qui se touche
 - pas de verre : le fond (`Wallpaper`, couleurs et flou), le texte
-  courant, les listes système (choix de la cible)
+  courant, l'en-tête cible (texte, pas un contrôle : l'effet de bord
+  du système le détache des tuiles), les listes système (choix de la
+  cible)
 
 ## Icône
 
@@ -110,7 +114,8 @@ affiché dans l'app.
 - pas de `NavigationStack` ni de `List` sur l'accueil : une composition
   pleine page
 - le fond est toujours le dégradé flou, jamais un gris système
-- la cible se lit de loin : nom en très grand, état en une phrase
+- la cible se lit d'un coup d'œil en haut : nom en grand, état en une
+  phrase, sans prendre la place de la grille
 - tout ce qui se touche est dans la moitié basse, utilisable d'une main
 - le bouton voix domine, Écrire et Coller restent secondaires
 - les écrans annexes (choix de cible, transcription originale) peuvent

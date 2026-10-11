@@ -72,13 +72,15 @@ autres restent en secours (LAN puis Tailscale).
 
 ## 4. Écran principal
 
-Disposition : direction D des [protos](protos/), cible en grand dans la
-moitié haute, grille des workspaces en bas, orbe voix d'environ 104 pt
-en saillie au-dessus de la barre Écrire / Coller.
+Disposition : direction D des [protos](protos/), cible en en-tête
+d'environ un quart de l'écran (pilule du Mac comprise), grille des
+workspaces dessous qui défile sous l'en-tête, orbe voix d'environ
+104 pt en saillie au-dessus de la barre Écrire / Coller.
 
 ### 4.1 Cible
 
-« CIBLE », puis le label (plus grand pour Home), puis l'état de son
+« CIBLE », puis le label (même taille pour tous les workspaces, Home
+compris), puis l'état de son
 agent `<slug>-main` et ce que fera le prochain envoi :
 
 | État | Titre | Prochain envoi |
@@ -95,14 +97,15 @@ Un agent du même nom dans un autre workspace ne compte pas.
 
 ### 4.2 Grille
 
-- Home en premier sur toute la largeur, puis les autres sur deux
-  colonnes dans l'ordre herdr (`number`)
-- par workspace : label, dot de l'état agrégé (`agent_status` de
-  `workspace.list`) :
-  - gris : idle
-  - bleu animé : working
-  - orange : blocked
-  - vert : done
+- deux colonnes, Home en premier comme une tuile ordinaire, puis les
+  autres dans l'ordre herdr (`number`)
+- par workspace : label, dot et libellé de l'état agrégé
+  (`agent_status` de `workspace.list`) :
+  - gris, « Inactif » : idle
+  - bleu animé, « Travaille » : working
+  - orange, « Attend une réponse » : blocked
+  - vert, « Terminé » : done
+  - gris, « État inconnu » : état inconnu de herdr
 - badge « en attente » quand un envoi vers ce workspace est en file ou
   en cours
 - tap : le workspace devient la cible (sélection visuelle forte). C'est
