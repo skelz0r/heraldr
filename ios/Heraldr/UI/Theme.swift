@@ -33,15 +33,15 @@ extension Color {
 extension AgentStatus {
     var color: Color {
         switch self {
-        case .idle, .unknown: Color(light: 0x6A6C73, dark: 0xD7D8DD)
-        case .done: Color(light: 0x1F8A4C, dark: 0x6EDB8F)
+        case .unknown: Color(light: 0x6A6C73, dark: 0xD7D8DD)
+        case .idle, .done: Color(light: 0x1F8A4C, dark: 0x6EDB8F)
         case .working: Color(light: 0x0A63C9, dark: 0x64C8FF)
         case .blocked: Color(light: 0x8F5400, dark: 0xFFC23D)
         }
     }
 
     var isHollow: Bool {
-        self == .idle || self == .unknown
+        self == .unknown
     }
 
     var label: String {
@@ -50,7 +50,7 @@ extension AgentStatus {
         case .working: "Travaille"
         case .blocked: "Attend une réponse"
         case .done: "Terminé"
-        case .unknown: "État inconnu"
+        case .unknown: "Non détecté"
         }
     }
 }
