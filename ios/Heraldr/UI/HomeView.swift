@@ -19,9 +19,12 @@ struct HomeView: View {
     @State private var confirmingForget = false
     @State private var showingHistory = false
     @State private var showingSettings = false
+    @State private var targetBottom: CGFloat = 0
 
     private let orbSize: CGFloat = 104
     private let barHeight: CGFloat = 92
+    private let targetShare: CGFloat = 0.38
+    private let gridFadeHeight: CGFloat = 56
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -64,7 +67,7 @@ struct HomeView: View {
         }
     }
 
-    private var targetHeader: some View {
+    private var readArea: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 macPill
@@ -74,18 +77,18 @@ struct HomeView: View {
                     settingsButton
                 }
             }
-            .padding(.bottom, 10)
+            Spacer(minLength: 12)
             if let target = model.selectedWorkspace {
                 Text("CIBLE")
                     .font(.caption.weight(.heavy))
                     .tracking(1.2)
                     .foregroundStyle(.secondary)
                 Text(target.label)
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .tracking(-0.5)
-                    .lineLimit(1)
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .tracking(-1)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.6)
-                    .padding(.top, 2)
+                    .padding(.top, 6)
                     .contentTransition(.opacity)
                 let state = model.targetState(for: target)
                 VStack(alignment: .leading, spacing: 4) {
@@ -97,18 +100,19 @@ struct HomeView: View {
                     Text("\(AgentName.forWorkspace(label: target.label)) · \(state.nextSend)")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
                         .padding(.leading, 18)
                 }
-                .padding(.top, 6)
+                .padding(.top, 10)
             } else {
                 connectionState
             }
+            Spacer(minLength: 12)
         }
         .padding(.horizontal, 24)
         .padding(.top, 8)
-        .padding(.bottom, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .containerRelativeFrame(.vertical, alignment: .top) { height, _ in height * targetShare }
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { targetBottom = $0 }
     }
 
     @ViewBuilder
@@ -185,17 +189,31 @@ struct HomeView: View {
 
     private var workspaceGrid: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(model.workspaces) { workspace in
-                    tile(for: workspace)
+            VStack(spacing: 8) {
+                if let first = model.workspaces.first {
+                    tile(for: first)
+                }
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    ForEach(model.workspaces.dropFirst()) { workspace in
+                        tile(for: workspace)
+                    }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 4)
         }
         .scrollIndicators(.hidden)
+        .mask {
+            VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: max(targetBottom - gridFadeHeight, 0))
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                    .frame(height: gridFadeHeight)
+                Color.black
+            }
+            .ignoresSafeArea()
+        }
         .scrollEdgeEffectStyle(.soft, for: .vertical)
-        .safeAreaBar(edge: .top) { targetHeader }
+        .safeAreaBar(edge: .top) { readArea }
         .safeAreaBar(edge: .bottom) { actionBar }
         .refreshable { await model.refresh() }
     }
@@ -265,27 +283,23 @@ struct WorkspaceTile: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+            HStack(spacing: 10) {
                 StatusDot(status: workspace.agentStatus)
                     .overlay {
                         if isSelected { Circle().stroke(Color.onAccent, lineWidth: 2).padding(-2) }
                     }
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(workspace.label)
-                        .font(.callout.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    Text(workspace.agentStatus.label)
-                        .font(.footnote)
-                        .foregroundStyle(isSelected ? Color.onAccent.opacity(0.8) : Color.secondary)
-                        .lineLimit(1)
-                    if isQueued { WaitBadge(compact: true).padding(.top, 2) }
+                    if isQueued { WaitBadge(compact: true) }
                 }
                 Spacer(minLength: 0)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
             .foregroundStyle(isSelected ? Color.onAccent : Color.primary)
             .contentShape(.rect(cornerRadius: 20))
         }
