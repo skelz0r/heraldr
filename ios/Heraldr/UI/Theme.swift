@@ -68,9 +68,9 @@ extension AppModel.TargetState {
         }
     }
 
-    var nextSend: String {
+    func nextSend(to workspace: Workspace) -> String {
         switch self {
-        case .missing: "Un envoi lancera Claude dans le tab 1."
+        case .missing: "Un envoi lancera Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: workspace.label))."
         case .sending: "Un nouvel envoi partira juste après."
         case .agent(.idle, _), .agent(.done, _): "Un envoi vide son contexte puis transmet la demande."
         case .agent(.working, _): "Un nouvel envoi attendra la fin de son travail."

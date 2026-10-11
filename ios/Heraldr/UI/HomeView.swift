@@ -95,7 +95,7 @@ struct HomeView: View {
                         Text(state.headline)
                             .font(.callout.weight(.semibold))
                     }
-                    Text("\(AgentName.forWorkspace(label: target.label)) · \(state.nextSend)")
+                    Text(state.nextSend(to: target))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 18)

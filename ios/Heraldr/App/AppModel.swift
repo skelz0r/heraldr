@@ -206,14 +206,13 @@ final class AppModel {
             throw error
         }
         lastSentAt[workspace.id] = .now
-        let agent = AgentName.forWorkspace(label: workspace.label)
         switch state {
         case .missing:
-            notice = Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Le Mac lance \(agent) dans le tab 1, puis lui transmet la demande.")
+            notice = Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Le Mac lance Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: workspace.label)), puis lui transmet la demande.")
         case .agent(let status, _) where status.isReady:
-            notice = Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Le Mac vide le contexte de \(agent), puis lui transmet la demande.")
+            notice = Notice(kind: .sent, title: "Envoyé à \(workspace.label)", detail: "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
         default:
-            notice = Notice(kind: .queued, title: "En file pour \(workspace.label)", detail: "\(agent) est occupé : la demande partira dès qu'il aura fini.")
+            notice = Notice(kind: .queued, title: "En file pour \(workspace.label)", detail: "Claude est occupé : la demande partira dès qu'il aura fini.")
         }
         await refresh()
     }
