@@ -54,7 +54,7 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
-                .presentationDetents([.medium])
+                .presentationDetents([.medium, .large])
         }
         .confirmationDialog("Oublier ce Mac ?", isPresented: $confirmingForget, titleVisibility: .visible) {
             Button("Oublier et réappairer", role: .destructive) {
