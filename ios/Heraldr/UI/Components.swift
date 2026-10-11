@@ -31,7 +31,8 @@ struct StatusDot: View {
 
     var body: some View {
         Circle()
-            .fill(status.color)
+            .fill(status.isHollow ? .clear : status.color)
+            .strokeBorder(status.isHollow ? status.color : .clear, lineWidth: size * 0.17)
             .frame(width: size, height: size)
             .background {
                 if status == .working {
@@ -80,7 +81,7 @@ struct NoticeToast: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(Color.onAccent)
+                .foregroundStyle(Color.onStatus)
                 .frame(width: 36, height: 36)
                 .background(color, in: .circle)
             VStack(alignment: .leading, spacing: 2) {
@@ -123,7 +124,7 @@ struct UnopenedQuestionCard: View {
             HStack(spacing: 12) {
                 Image(systemName: "questionmark.bubble.fill")
                     .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(Color.onAccent)
+                    .foregroundStyle(Color.onStatus)
                     .frame(width: 36, height: 36)
                     .background(AgentStatus.blocked.color, in: .circle)
                 VStack(alignment: .leading, spacing: 2) {

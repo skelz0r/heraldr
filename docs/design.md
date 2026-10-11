@@ -5,49 +5,52 @@ Référence du rendu de l'app Heraldr. Les valeurs vivent dans
 
 ## Palette
 
+« Graphite et gueules » : tout est verre neutre, presque monochrome, et
+une seule couleur vive, le vermillon des blasons (« gueules »),
+réservée à la voix. La sélection ne prend pas de couleur, elle prend
+de la lumière.
+
 | Token | Clair | Sombre | Usage |
 | --- | --- | --- | --- |
-| `accent` | `#0E7A66` | `#5FD3BA` | orbe voix, tuile cible, Envoyer, liens, coches |
-| `onAccent` | `#FFFFFF` | `#04241D` | texte et icônes posés sur l'accent ou une pastille d'état |
-| `wallBase` | `#EEF3F1` | `#050607` | fond de tous les écrans |
-| `wallBlobOne` | `#A8EBD9` | `#0E3B32` | tache floue, en haut à gauche |
-| `wallBlobTwo` | `#C9D6F2` | `#151A2C` | tache floue, à droite |
-| `wallBlobThree` | `#9FE0F0` | `#0B2A33` | tache floue, en bas |
-| `recording` | `#D70015` | `#FF453A` | bouton Arrêter de la dictée |
+| `accent` | `#C2321A` | `#FF5A3C` | orbe voix, Envoyer, Arrêter, onde de dictée, flèche de la cible, liens, coches |
+| `onAccent` | `#FFFFFF` | `#FFFFFF` | texte et icônes posés sur l'accent |
+| `selectedGlass` | blanc 92 % | blanc 20 % | teinte du verre de la tuile cible |
+| `restingGlass` | `#8A8D96` à 12 % | aucune | teinte des autres tuiles, pour que la cible ressorte en clair |
+| `selectedGlow` | noir 10 % | blanc 10 % | ombre de la tuile cible |
+| `onStatus` | `#FFFFFF` | `#121214` | icône posée sur une pastille d'état (notices) |
+| `macOnline` | `#1F8A4C` | `#6EDB8F` | dot du Mac en ligne, seul vert de l'app |
+| `wallBase` | `#F1F1F3` | `#0B0B0D` | fond de tous les écrans |
+| `wallBlobOne` | `#D8DAE0` | `#26282E` | tache floue, en haut à gauche |
+| `wallBlobTwo` | `#E4E7EE` | `#1A1D24` | tache floue, à droite |
+| `wallBlobThree` | `#F4D3CB` | `#3A1712` | tache floue, en bas : lueur rouge discrète sous l'orbe |
 
-L'accent vient du logo (`#9FF0DD`, `#5FD3BA`, `#2FA88F`) : `#5FD3BA` tel
-quel en sombre, foncé à `#0E7A66` en clair pour porter du blanc. Le texte
-reste celui du système (`.primary`, `.secondary`).
+Le texte reste celui du système (`.primary`, `.secondary`).
 
 Contrastes (WCAG 2.1) :
 
-- `onAccent` sur `accent` : 5,3:1 en clair, 9,0:1 en sombre (AA texte)
-- `accent` en texte sur `wallBase` : 4,7:1 en clair, 11:1 en sombre
-- les tuiles et l'orbe sont en Liquid Glass teinté : la translucidité
-  rapproche un peu la couleur du fond, d'où des valeurs choisies avec
-  de la marge
+- `accent` en texte sur `wallBase` : 4,9:1 en clair, 6,3:1 en sombre
+- `onAccent` sur `accent` : 5,6:1 en clair, 3,1:1 en sombre ; en
+  sombre, le blanc n'est posé que sur du texte large (Envoyer, title3
+  gras) ou une icône, où 3:1 suffit
+- `onStatus` sur les pastilles d'état : 5,2:1 au moins
 
 ## Couleurs d'état
 
-| État | Clair | Sombre | Sur `wallBase` (clair / sombre) |
-| --- | --- | --- | --- |
-| idle | `#6B7075` | `#8E9399` | 4,5 / 6,5 |
-| working | `#005FCC` | `#4DA3FF` | 5,3 / 7,6 |
-| blocked | `#A84F00` | `#FF9F0A` | 5,0 / 9,8 |
-| done | `#3F8A12` | `#8BD450` | 3,9 / 11,1 |
+| État | Clair | Sombre | Sur `wallBase` (clair / sombre) | Dot |
+| --- | --- | --- | --- | --- |
+| idle, inconnu | `#6A6C73` | `#D7D8DD` | 4,6 / 13,8 | anneau |
+| done | `#6A6C73` | `#D7D8DD` | 4,6 / 13,8 | pastille pleine |
+| working | `#0A63C9` | `#64C8FF` | 5,1 / 10,5 | pastille, anneau qui pulse |
+| blocked | `#8F5400` | `#FFC23D` | 5,4 / 12,2 | pastille, halo fixe |
 
-working, blocked et idle servent aussi de texte (badge « en attente »,
-erreurs) : en clair, ils tiennent 4,5:1. done n'est jamais du texte
-(dot et pastille d'icône seulement) : 3:1 suffit pour un élément
-graphique.
+Le vert sort des états : idle et done mènent tous deux à « Prêt », ils
+partagent le gris « prêt » et ne diffèrent que par la forme (anneau ou
+pastille). Seuls working et blocked prennent une couleur, et rien ne
+leur fait concurrence. La couleur ne porte jamais seule l'information :
+le libellé d'état est écrit sous la cible.
 
-Conflit done / accent : le vert système (teinte 135°) était trop proche
-du vert d'eau (167°). done passe à un vert jaune (97°), soit plus de 70°
-d'écart, et un dot posé sur la tuile cible est toujours cerclé de
-`onAccent`. La couleur ne porte jamais seule l'information : le libellé
-d'état est écrit sous la cible.
-
-working pulse (anneau qui s'élargit), blocked a un halo fixe.
+Notices et historique : envoyé en gris « prêt », en file en bleu
+working, échec en ambre blocked.
 
 ## Typographie
 
@@ -79,7 +82,8 @@ SF Pro, sans police embarquée.
   haut et en bas ; en haut, les tuiles s'effacent aussi en fondu sur
   les 56 derniers points de la cible, pour ne jamais passer derrière
   son texte
-- tuile : 58 pt de haut minimum, coins de 20 pt
+- tuile : 58 pt de haut minimum, coins de 20 pt ; cible en gras, ombre
+  `selectedGlow` de rayon 13 pt décalée de 6 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
 - aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt
 - toute cible tactile fait au moins 44 pt
@@ -88,10 +92,14 @@ SF Pro, sans police embarquée.
 
 `glassEffect` d'iOS 26, sans matériau imité.
 
-- verre simple `.regular` : barre Écrire / Coller, tuiles, pilule du
-  Mac, bandeau cible et texte de l'aperçu, notices
-- verre teinté accent : orbe voix, tuile cible, Envoyer
-- verre teinté `recording` : bouton Arrêter
+- verre simple `.regular` : barre Écrire / Coller, pilule du Mac,
+  bandeau cible et texte de l'aperçu, notices
+- verre teinté `selectedGlass` : tuile cible, plus dense et plus clair
+  que les autres, sans couleur (le segment choisi d'un `Picker`)
+- verre teinté `restingGlass` : autres tuiles
+- verre teinté accent : orbe voix, Envoyer, Arrêter ; Arrêter se
+  distingue de la voix par sa forme (carré d'arrêt sur disque plein),
+  pas par sa couleur
 - `.interactive()` sur tout ce qui se touche
 - pas de verre : le fond (`Wallpaper`, couleurs et flou), le texte
   courant, les listes système (choix de la cible)

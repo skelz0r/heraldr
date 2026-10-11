@@ -143,7 +143,7 @@ struct HomeView: View {
                 BrandMark(size: 20)
                 Text("Heraldr").font(.subheadline.weight(.heavy))
                 Rectangle().fill(.secondary.opacity(0.4)).frame(width: 1, height: 14)
-                StatusDot(status: macStatus, size: 8)
+                macDot
                 Text(macName).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             }
             .padding(.horizontal, 12)
@@ -178,12 +178,13 @@ struct HomeView: View {
         return "\(mac.username)@\(mac.addresses.first ?? "?")"
     }
 
-    private var macStatus: AgentStatus {
+    @ViewBuilder
+    private var macDot: some View {
         switch model.connection {
-        case .online: .done
-        case .connecting: .working
-        case .unreachable: .blocked
-        case .unpaired: .idle
+        case .online: Circle().fill(Color.macOnline).frame(width: 8, height: 8).accessibilityLabel("En ligne")
+        case .connecting: StatusDot(status: .working, size: 8)
+        case .unreachable: StatusDot(status: .blocked, size: 8)
+        case .unpaired: StatusDot(status: .idle, size: 8)
         }
     }
 
@@ -285,12 +286,9 @@ struct WorkspaceTile: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 StatusDot(status: workspace.agentStatus)
-                    .overlay {
-                        if isSelected { Circle().stroke(Color.onAccent, lineWidth: 2).padding(-2) }
-                    }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(workspace.label)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15, weight: isSelected ? .bold : .semibold))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     if isQueued { WaitBadge(compact: true) }
@@ -300,18 +298,13 @@ struct WorkspaceTile: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-            .foregroundStyle(isSelected ? Color.onAccent : Color.primary)
             .contentShape(.rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
         .glassEffect(
-            isSelected ? .regular.tint(.heraldrAccent).interactive() : .regular.interactive(),
+            isSelected ? .regular.tint(.selectedGlass).interactive() : .regular.tint(.restingGlass).interactive(),
             in: .rect(cornerRadius: 20, style: .continuous))
-        .overlay {
-            if isSelected {
-                RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.primary, lineWidth: 2.5)
-            }
-        }
+        .shadow(color: isSelected ? .selectedGlow : .clear, radius: 13, y: 6)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

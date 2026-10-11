@@ -128,7 +128,7 @@ struct ComposeView: View {
                         .frame(width: 112, height: 112)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.tint(.recording).interactive(), in: .circle)
+                .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
                 .disabled(dictation.phase != .recording)
                 .accessibilityLabel("Arrêter la dictée")
 
