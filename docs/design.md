@@ -73,6 +73,9 @@ SF Pro, sans police embarquée.
 - barre Écrire / Coller : capsule de 92 pt de haut, 12 pt des bords
 - grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
   workspace (Home) occupe toute la largeur au-dessus
+- bords de la grille au défilement : fondu sur 32 pt en haut, contre la
+  cible ; en bas, les tuiles passent floutées sous la barre Écrire /
+  Coller (effet de bord `.soft` d'iOS 26)
 - tuile : 58 pt de haut minimum, coins de 20 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
 - aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt

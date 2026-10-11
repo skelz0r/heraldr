@@ -21,6 +21,7 @@ struct HomeView: View {
 
     private let orbSize: CGFloat = 104
     private let barHeight: CGFloat = 92
+    private let gridFadeHeight: CGFloat = 32
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -31,7 +32,6 @@ struct HomeView: View {
                 workspaceGrid
                     .frame(maxHeight: .infinity)
             }
-            actionBar
         }
         .overlay(alignment: .top) {
             if let question = model.unopenedQuestion {
@@ -187,11 +187,19 @@ struct HomeView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 4)
         }
-        .contentMargins(.bottom, orbSize + 40, for: .scrollContent)
         .scrollIndicators(.hidden)
-        .scrollEdgeEffectHidden(true, for: .top)
+        .contentMargins(.top, gridFadeHeight, for: .scrollContent)
+        .mask {
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                    .frame(height: gridFadeHeight)
+                Color.black
+            }
+            .ignoresSafeArea()
+        }
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .safeAreaBar(edge: .bottom) { actionBar }
         .refreshable { await model.refresh() }
     }
 
