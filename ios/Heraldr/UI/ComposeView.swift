@@ -382,7 +382,7 @@ struct TargetPicker: View {
                     dismiss()
                 } label: {
                     HStack(spacing: 12) {
-                        StatusDot(status: workspace.agentStatus)
+                        StatusDot(status: model.targetState(for: workspace).dotStatus)
                         Text(workspace.label).font(.body.weight(.semibold))
                         Spacer()
                         if !model.pendingJobs(for: workspace).isEmpty { WaitBadge(compact: true) }

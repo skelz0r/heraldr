@@ -99,11 +99,12 @@ Un agent du même nom dans un autre workspace ne compte pas.
 
 - Home en premier sur toute la largeur, puis les autres sur deux
   colonnes dans l'ordre herdr (`number`)
-- par workspace : label, dot de l'état agrégé (`agent_status` de
-  `workspace.list`) :
-  - anneau gris : idle (et état inconnu)
+- par workspace : label, dot de l'état de son agent `<slug>-main`, la
+  même source que la cible (§4.1) ; les autres tabs du workspace n'y
+  comptent pas :
+  - anneau gris : idle, état inconnu, ou aucun agent `<slug>-main`
   - pastille grise : done
-  - bleu animé : working
+  - bleu animé : working, ou envoi en file ou en cours
   - ambre avec halo : blocked
 - badge « en attente » quand un envoi vers ce workspace est en file ou
   en cours
@@ -193,7 +194,8 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 
 - en tête « Aperçu » et « Fermer »
 - la cible (« → label »), avec son dot, modifiable par « Changer de
-  cible » (liste des workspaces, badge « en attente »)
+  cible » (liste des workspaces, dot comme dans la grille, badge « en
+  attente »)
 - l'état de la cible et le prochain envoi (§4.1)
 - le texte, éditable, placeholder « Que doit faire l'agent ? » ;
   clavier ouvert pour Écrire, pré-rempli pour Coller et la dictée
