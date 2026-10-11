@@ -18,6 +18,10 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>HeraldrBuildCommit</key>
+	<string></string>
+	<key>HeraldrBuildDate</key>
+	<string></string>
 	<key>HeraldrTeamID</key>
 	<string>$(DEVELOPMENT_TEAM)</string>
 </dict>

@@ -138,6 +138,22 @@ liste les envois gardés (§6), du plus récent au plus ancien :
 - sans envoi : « Aucun envoi », « Les 20 derniers envois s'afficheront
   ici. »
 
+### 4.5 Réglages
+
+Bouton rond engrenage à droite du bouton Historique, « Réglages » pour
+VoiceOver. Il ouvre une feuille « Réglages » (« Fermer ») qui dit quel
+build tourne, sous « Build installé » :
+
+- « Version » : `CFBundleShortVersionString` (0.1.0, jamais incrémentée)
+- « Commit » : SHA court du commit buildé, suffixé `-dirty` si le
+  worktree avait des modifications ; « inconnu » hors dépôt git
+- « Buildé » : date et heure locales du build ; « inconnu » si absente
+
+Commit et date sont écrits dans l'`Info.plist` du `.app` à chaque build
+(`HeraldrBuildCommit`, `HeraldrBuildDate` en ISO 8601 UTC), quel que
+soit le chemin : `bin/` ou Xcode. Rien de plus dans cette feuille
+aujourd'hui.
+
 ## 5. Composer une demande
 
 Les trois boutons mènent au même aperçu, sur la cible du moment.

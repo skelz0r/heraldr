@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var compose: ComposeRequest?
     @State private var confirmingForget = false
     @State private var showingHistory = false
+    @State private var showingSettings = false
 
     private let orbSize: CGFloat = 104
     private let barHeight: CGFloat = 92
@@ -56,6 +57,10 @@ struct HomeView: View {
             HistoryView()
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+                .presentationDetents([.medium])
+        }
         .confirmationDialog("Oublier ce Mac ?", isPresented: $confirmingForget, titleVisibility: .visible) {
             Button("Oublier et réappairer", role: .destructive) {
                 Task { await model.forgetMac() }
@@ -70,7 +75,10 @@ struct HomeView: View {
             HStack {
                 macPill
                 Spacer(minLength: 8)
-                historyButton
+                HStack(spacing: 8) {
+                    historyButton
+                    settingsButton
+                }
             }
             Spacer(minLength: 12)
             if let target = model.selectedWorkspace {
@@ -147,17 +155,23 @@ struct HomeView: View {
     }
 
     private var historyButton: some View {
-        Button {
-            showingHistory = true
-        } label: {
-            Image(systemName: "clock.arrow.circlepath")
+        roundButton("Historique des envois", systemImage: "clock.arrow.circlepath") { showingHistory = true }
+    }
+
+    private var settingsButton: some View {
+        roundButton("Réglages", systemImage: "gearshape") { showingSettings = true }
+    }
+
+    private func roundButton(_ label: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
                 .font(.system(size: 17, weight: .semibold))
                 .frame(width: 38, height: 38)
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .circle)
-        .accessibilityLabel("Historique des envois")
+        .accessibilityLabel(label)
     }
 
     private var macName: String {
