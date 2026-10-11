@@ -21,8 +21,6 @@ struct HomeView: View {
     @State private var showingSettings = false
     @State private var targetBottom: CGFloat = 0
 
-    private let orbSize: CGFloat = 104
-    private let barHeight: CGFloat = 92
     private let targetShare: CGFloat = 0.38
     private let gridFadeHeight: CGFloat = 56
 
@@ -231,35 +229,25 @@ struct HomeView: View {
     }
 
     private var actionBar: some View {
-        ZStack(alignment: .bottom) {
-            HStack(spacing: 0) {
-                sideButton("Écrire", systemImage: "pencil") { open(.write) }
-                Spacer().frame(width: orbSize + 12)
-                sideButton("Coller", systemImage: "doc.on.clipboard") { paste() }
-            }
-            .frame(height: barHeight)
-            .glassEffect(.regular, in: .capsule)
-            .padding(.horizontal, 12)
-
-            VoiceOrb(size: orbSize) { open(.voice) }
-                .padding(.bottom, 10)
+        HStack(spacing: 16) {
+            sideButton("Écrire", systemImage: "pencil") { open(.write) }
+            VoiceDrop { open(.voice) }
+            sideButton("Coller", systemImage: "doc.on.clipboard") { paste() }
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, 8)
         .disabled(model.selectedWorkspace == nil)
     }
 
     private func sideButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 26, weight: .semibold))
-                    .frame(height: 32)
-                Text(title).font(.subheadline.weight(.semibold))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(.rect)
+            Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 54, height: 54)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(title)
     }
 
     private func open(_ source: ComposeRequest.Source) {
@@ -309,25 +297,28 @@ struct WorkspaceTile: View {
     }
 }
 
-struct VoiceOrb: View {
-    let size: CGFloat
+struct VoiceDrop: View {
     let action: () -> Void
+    private let size: CGFloat = 92
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "mic.fill")
-                .font(.system(size: size * 0.36, weight: .semibold))
-                .foregroundStyle(Color.onAccent)
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(Color.voiceInk)
+                .shadow(color: Color.voiceGlow.opacity(0.7), radius: 4)
                 .frame(width: size, height: size)
+                .background {
+                    Circle().fill(RadialGradient(
+                        colors: [Color.voiceGlow.opacity(0.55), Color.voiceGlow.opacity(0)],
+                        center: UnitPoint(x: 0.5, y: 1.15),
+                        startRadius: 0,
+                        endRadius: size * 0.78))
+                }
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
-        .background {
-            Circle()
-                .stroke(Color.wallBase, lineWidth: 10)
-                .shadow(color: Color.heraldrAccent.opacity(0.35), radius: 16, y: 8)
-        }
+        .glassEffect(.clear.interactive(), in: .circle)
         .accessibilityLabel("Dicter")
     }
 }

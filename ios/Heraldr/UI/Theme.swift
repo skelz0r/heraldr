@@ -9,6 +9,8 @@ extension Color {
     static let selectedGlass = Color(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0.92, darkOpacity: 0.2)
     static let restingGlass = Color(light: 0x8A8D96, dark: 0x000000, lightOpacity: 0.12, darkOpacity: 0)
     static let selectedGlow = Color(light: 0x000000, dark: 0xFFFFFF, lightOpacity: 0.1, darkOpacity: 0.1)
+    static let voiceInk = Color(light: 0xC2321A, dark: 0xFF7A5C)
+    static let voiceGlow = Color(light: 0xFF5A3C, dark: 0xFF5A3C)
 
     init(light: UInt32, dark: UInt32, lightOpacity: CGFloat = 1, darkOpacity: CGFloat = 1) {
         self.init(uiColor: UIColor { traits in

@@ -74,8 +74,8 @@ autres restent en secours (LAN puis Tailscale).
 
 Disposition : direction D des [protos](protos/), cible en haut sur
 environ 38 % de l'écran, grille des workspaces dessous qui défile sous
-la cible, orbe voix d'environ 104 pt en saillie au-dessus de la barre
-Écrire / Coller.
+la cible, en bas une goutte voix d'environ 92 pt entre deux ronds
+Écrire et Coller.
 
 ### 4.1 Cible
 
@@ -113,9 +113,10 @@ Un agent du même nom dans un autre workspace ne compte pas.
 
 ### 4.3 Boutons
 
-Écrire, voix (orbe), Coller, désactivés sans cible. Coller avec un
-presse-papier vide : notice d'échec « Presse-papier vide », « Copie
-d'abord le texte à envoyer. »
+Écrire, voix (goutte), Coller, désactivés sans cible. Écrire et
+Coller n'affichent que leur icône, libellée pour VoiceOver. Coller
+avec un presse-papier vide : notice d'échec « Presse-papier vide »,
+« Copie d'abord le texte à envoyer. »
 
 ### 4.4 Historique
 

@@ -12,8 +12,10 @@ de la lumière.
 
 | Token | Clair | Sombre | Usage |
 | --- | --- | --- | --- |
-| `accent` | `#C2321A` | `#FF5A3C` | orbe voix, Envoyer, Arrêter, onde de dictée, flèche de la cible, liens, coches |
+| `accent` | `#C2321A` | `#FF5A3C` | Envoyer, Arrêter, onde de dictée, flèche de la cible, liens, coches |
 | `onAccent` | `#FFFFFF` | `#FFFFFF` | texte et icônes posés sur l'accent |
+| `voiceInk` | `#C2321A` | `#FF7A5C` | micro de la goutte |
+| `voiceGlow` | `#FF5A3C` | `#FF5A3C` | lueur au fond de la goutte, halo du micro |
 | `selectedGlass` | blanc 92 % | blanc 20 % | teinte du verre de la tuile cible |
 | `restingGlass` | `#8A8D96` à 12 % | aucune | teinte des autres tuiles, pour que la cible ressorte en clair |
 | `selectedGlow` | noir 10 % | blanc 10 % | ombre de la tuile cible |
@@ -22,7 +24,7 @@ de la lumière.
 | `wallBase` | `#F1F1F3` | `#0B0B0D` | fond de tous les écrans |
 | `wallBlobOne` | `#D8DAE0` | `#26282E` | tache floue, en haut à gauche |
 | `wallBlobTwo` | `#E4E7EE` | `#1A1D24` | tache floue, à droite |
-| `wallBlobThree` | `#F4D3CB` | `#3A1712` | tache floue, en bas : lueur rouge discrète sous l'orbe |
+| `wallBlobThree` | `#F4D3CB` | `#3A1712` | tache floue, en bas : lueur rouge discrète sous la goutte |
 
 Le texte reste celui du système (`.primary`, `.secondary`).
 
@@ -32,6 +34,7 @@ Contrastes (WCAG 2.1) :
 - `onAccent` sur `accent` : 5,6:1 en clair, 3,1:1 en sombre ; en
   sombre, le blanc n'est posé que sur du texte large (Envoyer, title3
   gras) ou une icône, où 3:1 suffit
+- micro `voiceInk` sur `wallBase` : 4,9:1 en clair, 7,7:1 en sombre
 - `onStatus` sur les pastilles d'état : 5,2:1 au moins
 
 ## Couleurs d'état
@@ -67,13 +70,13 @@ SF Pro, sans police embarquée.
 
 ## Tailles
 
-- orbe voix : 104 pt, en saillie au-dessus de la barre, détaché par
-  10 pt de `wallBase` ; fixé à 180 puis 128 pt, réduit car il masquait
-  la grille
-- sous l'orbe, une ombre douce de l'accent, fixe : opacité 0,35,
-  rayon 16 pt, décalée de 8 pt vers le bas ; ni anneau ni animation,
-  l'anneau tournant puis le halo à cercle fin chargeaient trop l'écran
-- barre Écrire / Coller : capsule de 92 pt de haut, 12 pt des bords
+- goutte voix : 92 pt, au centre de la barre du bas, entre deux ronds
+  de verre de 54 pt (Écrire, Coller), 16 pt d'écart ; icônes seules,
+  libellés pour VoiceOver. Avant : orbe de 104 pt en saillie sur une
+  capsule de 92 pt, détaché par un anneau de `wallBase`
+- micro de la goutte : 30 pt medium ; lueur radiale `voiceGlow` de 55 %
+  à 0, centrée sous le bas de la goutte (115 % de sa hauteur), rayon
+  72 pt
 - grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
   workspace (Home) occupe toute la largeur au-dessus
 - cible : 38 % de la hauteur de l'écran, en `safeAreaBar` du haut de
@@ -81,7 +84,8 @@ SF Pro, sans police embarquée.
 - bords de la grille au défilement : effet de bord `.soft` d'iOS 26 en
   haut et en bas ; en haut, les tuiles s'effacent aussi en fondu sur
   les 56 derniers points de la cible, pour ne jamais passer derrière
-  son texte
+  son texte ; en bas, elles passent floutées sous la goutte et les
+  ronds
 - tuile : 58 pt de haut minimum, coins de 20 pt ; cible en gras, ombre
   `selectedGlow` de rayon 13 pt décalée de 6 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
@@ -92,17 +96,22 @@ SF Pro, sans police embarquée.
 
 `glassEffect` d'iOS 26, sans matériau imité.
 
-- verre simple `.regular` : barre Écrire / Coller, pilule du Mac,
+- verre simple `.regular` : ronds Écrire et Coller, pilule du Mac,
   bandeau cible et texte de l'aperçu, notices
+- verre clair `.clear` : goutte voix, sans teinte ni anneau ; la couleur
+  n'est que dans la lueur au fond et le micro
 - verre teinté `selectedGlass` : tuile cible, plus dense et plus clair
   que les autres, sans couleur (le segment choisi d'un `Picker`)
 - verre teinté `restingGlass` : autres tuiles
-- verre teinté accent : orbe voix, Envoyer, Arrêter ; Arrêter se
-  distingue de la voix par sa forme (carré d'arrêt sur disque plein),
-  pas par sa couleur
+- verre teinté accent : Envoyer, Arrêter ; Arrêter se distingue de la
+  voix par sa forme (carré d'arrêt sur disque plein), pas par sa
+  couleur
 - `.interactive()` sur tout ce qui se touche
 - pas de verre : le fond (`Wallpaper`, couleurs et flou), le texte
   courant, les listes système (choix de la cible)
+- Réduire la transparence : le système rend le verre opaque ; la
+  lueur et le micro de la goutte, posés dessus, restent colorés et
+  la gardent repérable. Contraste augmenté : bordures du système
 
 ## Icône
 
