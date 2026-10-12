@@ -137,8 +137,11 @@ liste les envois gardés (§6), du plus récent au plus ancien :
   (Envoi…, En file, Envoyé, Échec)
 - le texte, sur quatre lignes au plus ; la raison sous un envoi en
   échec, dans le rouge de « Échec »
+- deux actions en icônes seules, grises et sans fond, dans l'en-tête
+  de l'entrée juste avant la pastille ; VoiceOver lit leur nom
 - « Copier » met le texte dans le presse-papier, puis affiche
-  « Copié » deux secondes
+  « Copié » deux secondes : l'icône devient une coche dans la couleur
+  d'accent
 - « Renvoyer » ferme la feuille et renvoie le texte tel quel au
   workspace d'origine, sans passer par l'aperçu : c'est un nouvel envoi
   (§6), avec sa notice et sa propre entrée. Échecs, en notice :
