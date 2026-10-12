@@ -25,7 +25,7 @@ already cover. A defect found is first reproduced in a test (fake Mac,
 ## Network (Mac/, Pairing/)
 
 - [ ] Wi-Fi off, Tailscale on: the app reaches the Mac through
-  Tailscale. Tailscale off too: orange dot, list kept; once the network
+  Tailscale. Tailscale off too: amber dot, list kept; once the network
   is back, "Refresh" turns it green again.
 - [ ] "Forget this Mac", then pair by scanning the QR code from
   `heeler.pair`: back on the main screen, Home as target.
@@ -35,7 +35,7 @@ already cover. A defect found is first reproduced in a test (fake Mac,
 ## Dictation (Voice/, UI/ComposeView.swift)
 
 - [ ] Dictate a request with hesitations: "Dictation cleaned up",
-  "Show original" shows the raw transcription.
+  "See original" shows the raw transcript.
 - [ ] Dictate longer than auto-lock: the screen stays on, then locks
   after the usual delay once stopped.
 - [ ] With Spotify playing, dictate then stop: the music pauses while

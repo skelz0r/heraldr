@@ -53,7 +53,7 @@ never carries the information alone: the status label is written under
 the target.
 
 Notices and history: sent in "ready" grey, queued in working blue,
-failed in blocked amber.
+failed in red (`#D70015`, `#FF453A` in dark).
 
 ## Typography
 
