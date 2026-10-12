@@ -58,14 +58,15 @@ struct DictationLexicon: Codable, Equatable, Sendable {
             var start = 0
             while start + heard.count <= tokens.count {
                 let window = start..<start + heard.count
-                let matches = window.allSatisfy { !consumed[$0] && tokens[$0].key == heard[$0 - start] }
+                let matches =
+                    window.allSatisfy { !consumed[$0] && tokens[$0].key == heard[$0 - start] }
                     && window.dropLast().allSatisfy { text[tokens[$0].range.upperBound..<tokens[$0 + 1].range.lowerBound].allSatisfy(\.isWhitespace) }
                 guard matches else {
                     start += 1
                     continue
                 }
                 replacements.append((tokens[window.lowerBound].range.lowerBound..<tokens[window.upperBound - 1].range.upperBound, term))
-                window.forEach { consumed[$0] = true }
+                for index in window { consumed[index] = true }
                 start = window.upperBound
             }
         }
@@ -90,7 +91,8 @@ struct DictationLexicon: Codable, Equatable, Sendable {
 
     func hints(for text: String) -> [(heard: String, term: String)] {
         let present = Set(Self.tokens(in: text).map(\.key))
-        return terms
+        return
+            terms
             .flatMap { term in term.variants.map { (variant: $0, term: term.text) } }
             .filter { !Self.isReplaced($0.variant) && present.contains(Self.key($0.variant.heard)) }
             .sorted { ($0.variant.count, $0.variant.updatedAt) > ($1.variant.count, $1.variant.updatedAt) }
@@ -174,7 +176,8 @@ struct DictationLexicon: Codable, Equatable, Sendable {
             variant.count = known.count + 1
             variant.source = known.source
         }
-        let term = terms.first { $0.id == Self.key(meant) }
+        let term =
+            terms.first { $0.id == Self.key(meant) }
             ?? DictationTerm(text: meant, source: .learned, variants: [], updatedAt: date)
         let others = term.variants.filter { Self.key($0.heard) != Self.key(heard) }
         place(DictationTerm(text: term.text, source: term.source, variants: [variant] + others, updatedAt: date))
@@ -196,12 +199,14 @@ struct DictationLexicon: Codable, Equatable, Sendable {
 
     private mutating func place(_ term: DictationTerm) {
         let claimed = Set(term.variants.map { Self.key($0.heard) })
-        terms = [term] + terms.compactMap { other in
-            guard other.id != term.id else { return nil }
-            var kept = other
-            kept.variants.removeAll { claimed.contains(Self.key($0.heard)) }
-            return kept.variants.isEmpty && kept.source == .learned ? nil : kept
-        }
+        terms =
+            [term]
+            + terms.compactMap { other in
+                guard other.id != term.id else { return nil }
+                var kept = other
+                kept.variants.removeAll { claimed.contains(Self.key($0.heard)) }
+                return kept.variants.isEmpty && kept.source == .learned ? nil : kept
+            }
         terms = Array(terms.prefix(Self.capacity))
     }
 
@@ -216,7 +221,8 @@ struct DictationLexicon: Codable, Equatable, Sendable {
                 (1...maxWords).contains(hunk.before.count),
                 (1...maxWords).contains(hunk.after.count)
             else { return nil }
-            let (heard, meant) = hunk.before.count == 1 && hunk.after.count == 1
+            let (heard, meant) =
+                hunk.before.count == 1 && hunk.after.count == 1
                 ? withNeighbour(hunk, before: before.count) : hunk
             return (before[heard].joined(separator: " "), after[meant].joined(separator: " "))
         }

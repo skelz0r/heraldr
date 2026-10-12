@@ -133,7 +133,11 @@ struct HomeView: View {
         .padding(.top, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .containerRelativeFrame(.vertical, alignment: .top) { height, _ in height * targetShare }
-        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { targetBottom = $0 }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.frame(in: .global).maxY
+        } action: {
+            targetBottom = $0
+        }
     }
 
     @ViewBuilder
@@ -352,7 +356,8 @@ struct WorkspaceTile: View {
         .buttonStyle(.plain)
         .glassEffect(
             isSelected ? .regular.tint(.selectedGlass).interactive() : .regular.tint(.restingGlass).interactive(),
-            in: .rect(cornerRadius: 20, style: .continuous))
+            in: .rect(cornerRadius: 20, style: .continuous)
+        )
         .shadow(color: isSelected ? .selectedGlow : .clear, radius: 13, y: 6)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -370,11 +375,12 @@ struct VoiceDrop: View {
                 .shadow(color: Color.voiceGlow.opacity(0.7), radius: 4)
                 .frame(width: size, height: size)
                 .background {
-                    Circle().fill(RadialGradient(
-                        colors: [Color.voiceGlow.opacity(0.55), Color.voiceGlow.opacity(0)],
-                        center: UnitPoint(x: 0.5, y: 1.15),
-                        startRadius: 0,
-                        endRadius: size * 0.78))
+                    Circle().fill(
+                        RadialGradient(
+                            colors: [Color.voiceGlow.opacity(0.55), Color.voiceGlow.opacity(0)],
+                            center: UnitPoint(x: 0.5, y: 1.15),
+                            startRadius: 0,
+                            endRadius: size * 0.78))
                 }
                 .contentShape(.circle)
         }

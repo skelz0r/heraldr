@@ -16,9 +16,9 @@ struct PushDevice: Sendable, Equatable {
         self.topic = topic
         self.teamId = teamId
         #if DEBUG
-        environment = "sandbox"
+            environment = "sandbox"
         #else
-        environment = "production"
+            environment = "production"
         #endif
     }
 }
@@ -95,11 +95,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         model?.notice = AppModel.Notice(kind: .failed, title: "Notifications indisponibles", detail: error.localizedDescription)
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
         completionHandler([.banner, .list, .sound])
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping @Sendable () -> Void) {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+    ) {
         let tap = NotificationTap(userInfo: response.notification.request.content.userInfo)
         Task { @MainActor in
             if let tap { received(tap) }

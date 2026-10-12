@@ -116,9 +116,10 @@ enum TranscriptCleaner {
                 replaced: corrected,
                 replacements: before.applied + after,
                 hints: hints.map { hint in
-                    let applied = reply.map {
-                        !DictationLexicon.contains(hint.heard, in: $0) && DictationLexicon.contains(hint.term, in: $0)
-                    } ?? false
+                    let applied =
+                        reply.map {
+                            !DictationLexicon.contains(hint.heard, in: $0) && DictationLexicon.contains(hint.term, in: $0)
+                        } ?? false
                     return CleaningTrace.Hint(heard: hint.heard, term: hint.term, applied: applied)
                 })
         }

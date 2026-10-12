@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @MainActor
@@ -81,9 +82,10 @@ struct SendNoticeTests {
 
     @Test("vers un agent qui travaille, qui est bloqué ou qui a déjà un envoi en file : en file")
     func busyAgent() async throws {
-        let session = await Session(world(
-            agents: [main("acme-main", in: "wS", "blocked"), main("home-main", in: "wA", "idle")],
-            jobs: [.init(id: "j1", workspaceId: "wA", agent: "home-main", state: "queued")]))
+        let session = await Session(
+            world(
+                agents: [main("acme-main", in: "wS", "blocked"), main("home-main", in: "wA", "idle")],
+                jobs: [.init(id: "j1", workspaceId: "wA", agent: "home-main", state: "queued")]))
 
         try await session.model.send("Après ta question", to: Target(session.workspace("wS")))
         #expect(session.model.notice?.kind == .queued)
@@ -107,9 +109,10 @@ struct SendNoticeTests {
         await session.model.refresh()
         try await session.model.send("Repars de zéro", to: target, clearingContext: true)
         #expect(session.model.notice?.detail == "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
-        #expect(await session.mac.commands.filter { $0.hasPrefix("enqueue-pane") } == [
-            "enqueue-pane wS wS:p9 keep", "enqueue-pane wS wS:p9 clear",
-        ])
+        #expect(
+            await session.mac.commands.filter { $0.hasPrefix("enqueue-pane") } == [
+                "enqueue-pane wS wS:p9 keep", "enqueue-pane wS wS:p9 clear",
+            ])
     }
 }
 
@@ -197,7 +200,10 @@ struct SendImagesTests {
         let commands = await session.mac.commands.filter { $0.hasPrefix("attach") || $0.hasPrefix("enqueue") }
         #expect(commands == ["attach jpg", "attach jpg", "enqueue wS acme-main U3VwZXJEb2N1"])
         let prompt = try #require(await session.mac.prompts.first)
-        #expect(prompt.contains("Le bouton déborde\n\nCaptures d'écran jointes, à lire avec Read :\n- /Users/moi/.local/state/heraldr/attachments/capture-101.jpg\n- /Users/moi/.local/state/heraldr/attachments/capture-102.jpg"))
+        #expect(
+            prompt.contains(
+                "Le bouton déborde\n\nCaptures d'écran jointes, à lire avec Read :\n- /Users/moi/.local/state/heraldr/attachments/capture-101.jpg\n- /Users/moi/.local/state/heraldr/attachments/capture-102.jpg"
+            ))
         #expect(session.model.history.entries.first?.attachments?.count == 2)
     }
 
@@ -265,10 +271,11 @@ struct RefreshTests {
 
     @Test("un agent sans tab_id ni workspace_id n'empêche pas de lire les autres")
     func agentWithoutTab() async throws {
-        let session = await Session(world(agents: [
-            .init(name: "orphelin-main", kind: "claude", paneId: nil, workspaceId: nil, tabId: nil, status: "idle"),
-            main("acme-main", in: "wS", "blocked"),
-        ]))
+        let session = await Session(
+            world(agents: [
+                .init(name: "orphelin-main", kind: "claude", paneId: nil, workspaceId: nil, tabId: nil, status: "idle"),
+                main("acme-main", in: "wS", "blocked"),
+            ]))
 
         #expect(session.model.connection == .online)
         #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.blocked, workingOnOurRequest: false))
@@ -308,8 +315,9 @@ struct WorkingOnOurRequestTests {
 
     @Test("un envoi en échec ne compte pas comme une demande en cours")
     func failedSendDoesNotCount() async throws {
-        let session = await Session(world(
-            agents: [main("acme-main", in: "wS", "working")], failures: ["enqueue": "refusé"]))
+        let session = await Session(
+            world(
+                agents: [main("acme-main", in: "wS", "working")], failures: ["enqueue": "refusé"]))
 
         _ = try? await session.model.send("Corrige le bug", to: Target(session.workspace("wS")))
 
@@ -330,9 +338,10 @@ struct ResendTests {
 
         await session.model.resend(entry)
 
-        #expect(await session.mac.commands.filter { $0.hasPrefix("enqueue-pane") || $0.hasPrefix("attach") } == [
-            "attach jpg", "enqueue-pane wS wS:p9 clear", "enqueue-pane wS wS:p9 clear",
-        ])
+        #expect(
+            await session.mac.commands.filter { $0.hasPrefix("enqueue-pane") || $0.hasPrefix("attach") } == [
+                "attach jpg", "enqueue-pane wS wS:p9 clear", "enqueue-pane wS wS:p9 clear",
+            ])
         #expect(session.model.history.entries.count == 2)
         #expect(session.model.history.entries.first?.attachments == entry.attachments)
     }
@@ -355,8 +364,10 @@ struct ResendTests {
     func resendWhileUnreachable() async throws {
         var scenario = world()
         scenario.unreachable = "délai dépassé"
-        scenario.history = [SentRequest(
-            id: UUID(), text: "Demande", workspaceId: "wS", workspaceLabel: "Acme", createdAt: .now, status: .sent)]
+        scenario.history = [
+            SentRequest(
+                id: UUID(), text: "Demande", workspaceId: "wS", workspaceLabel: "Acme", createdAt: .now, status: .sent)
+        ]
         let session = await Session(scenario)
         let entry = try #require(session.model.history.entries.first)
 
@@ -390,7 +401,8 @@ struct ConnectionTests {
 
         #expect(session.model.workspaces.count == 3)
         #expect(session.model.selectedTarget?.workspace.id == "wM")
-        if case .unreachable = session.model.connection {} else {
+        if case .unreachable = session.model.connection {
+        } else {
             Issue.record("connexion \(session.model.connection) au lieu d'injoignable")
         }
     }
@@ -398,9 +410,10 @@ struct ConnectionTests {
     @Test("au tap sur une question, son workspace devient la cible ; sans lien ouvert, la carte le propose")
     func questionTap() async throws {
         let session = await Session(world())
-        let question = try #require(QuestionNotification(userInfo: [
-            "workspace_id": "wM", "agent": "vid-o-studio-main", "session_url": "https://claude.ai/code/session_01",
-        ]))
+        let question = try #require(
+            QuestionNotification(userInfo: [
+                "workspace_id": "wM", "agent": "vid-o-studio-main", "session_url": "https://claude.ai/code/session_01",
+            ]))
 
         await session.model.open(question)
 

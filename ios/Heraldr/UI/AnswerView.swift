@@ -8,7 +8,8 @@ struct AnswerSheet: View {
         NavigationStack {
             AnswerContent(
                 question: presented.question, answer: presented.answer, loading: presented.loading,
-                failure: presented.failure)
+                failure: presented.failure
+            )
             .navigationTitle(presented.targetLabel)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

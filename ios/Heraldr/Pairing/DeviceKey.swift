@@ -76,8 +76,8 @@ enum DeviceKeyStore {
     }
 }
 
-private extension Data {
-    mutating func appendSSHString(_ bytes: Data) {
+extension Data {
+    fileprivate mutating func appendSSHString(_ bytes: Data) {
         var length = UInt32(bytes.count).bigEndian
         Swift.withUnsafeBytes(of: &length) { append(contentsOf: $0) }
         append(bytes)

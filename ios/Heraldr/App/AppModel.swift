@@ -255,7 +255,8 @@ final class AppModel {
 
     func open(_ notification: AnswerNotification) async {
         let entry = history.entry(forJob: notification.jobId)
-        let label = entry?.targetLabel
+        let label =
+            entry?.targetLabel
             ?? workspaces.first { $0.id == notification.workspaceId }?.label
             ?? notification.workspaceId
         presentedAnswer = PresentedAnswer(
@@ -346,12 +347,13 @@ final class AppModel {
                 attachments.append(try await dispatcher.upload(image))
                 history.attach(entryId, paths: attachments)
             }
-            let jobId = if let paneId {
-                try await dispatcher.send(
-                    text, attachments: attachments, toPane: paneId, in: workspace, clearingContext: clearingContext)
-            } else {
-                try await dispatcher.send(text, attachments: attachments, to: workspace)
-            }
+            let jobId =
+                if let paneId {
+                    try await dispatcher.send(
+                        text, attachments: attachments, toPane: paneId, in: workspace, clearingContext: clearingContext)
+                } else {
+                    try await dispatcher.send(text, attachments: attachments, to: workspace)
+                }
             history.accept(entryId, jobId: jobId)
         } catch {
             history.fail(entryId, error: error.localizedDescription)
@@ -365,7 +367,9 @@ final class AppModel {
         let label = target.tab == nil ? target.workspace.label : target.label
         switch state {
         case .missing:
-            return Notice(kind: .sent, title: "Envoyé à \(label)", detail: "Le Mac lance Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label)), puis lui transmet la demande.")
+            return Notice(
+                kind: .sent, title: "Envoyé à \(label)",
+                detail: "Le Mac lance Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label)), puis lui transmet la demande.")
         case .agent(let status, _) where status.isReady && (target.tab == nil || clearingContext):
             return Notice(kind: .sent, title: "Envoyé à \(label)", detail: "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
         case .agent(let status, _) where status.isReady:

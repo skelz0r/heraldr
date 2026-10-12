@@ -202,7 +202,9 @@ struct ComposeView: View {
     private var previewStage: some View {
         VStack(spacing: 14) {
             HStack {
-                Button { dismiss() } label: {
+                Button {
+                    dismiss()
+                } label: {
                     Image(systemName: "xmark").font(.system(size: 18, weight: .bold)).frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
@@ -215,7 +217,9 @@ struct ComposeView: View {
                 Color.clear.frame(width: 44, height: 44)
             }
 
-            Button { choosingTarget = true } label: {
+            Button {
+                choosingTarget = true
+            } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.right").font(.title3.weight(.heavy)).foregroundStyle(Color.heraldrAccent)
                     Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1).minimumScaleFactor(0.7)
@@ -234,11 +238,14 @@ struct ComposeView: View {
 
             if let target {
                 let state = model.targetState(for: target)
-                Label("\(state.headline). \(state.nextSend(to: target, clearingContext: clearsContext))", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("compose.state")
+                Label(
+                    "\(state.headline). \(state.nextSend(to: target, clearingContext: clearsContext))",
+                    systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock"
+                )
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("compose.state")
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -285,7 +292,9 @@ struct ComposeView: View {
                     pickedPhotos = []
                     enqueueImports(picked.map { item in { try? await item.loadTransferable(type: Data.self) } })
                 }
-                Button { dictateFollowUp() } label: {
+                Button {
+                    dictateFollowUp()
+                } label: {
                     Label(text.isEmpty ? "Dicter" : "Dicter la suite", systemImage: "mic.fill")
                         .font(.footnote.weight(.bold))
                         .padding(.horizontal, 14)
@@ -298,7 +307,9 @@ struct ComposeView: View {
             }
 
             if target?.tab != nil {
-                Button { clearsContext.toggle() } label: {
+                Button {
+                    clearsContext.toggle()
+                } label: {
                     Label("Envoyer /clear avant", systemImage: clearsContext ? "checkmark.square.fill" : "square")
                         .font(.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -342,7 +353,8 @@ struct ComposeView: View {
             .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .capsule)
             .accessibilityIdentifier("compose.send")
             .disabled(
-                sending || importing || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil)
+                sending || importing || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil
+            )
             .opacity(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
         .padding(.horizontal, 16)
@@ -379,7 +391,9 @@ struct ComposeView: View {
                     }
                 }
                 .overlay(alignment: .topTrailing) {
-                    Button { remove(slot) } label: {
+                    Button {
+                        remove(slot)
+                    } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .heavy))
                             .frame(width: 20, height: 20)
@@ -479,11 +493,12 @@ struct ComposeView: View {
     }
 
     private func append(_ salve: CleanedTranscript) {
-        let dictated = if case .dictated(let dictated) = origin {
-            dictated.appending(salve, after: text)
-        } else {
-            DictatedText(salve, after: text)
-        }
+        let dictated =
+            if case .dictated(let dictated) = origin {
+                dictated.appending(salve, after: text)
+            } else {
+                DictatedText(salve, after: text)
+            }
         text = dictated.text
         origin = .dictated(dictated)
     }
@@ -613,14 +628,14 @@ struct RawTranscriptSheet: View {
     }
 }
 
-private extension CleanedTranscript {
-    var isCleaned: Bool {
+extension CleanedTranscript {
+    fileprivate var isCleaned: Bool {
         if case .cleaned = self { true } else { false }
     }
 }
 
-private extension [CleanedTranscript] {
-    var lastRawReason: String? {
+extension [CleanedTranscript] {
+    fileprivate var lastRawReason: String? {
         reversed().lazy.compactMap(\.reason).first
     }
 }

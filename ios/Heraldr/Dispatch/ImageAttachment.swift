@@ -24,7 +24,9 @@ struct ImageAttachment: Identifiable, Sendable {
         }
         guard let jpeg = resized.jpegData(compressionQuality: Self.jpegQuality) else { return nil }
         self.jpeg = jpeg
-        thumbnail = resized.preparingThumbnail(of: CGSize(width: size.width * 240 / max(size.width, size.height), height: size.height * 240 / max(size.width, size.height))) ?? resized
+        thumbnail =
+            resized.preparingThumbnail(
+                of: CGSize(width: size.width * 240 / max(size.width, size.height), height: size.height * 240 / max(size.width, size.height))) ?? resized
     }
 }
 

@@ -1,20 +1,27 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @Suite("Pastille de la cible et des tuiles de workspace")
 struct TargetStatusTests {
     @Test("l'agent cible travaille pendant qu'un autre tab du workspace a fini : la pastille est bleue, pas verte")
     func targetAgentWinsOverOtherTabs() throws {
-        let workspaces = try JSONDecoder().decode([Workspace].self, from: Data("""
-            [{"agent_status":"done","label":"Morris","number":2,"workspace_id":"w8"}]
-            """.utf8))
-        let agents = try JSONDecoder().decode([Agent].self, from: Data("""
-            [
-              {"agent":"claude","agent_status":"working","name":"morris-main","tab_id":"w8:t1","workspace_id":"w8"},
-              {"agent":"claude","agent_status":"done","name":"morris-worktree","tab_id":"w8:t2","workspace_id":"w8"}
-            ]
-            """.utf8))
+        let workspaces = try JSONDecoder().decode(
+            [Workspace].self,
+            from: Data(
+                """
+                [{"agent_status":"done","label":"Morris","number":2,"workspace_id":"w8"}]
+                """.utf8))
+        let agents = try JSONDecoder().decode(
+            [Agent].self,
+            from: Data(
+                """
+                [
+                  {"agent":"claude","agent_status":"working","name":"morris-main","tab_id":"w8:t1","workspace_id":"w8"},
+                  {"agent":"claude","agent_status":"done","name":"morris-worktree","tab_id":"w8:t2","workspace_id":"w8"}
+                ]
+                """.utf8))
         let morris = try #require(workspaces.first)
 
         let state = AppModel.TargetState.resolve(for: morris, agents: agents, jobs: [], lastSentAt: nil, now: .now)
@@ -31,7 +38,8 @@ struct TargetStatusTests {
 
     @Test("un tab ciblé suit son premier Claude sans nom herdr, ni un agent nommé ni un autre type d'agent")
     func tabFollowsItsFirstClaude() throws {
-        let agents = try agents("""
+        let agents = try agents(
+            """
             [
               {"agent":"claude","agent_status":"working","name":"acme-main","pane_id":"wB:p19","tab_id":"wB:t1","workspace_id":"wB"},
               {"agent":"codex","agent_status":"working","pane_id":"wB:pF","tab_id":"wB:tC","workspace_id":"wB"},
@@ -49,7 +57,8 @@ struct TargetStatusTests {
 
     @Test("un tab dont le Claude a disparu ne prend plus d'envoi, et l'app ne lance rien à sa place")
     func tabWithoutClaude() throws {
-        let agents = try agents("""
+        let agents = try agents(
+            """
             [{"agent":"claude","agent_status":"idle","name":"acme-main","pane_id":"wB:p19","tab_id":"wB:t1","workspace_id":"wB"}]
             """)
 
@@ -61,7 +70,8 @@ struct TargetStatusTests {
 
     @Test("un envoi en file vers un tab n'occupe que ce tab, pas le -main du workspace")
     func tabJobStaysOnTheTab() throws {
-        let agents = try agents("""
+        let agents = try agents(
+            """
             [
               {"agent":"claude","agent_status":"idle","name":"acme-main","pane_id":"wB:p19","tab_id":"wB:t1","workspace_id":"wB"},
               {"agent":"claude","agent_status":"working","pane_id":"wB:pG","tab_id":"wB:tC","workspace_id":"wB"}

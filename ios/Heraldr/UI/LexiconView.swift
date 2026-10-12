@@ -19,7 +19,9 @@ struct LexiconView: View {
                 List {
                     Section {
                         ForEach(lexicon.terms) { term in
-                            Button { editing = TermDraft(term) } label: {
+                            Button {
+                                editing = TermDraft(term)
+                            } label: {
                                 row(for: term)
                             }
                             .tint(.primary)
@@ -30,7 +32,9 @@ struct LexiconView: View {
                             }
                         }
                     } footer: {
-                        Text("Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.\n\n\(backupStatus)")
+                        Text(
+                            "Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.\n\n\(backupStatus)"
+                        )
                     }
                 }
             }

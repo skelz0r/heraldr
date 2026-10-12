@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @MainActor
@@ -37,7 +38,9 @@ struct DictationJournalTests {
         .dictated(DictatedText(.cleaned(text, raw: text)))
     }
 
-    @Test("un envoi dicté en deux salves garde, pour chacune, le brut, le texte après remplacement, les indices, le texte proposé et ce qu'il est devenu jusqu'à l'envoi")
+    @Test(
+        "un envoi dicté en deux salves garde, pour chacune, le brut, le texte après remplacement, les indices, le texte proposé et ce qu'il est devenu jusqu'à l'envoi"
+    )
     func dictatedSendIsJournaled() async throws {
         var lexicon = DictationLexicon()
         lexicon.define("Acme", heard: ["ack me"])
@@ -59,26 +62,27 @@ struct DictationJournalTests {
         #expect(entry.version == 1)
         #expect(entry.sent == sent)
         #expect(entry.sentAt == Date(timeIntervalSince1970: 1_760_000_000))
-        #expect(entry.salves == [
-            DictationJournalEntry.Salve(
-                raw: "lance ack me et le guithub",
-                replaced: "lance Acme et le guithub",
-                replacements: [DictationLexicon.Replacement(heard: "ack me", term: "Acme")],
-                hints: [CleaningTrace.Hint(heard: "guithub", term: "git hub", applied: true)],
-                proposed: "Lance Acme et le git hub.",
-                reason: nil,
-                previewed: "Lance Acme et le git hub.",
-                edited: edited),
-            DictationJournalEntry.Salve(
-                raw: "puis ouvre la PR",
-                replaced: "puis ouvre la PR",
-                replacements: [],
-                hints: [],
-                proposed: "puis ouvre la PR",
-                reason: "Apple Intelligence est désactivé",
-                previewed: "Lance Acme et le GitHub.\npuis ouvre la PR",
-                edited: sent),
-        ])
+        #expect(
+            entry.salves == [
+                DictationJournalEntry.Salve(
+                    raw: "lance ack me et le guithub",
+                    replaced: "lance Acme et le guithub",
+                    replacements: [DictationLexicon.Replacement(heard: "ack me", term: "Acme")],
+                    hints: [CleaningTrace.Hint(heard: "guithub", term: "git hub", applied: true)],
+                    proposed: "Lance Acme et le git hub.",
+                    reason: nil,
+                    previewed: "Lance Acme et le git hub.",
+                    edited: edited),
+                DictationJournalEntry.Salve(
+                    raw: "puis ouvre la PR",
+                    replaced: "puis ouvre la PR",
+                    replacements: [],
+                    hints: [],
+                    proposed: "puis ouvre la PR",
+                    reason: "Apple Intelligence est désactivé",
+                    previewed: "Lance Acme et le GitHub.\npuis ouvre la PR",
+                    edited: sent),
+            ])
     }
 
     @Test("un indice que le modèle n'a pas suivi est noté non appliqué")

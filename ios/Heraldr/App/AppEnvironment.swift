@@ -37,7 +37,7 @@ struct AppEnvironment {
 }
 
 #if !DEBUG
-extension AppEnvironment {
-    static var launch: AppEnvironment { .live }
-}
+    extension AppEnvironment {
+        static var launch: AppEnvironment { .live }
+    }
 #endif
