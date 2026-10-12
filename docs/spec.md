@@ -189,31 +189,37 @@ Bouton rond engrenage à droite du bouton Historique, « Réglages » pour
 VoiceOver. Il ouvre une feuille « Réglages » (« Fermer »), à mi-hauteur
 et extensible, en deux sections.
 
-« Dictée » : « Corrections », avec leur nombre, ouvre la liste du
-lexique de dictée (§5.2), « Corrections de dictée » :
+« Dictée » : « Lexique », avec le nombre de termes, ouvre la liste du
+lexique de dictée (§5.2), « Lexique de dictée » :
 
-- une ligne par correction, « entendu → voulu », dans l'ordre du
-  lexique, les plus récentes d'abord ; en pied, « <n> sur 50, les plus
-  récentes d'abord. Les 20 premières guident le nettoyage. »
-- balayer une ligne la supprime (« Supprimer ») ; pas de « Tout
-  vider »
-- taper une ligne ouvre « Modifier la correction », le bouton « + »
-  (« Ajouter une correction ») ouvre « Nouvelle correction » : champs
-  « Entendu » et « Voulu », sans correction automatique ni majuscule
-  imposée, « Annuler » et « Enregistrer »
-- « Enregistrer » reste désactivé tant que chaque côté ne compte pas
-  de 1 à 3 mots, ou que voulu et entendu sont égaux sans tenir compte
-  de la casse, des accents ni de la ponctuation en bord de mot ; les
-  espaces et la ponctuation en bord de mot sont retirés à
-  l'enregistrement
-- une correction enregistrée remonte en tête, comme une correction
-  apprise ; un entendu déjà dans le lexique est remplacé ; modifier
-  l'entendu retire l'ancien
+- une ligne par terme, dans l'ordre du lexique, les plus récents
+  d'abord : le terme, et dessous ses variantes entendues séparées par
+  des virgules ; en pied, « Les plus récents d'abord. »
+- balayer une ligne supprime le terme et ses variantes
+  (« Supprimer ») ; pas de « Tout vider »
+- taper une ligne ouvre « Modifier le terme », le bouton « + »
+  (« Ajouter un terme ») ouvre « Nouveau terme » : section « Terme »
+  (un champ), section « Variantes entendues » (un champ « Entendu » par
+  variante, plus un vide, balayer pour retirer, « Ajouter une
+  variante »), sans correction automatique ni majuscule imposée,
+  « Annuler » et « Enregistrer »
+- « Enregistrer » reste désactivé tant que le terme et chaque variante
+  remplie ne comptent pas de 1 à 3 mots, ou que deux d'entre eux sont
+  égaux sans tenir compte de la casse, des accents ni de la
+  ponctuation en bord de mot ; les champs vides sont ignorés, les
+  espaces et la ponctuation en bord de mot retirés à l'enregistrement
+- un terme enregistré remonte en tête ; une variante qui appartenait à
+  un autre terme passe à celui-ci ; un terme renommé comme un autre
+  terme existant fusionne avec lui. Une variante ajoutée ou modifiée
+  ici, même seulement en casse ou en accents, est « saisie », une
+  variante gardée telle quelle garde son origine ; un terme nouveau,
+  renommé ou enregistré sans variante est « saisi », sinon il garde la
+  sienne
 - les changements sont gardés aussitôt et servent dès la dictée
   suivante
-- sans correction : « Aucune correction », « Corrige un mot mal
-  entendu dans l'aperçu d'une dictée : la correction s'ajoutera ici à
-  l'envoi. » et « Ajouter une correction »
+- sans terme : « Aucun terme », « Corrige un mot mal entendu dans
+  l'aperçu d'une dictée : le terme s'ajoutera ici à l'envoi, avec ce
+  qui avait été entendu. » et « Ajouter un terme »
 
 « Build installé » dit quel build tourne :
 
@@ -254,11 +260,11 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   Apple Intelligence »), que la dictée est trop longue, ou que le
   résultat fait 40 % ou moins, ou 130 % ou plus, de la longueur brute
   (« nettoyage écarté : il s'éloignait trop de la dictée »)
-- les corrections apprises (§5.2) servent à la dictée suivante : le
-  texte corrigé est fourni à la transcription comme vocabulaire
-  contextuel, et les 20 paires « entendu → voulu » les plus récentes
-  sont ajoutées à la consigne du nettoyage, à appliquer quand le
-  contexte s'y prête ; aucun remplacement automatique dans le texte
+- le lexique (§5.2) sert à la dictée suivante : les 100 termes les
+  plus récents sont fournis à la transcription comme vocabulaire
+  contextuel, et les 20 premières variantes, « entendu → terme », sont
+  ajoutées à la consigne du nettoyage, à appliquer quand le contexte
+  s'y prête ; aucun remplacement automatique dans le texte
 - le nettoyage ne porte que sur la salve qui vient d'être dictée,
   jamais sur le texte déjà dans l'aperçu
 
@@ -322,10 +328,38 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   « on → git ». Rien n'est retenu quand plus de la moitié des mots
   proposés ont changé (réécriture), ni pour un ajout ou une
   suppression seuls, ni pour un envoi écrit ou collé
-- le lexique est gardé sur l'iPhone : une erreur déjà connue prend la
-  nouvelle correction et remonte en tête ; au-delà de 50 corrections,
-  les plus anciennes sont oubliées. Il se consulte et se corrige dans
-  les Réglages (§4.5)
+- chaque remplacement retenu range l'entendu comme variante
+  « apprise » du terme voulu, créé s'il manque (identifié sans tenir
+  compte de la casse ni des accents, il garde son orthographe d'origine) ;
+  un entendu n'appartient qu'à un terme : déjà connu, il passe au
+  dernier terme voulu et remonte en tête, avec son compteur augmenté
+  s'il garde le même terme. Un terme appris qui n'a plus de variante
+  disparaît ; au-delà de 200 termes, les moins récents sont oubliés.
+  Le lexique se consulte et se corrige dans les Réglages (§4.5)
+- le lexique est gardé sur l'iPhone, dans un fichier JSON versionné
+  (`dictation-lexicon.json`, Application Support) :
+
+  ```json
+  {
+    "terms" : [
+      {
+        "source" : "typed",
+        "text" : "Acme",
+        "updatedAt" : "2026-10-12T09:00:00Z",
+        "variants" : [
+          { "count" : 2, "heard" : "ack me", "source" : "learned", "updatedAt" : "2026-10-12T09:00:00Z" }
+        ]
+      }
+    ],
+    "version" : 1
+  }
+  ```
+
+  `source` vaut `typed` (saisi) ou `learned` (appris), une valeur
+  inconnue est lue comme `learned` ; tout autre champ est ignoré ; un
+  fichier d'une version supérieure n'est pas lu. Les corrections de
+  l'ancien lexique (UserDefaults) sont reprises une fois : chaque voulu
+  devient un terme appris, chaque entendu une de ses variantes apprises
 
 ## 6. Ce que fait un envoi
 

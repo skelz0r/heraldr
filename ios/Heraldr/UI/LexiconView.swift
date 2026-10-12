@@ -2,104 +2,119 @@ import SwiftUI
 
 struct LexiconView: View {
     @Binding var lexicon: DictationLexicon
-    @State private var editing: CorrectionDraft?
+    @State private var editing: TermDraft?
 
     var body: some View {
         Group {
-            if lexicon.corrections.isEmpty {
+            if lexicon.terms.isEmpty {
                 ContentUnavailableView {
-                    Label("Aucune correction", systemImage: "text.badge.checkmark")
+                    Label("Aucun terme", systemImage: "text.badge.checkmark")
                 } description: {
-                    Text("Corrige un mot mal entendu dans l'aperçu d'une dictée : la correction s'ajoutera ici à l'envoi.")
+                    Text("Corrige un mot mal entendu dans l'aperçu d'une dictée : le terme s'ajoutera ici à l'envoi, avec ce qui avait été entendu.")
                 } actions: {
-                    Button("Ajouter une correction") { editing = CorrectionDraft() }
+                    Button("Ajouter un terme") { editing = TermDraft() }
                 }
             } else {
                 List {
                     Section {
-                        ForEach(lexicon.corrections) { correction in
-                            Button { editing = CorrectionDraft(correction) } label: {
-                                row(for: correction)
+                        ForEach(lexicon.terms) { term in
+                            Button { editing = TermDraft(term) } label: {
+                                row(for: term)
                             }
                             .swipeActions {
                                 Button("Supprimer", systemImage: "trash", role: .destructive) {
-                                    lexicon.forget(heard: correction.heard)
+                                    lexicon.forget(term.id)
                                 }
                             }
                         }
                     } footer: {
-                        Text("\(lexicon.corrections.count) sur \(DictationLexicon.capacity), les plus récentes d'abord. Les \(DictationLexicon.promptedCorrections) premières guident le nettoyage.")
+                        Text("Les plus récents d'abord.")
                     }
                 }
             }
         }
-        .navigationTitle("Corrections de dictée")
+        .navigationTitle("Lexique de dictée")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Ajouter une correction", systemImage: "plus") { editing = CorrectionDraft() }
+                Button("Ajouter un terme", systemImage: "plus") { editing = TermDraft() }
             }
         }
         .sheet(item: $editing) { draft in
-            CorrectionForm(draft: draft) { heard, meant in
-                lexicon.correct(heard: heard, meant: meant, replacing: draft.original)
+            TermForm(draft: draft) { text, heard in
+                lexicon.define(text, heard: heard, replacing: draft.original)
             }
         }
     }
 
-    private func row(for correction: DictationCorrection) -> some View {
-        HStack(spacing: 8) {
-            Text(correction.heard).foregroundStyle(.secondary)
-            Image(systemName: "arrow.right")
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-                .accessibilityLabel("devient")
-            Text(correction.meant).foregroundStyle(.primary)
+    private func row(for term: DictationTerm) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(term.text).foregroundStyle(.primary)
+            if !term.variants.isEmpty {
+                Text(term.variants.map(\.heard).joined(separator: ", "))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
 
-struct CorrectionDraft: Identifiable {
+struct TermDraft: Identifiable {
+    struct Variant: Identifiable {
+        let id = UUID()
+        var heard: String
+    }
+
     let id = UUID()
-    var original: String?
-    var heard = ""
-    var meant = ""
+    var original: DictationTerm.ID?
+    var text = ""
+    var variants = [Variant(heard: "")]
 
     init() {}
 
-    init(_ correction: DictationCorrection) {
-        original = correction.heard
-        heard = correction.heard
-        meant = correction.meant
+    init(_ term: DictationTerm) {
+        original = term.id
+        text = term.text
+        variants = term.variants.map { Variant(heard: $0.heard) } + [Variant(heard: "")]
     }
+
+    var heard: [String] { variants.map(\.heard) }
 }
 
-private struct CorrectionForm: View {
+private struct TermForm: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var draft: CorrectionDraft
-    let save: (String, String) -> Bool
+    @State private var draft: TermDraft
+    let save: (String, [String]) -> Bool
 
-    init(draft: CorrectionDraft, save: @escaping (String, String) -> Bool) {
+    init(draft: TermDraft, save: @escaping (String, [String]) -> Bool) {
         _draft = State(initialValue: draft)
         self.save = save
     }
 
     private var isValid: Bool {
-        DictationLexicon.normalized(heard: draft.heard, meant: draft.meant) != nil
+        DictationLexicon.validated(draft.text, heard: draft.heard) != nil
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section("Terme") {
+                    TextField("Terme", text: $draft.text)
+                }
                 Section {
-                    TextField("Entendu", text: $draft.heard)
-                    TextField("Voulu", text: $draft.meant)
+                    ForEach($draft.variants) { $variant in
+                        TextField("Entendu", text: $variant.heard)
+                    }
+                    .onDelete { draft.variants.remove(atOffsets: $0) }
+                    Button("Ajouter une variante") { draft.variants.append(.init(heard: "")) }
+                } header: {
+                    Text("Variantes entendues")
                 } footer: {
-                    Text("De 1 à \(DictationLexicon.maxWordsPerSide) mots de chaque côté, et un voulu différent de l'entendu.")
+                    Text("De 1 à \(DictationLexicon.maxWords) mots pour le terme et pour chaque variante, chacune différente du terme et des autres.")
                 }
             }
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
-            .navigationTitle(draft.original == nil ? "Nouvelle correction" : "Modifier la correction")
+            .navigationTitle(draft.original == nil ? "Nouveau terme" : "Modifier le terme")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -107,12 +122,12 @@ private struct CorrectionForm: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer") {
-                        if save(draft.heard, draft.meant) { dismiss() }
+                        if save(draft.text, draft.heard) { dismiss() }
                     }
                     .disabled(!isValid)
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 }

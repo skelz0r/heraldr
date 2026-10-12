@@ -29,7 +29,7 @@ struct ComposeView: View {
     @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var importFailed = false
     @State private var dictation = Dictation()
-    @State private var lexicon = DictationLexiconStore.load()
+    @State private var lexicon = DictationLexiconStore.standard.load()
     @State private var dictationError: String?
     @State private var dictatingFollowUp = false
     @State private var sending = false
@@ -493,7 +493,7 @@ struct ComposeView: View {
         sendError = nil
         defer { sending = false }
         lexicon.learn(sent: text, origin: origin)
-        DictationLexiconStore.save(lexicon)
+        DictationLexiconStore.standard.save(lexicon)
         do {
             try await model.send(
                 text, images: slots.compactMap(\.attachment?.jpeg), to: target, clearingContext: target.tab != nil && clearsContext)

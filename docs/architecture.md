@@ -218,7 +218,8 @@ l'ouverture échoue ou que l'URL manque.
     jointes (réduites et converties en JPEG sur l'iPhone, posées par
     `attach`), historique des 20 derniers envois (UserDefaults)
   - `Voice` : SpeechAnalyzer + nettoyage Foundation Models, lexique
-    des corrections de dictée (UserDefaults) ; le vocabulaire passe
+    de dictée en termes et variantes (fichier JSON dans Application
+    Support, `DictationLexiconStore`) ; le vocabulaire passe
     par `AnalysisContext.contextualStrings`, que seul
     `DictationTranscriber` exploite aujourd'hui, pas
     `SpeechTranscriber` : il reste fourni aux deux, le nettoyage
