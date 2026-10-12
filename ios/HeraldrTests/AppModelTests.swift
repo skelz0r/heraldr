@@ -121,7 +121,7 @@ struct SendNoticeTests {
 struct SendFailureTests {
     @Test("un envoi refusé par le Mac remonte son erreur à l'aperçu et passe en échec dans l'historique")
     func refusedByMac() async throws {
-        let session = await Session(world(failures: ["enqueue": "invalid agent name: x"]))
+        let session = await Session(world(failures: ["enqueue": "2:invalid agent name: x"]))
 
         await #expect(throws: MacLinkError.self) {
             try await session.model.send("Demande", to: Target(try session.workspace("wS")))
@@ -129,7 +129,7 @@ struct SendFailureTests {
 
         let entry = try #require(session.model.history.entries.first)
         #expect(entry.status == .failed)
-        #expect(entry.error == "Commande refusée par le Mac (1) : invalid agent name: x")
+        #expect(entry.error == "Commande refusée par le Mac (2) : invalid agent name: x")
     }
 
     @Test("un envoi qui échoue sur le Mac avant le rafraîchissement suivant est annoncé")
@@ -215,7 +215,7 @@ struct SendImagesTests {
         while !(await session.mac.isWaiting(at: "attach")) { await Task.yield() }
         await session.mac.release("attach", keepHolding: true)
         while !(await session.mac.isWaiting(at: "attach")) { await Task.yield() }
-        await session.mac.update { $0.failures = ["attach": "invalid attachment size: 0"] }
+        await session.mac.update { $0.failures = ["attach": "1:attachments dir unavailable"] }
         await session.mac.release("attach")
 
         await #expect(throws: MacLinkError.self) { try await sending.value }

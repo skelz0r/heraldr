@@ -53,16 +53,28 @@
 
         private func respond(to subcommand: String, arguments: [String], input: Data) -> CommandResult {
             if let failure = scenario.failures?[subcommand] {
-                return CommandResult(exitStatus: 1, stdout: Data(), stderr: Data(failure.utf8))
+                return Self.failure(failure)
             }
             switch subcommand {
             case "status":
                 return .success(statusOutput())
             case "enqueue" where arguments.count == 4:
+                guard arguments[2].wholeMatch(of: #/[a-z][a-z0-9_-]{0,31}/#) != nil else {
+                    return Self.failure("2:invalid agent name: \(arguments[2])")
+                }
+                guard !input.isEmpty else { return Self.failure("2:empty prompt") }
                 return .success(enqueue(workspaceId: arguments[1], agent: arguments[2], prompt: input))
             case "enqueue-pane" where arguments.count == 4:
+                guard arguments[2].wholeMatch(of: #/[A-Za-z0-9]+:[A-Za-z0-9]+/#) != nil else {
+                    return Self.failure("2:invalid pane: \(arguments[2])")
+                }
+                guard ["clear", "keep"].contains(arguments[3]), !input.isEmpty else { return Self.failure("2:usage") }
                 return .success(enqueue(workspaceId: arguments[1], agent: arguments[2], prompt: input))
+            case "enqueue", "enqueue-pane":
+                return Self.failure("2:usage")
             case "attach":
+                guard ["jpg", "png"].contains(arguments.dropFirst().first ?? "") else { return Self.failure("2:invalid extension") }
+                guard !input.isEmpty, input.count <= 20_000_000 else { return Self.failure("2:invalid attachment size: \(input.count)") }
                 sequence += 1
                 return .success("/Users/moi/.local/state/heraldr/attachments/capture-\(sequence).jpg\n")
             case "read-answer" where arguments.count == 2:
@@ -130,6 +142,9 @@
             }
             if isPane && target.kind != "claude" {
                 return ("failed", "plus de Claude dans le pane \(agent)")
+            }
+            if isPane, let name = target.name {
+                return ("failed", "le pane \(agent) est l'agent \(name) : vise-le par son nom")
             }
             if let owner = target.workspaceId, owner != workspaceId {
                 return ("failed", isPane ? "le pane \(agent) appartient au workspace \(owner)" : "l'agent \(agent) appartient au workspace \(owner)")
@@ -219,6 +234,16 @@
             }
             if inWord { words.append(current) }
             return words
+        }
+    }
+
+    extension FakeMac {
+        static func failure(_ scripted: String) -> CommandResult {
+            let parts = scripted.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, let status = Int32(parts[0]) else {
+                return CommandResult(exitStatus: 1, stdout: Data(), stderr: Data(scripted.utf8))
+            }
+            return CommandResult(exitStatus: status, stdout: Data(), stderr: Data(parts[1].utf8))
         }
     }
 

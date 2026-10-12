@@ -100,14 +100,14 @@ final class SendFlowTests: XCTestCase {
         let scenario = """
             {"workspaces":[{"id":"wA","number":1,"label":"~"}],
              "agents":[{"name":"home-main","kind":"claude","paneId":"wA:p1","workspaceId":"wA","tabId":"wA:t1","status":"idle"}],
-             "failures":{"enqueue":"empty prompt"}}
+             "failures":{"enqueue":"2:empty prompt"}}
             """
         let app = launch("custom", environment: ["HERALDR_FAKE_MAC": scenario])
         element("home.write", in: app).tap()
         element("compose.text", in: app).typeText("Demande")
         element("compose.send", in: app).tap()
 
-        XCTAssertEqual(label(of: "compose.error", in: app), "Commande refusée par le Mac (1) : empty prompt")
+        XCTAssertEqual(label(of: "compose.error", in: app), "Commande refusée par le Mac (2) : empty prompt")
         XCTAssertTrue(element("compose.text", in: app).exists)
         capture("apercu-echec", in: app)
     }
