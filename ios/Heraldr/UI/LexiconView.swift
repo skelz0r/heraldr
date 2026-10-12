@@ -136,10 +136,10 @@ private struct TermForm: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuler") { dismiss() }
+                    Button("Annuler", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Enregistrer") {
+                    Button("Enregistrer", systemImage: "checkmark", role: .confirm) {
                         if save(draft.text, draft.heard) { dismiss() }
                     }
                     .disabled(!isValid)

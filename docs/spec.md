@@ -232,7 +232,7 @@ lexique de dictée (§5.2), « Lexique de dictée » :
   (un champ), section « Variantes entendues » (un champ « Entendu » par
   variante, plus un vide, balayer pour retirer, « Ajouter une
   variante »), sans correction automatique ni majuscule imposée,
-  « Annuler » et « Enregistrer »
+  « Annuler » (croix) et « Enregistrer » (coche)
 - « Enregistrer » reste désactivé tant que le terme et chaque variante
   remplie ne comptent pas de 1 à 3 mots, ou que deux d'entre eux sont
   égaux sans tenir compte de la casse, des accents ni de la

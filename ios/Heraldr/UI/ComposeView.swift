@@ -297,6 +297,7 @@ struct ComposeView: View {
                 } label: {
                     Label(text.isEmpty ? "Dicter" : "Dicter la suite", systemImage: "mic.fill")
                         .font(.footnote.weight(.bold))
+                        .fixedSize()
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                 }
