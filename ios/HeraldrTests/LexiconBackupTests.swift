@@ -32,7 +32,7 @@ struct LexiconBackupTests {
         }
 
         nonisolated var mirror: LexiconMirror {
-            LexiconMirror(fetch: { try await self.read() }, store: { try await self.write($0) })
+            LexiconMirror(fetch: { try await self.read() }, store: { await self.write($0) })
         }
     }
 

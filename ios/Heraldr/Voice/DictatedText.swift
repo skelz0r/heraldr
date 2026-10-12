@@ -1,3 +1,5 @@
+import Foundation
+
 struct DictatedText: Equatable, Sendable {
     struct Revision: Equatable, Sendable {
         let proposed: String

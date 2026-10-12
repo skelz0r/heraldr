@@ -551,15 +551,19 @@ struct LevelWave: View {
             let time = timeline.date.timeIntervalSinceReferenceDate
             HStack(spacing: 5) {
                 ForEach(0..<bars, id: \.self) { index in
-                    let phase = sin(time * 6 + Double(index) * 0.7) * 0.5 + 0.5
-                    let height = 8 + CGFloat(level) * 56 * CGFloat(0.35 + 0.65 * phase)
                     Capsule()
                         .fill(Color.heraldrAccent)
-                        .frame(width: 5, height: height)
+                        .frame(width: 5, height: barHeight(index, at: time))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func barHeight(_ index: Int, at time: TimeInterval) -> CGFloat {
+        let phase: Double = sin(time * 6 + Double(index) * 0.7) * 0.5 + 0.5
+        let swing: Double = 0.35 + 0.65 * phase
+        return 8 + CGFloat(Double(level) * 56 * swing)
     }
 }
 

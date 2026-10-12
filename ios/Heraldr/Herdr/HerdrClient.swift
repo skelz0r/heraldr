@@ -7,7 +7,7 @@ enum AgentStatus: String, Codable, Sendable {
     case done
     case unknown
 
-    init(from decoder: Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
         self = AgentStatus(rawValue: raw) ?? .unknown
     }
