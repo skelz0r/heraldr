@@ -43,6 +43,7 @@ struct HistoryView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
+                actions(for: entry)
                 SentStatusBadge(status: entry.status)
             }
             Text(entry.text)
@@ -54,19 +55,34 @@ struct HistoryView: View {
                     .foregroundStyle(SentRequest.Status.failed.color)
                     .lineLimit(3)
             }
-            HStack(spacing: 8) {
-                Button("Renvoyer", systemImage: "arrow.clockwise") {
-                    resend(entry)
-                }
-                Button(copiedId == entry.id ? "Copié" : "Copier", systemImage: copiedId == entry.id ? "checkmark" : "doc.on.doc") {
-                    copy(entry)
-                }
-            }
-            .buttonStyle(.glass)
-            .controlSize(.small)
-            .font(.footnote.weight(.semibold))
         }
         .padding(.vertical, 4)
+    }
+
+    private func actions(for entry: SentRequest) -> some View {
+        let copied = copiedId == entry.id
+        return HStack(spacing: 0) {
+            actionButton("Renvoyer", systemImage: "arrow.clockwise") {
+                resend(entry)
+            }
+            actionButton(copied ? "Copié" : "Copier", systemImage: copied ? "checkmark" : "doc.on.doc", done: copied) {
+                copy(entry)
+            }
+        }
+        .padding(.vertical, -6)
+    }
+
+    private func actionButton(_ title: String, systemImage: String, done: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(done ? Color.heraldrAccent : Color(uiColor: .secondaryLabel))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 36, height: 32)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(title)
     }
 
     private func resend(_ entry: SentRequest) {
