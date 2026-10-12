@@ -61,6 +61,11 @@ mac/test/           # dispatch_test.sh + fake-herdr, notify_hook_test.mjs, agent
 - Pas de commentaires, des noms parlants ; fichiers terminés par un
   newline
 - Textes affichés en français, tutoiement
+- Toute UI vise un rendu soigné et minimaliste, en Liquid Glass natif
+  d'iOS 26 (`glassEffect`, styles `.glass`) : peu d'éléments, pas de
+  capsule teintée, d'icône ni de couleur qui ne porte pas
+  d'information ; vérifier le rendu en clair et en sombre
+  (`docs/design.md`)
 - Le slug de l'agent et la consigne standard existent en Swift et dans
   `dispatch.sh` (relais de Home) : toute modification se fait des deux
   côtés, les tests de contrat le vérifient
