@@ -1,48 +1,89 @@
 # Vision
 
+Le [README](../README.md) dit ce que fait Heraldr et quelles conventions
+il impose. Ici, le pourquoi.
+
 ## Problème
 
-Une idée de tâche arrive loin du Mac (dans la rue, sur le canapé). La
-transformer en travail d'agent demande aujourd'hui d'ouvrir un terminal,
-de trouver le bon workspace herdr, le bon Claude, de faire `/clear`, de
-taper le prompt, puis de penser à faire `/start`. Trop de friction : l'idée
-se perd.
+Une idée de tâche arrive loin du clavier : dans la rue, sur le canapé,
+en testant une feature sur le Mac. La transformer en travail d'agent
+demande d'ouvrir un terminal, de trouver le bon workspace herdr, le bon
+Claude, de faire `/clear`, de taper le prompt, puis de penser à
+`/start`. Assez de friction pour que l'idée se perde, ou que la remarque
+de QA finisse dans un coin de tête au lieu d'aller au Claude concerné.
 
-## Proposition de valeur
+## Compagnon du quotidien
 
-Un geste, un résultat : appuyer sur le gros bouton voix, parler, relire,
-envoyer. Le Claude principal du workspace choisi reçoit la demande sur un
-contexte vierge, explore le code, pose ses questions s'il le faut, puis
-dispatche le travail dans un nouveau worktree via `/start`.
+Heraldr sert tous les jours, entre deux sessions devant le Mac ou en
+pleine QA : une idée ou une remarque arrive, elle part tout de suite au
+Claude qui doit la traiter. L'app ne montre pas de code, le travail se
+fait et se relit sur le Mac. Elle envoie, et elle prévient quand un
+`main` attend une réponse.
 
-L'app ne fait que ça. Elle ne montre ni terminal, ni diff, ni fichiers.
+La voix d'abord, parce que c'est ce qui coûte le moins quand on marche
+ou qu'on a les mains sur le Mac en pleine QA. Écrire et coller existent,
+mais le bouton voix domine l'écran.
+
+## Pourquoi opinionated
+
+Comme un framework opinionated, Heraldr n'a rien à configurer : il
+suppose une seule organisation de herdr, et c'est pour ça qu'un geste
+suffit. Chaque convention a sa raison :
+
+- un agent par projet au nom prévisible (`<slug>-main`, tab 1) : l'app
+  sait à qui parler sans rien demander, et le crée s'il manque
+- un `/clear` avant chaque demande : le `main` repart toujours d'un
+  contexte vierge, une idée ne pollue pas la suivante
+- le `main` explore et pose ses questions, mais ne code pas : il finit
+  par `/start`, qui isole chaque feature dans son worktree et son tab.
+  Le tab 1 reste disponible pour la prochaine idée
+- Home en dispatch global : à la voix, on ne veut pas choisir un projet
+  avant de parler. Home est la cible par défaut et relaie au bon `main`
+- vers un tab de worktree, l'inverse : pas de consigne ni de `/clear`
+  par défaut, parce qu'on y itère sur une feature lancée et que le
+  Claude doit garder son contexte
+
+En contrepartie, Heraldr ne sert à rien à qui organise herdr
+autrement. C'est voulu : l'app est faite pour un seul utilisateur et
+son Mac.
 
 ## Positionnement face à Heeler
 
 [Heeler](https://github.com/ZingerLittleBee/Heeler) est un client iOS
 généraliste pour herdr : console de tous les agents, attach terminal,
-composer, uploads, diffs, push. Il est déjà installé côté Mac.
+composer, uploads, diffs, push. Heraldr ne le remplace pas :
 
-Ce projet ne le remplace pas, il le complète :
+- Heeler sert à inspecter et piloter finement, quelle que soit
+  l'organisation des workspaces
+- Heraldr sert à lancer et faire avancer du travail en quelques
+  secondes, à la voix, dans une organisation imposée
 
-- Heeler sert à inspecter et piloter finement
-- Heraldr sert à lancer du travail en quelques secondes, à la voix
-
-Les deux cohabitent sur le même Mac en réutilisant le même plugin herdr
-(pairing Heeler) : chaque app enrôle sa propre clé SSH.
+Les deux cohabitent sur le même Mac et réutilisent le même plugin herdr
+pour l'appairage : chaque app enrôle sa propre clé SSH.
 
 ## Ce qui reste hors de l'app
 
-- répondre aux questions du Claude principal : Claude mobile (Remote
-  Control) ou le Mac
-- suivre le travail dispatché dans les worktrees : herdr, Heeler, Claude
-  mobile
+- répondre aux questions d'un `main` : une notification prévient, la
+  réponse se fait dans l'app Claude (Remote Control) ou sur le Mac
+- suivre l'avancement des worktrees : herdr, Heeler ou l'app Claude ;
+  Heraldr ne montre que l'état des `main` et du tab ciblé
+- être prévenu par un Claude de worktree : seuls les `main` notifient
 
 ## Principes
 
-- gros, lisible, utilisable d'une main en marchant : pas un look natif
-  standard, des cibles tactiles généreuses, le bouton voix dominant
-- Liquid Glass (iOS 26) pour une UI propre
+- gros, lisible, utilisable d'une main en marchant : des cibles tactiles
+  généreuses, le bouton voix dominant
+- Liquid Glass (iOS 26), peu d'éléments, aucune couleur qui ne porte pas
+  d'information ([design](design.md))
 - aucune action destructrice silencieuse : jamais de `/clear` sur un
-  agent en train de travailler
-- aucun code ni service côté Mac à maintenir dans le MVP
+  agent en train de travailler, jamais de repli silencieux vers une
+  autre cible
+- aucun daemon sur le Mac : SSH, l'API de herdr, un script de file et un
+  hook de notifications, que l'app installe elle-même
+
+## Cap
+
+Pistes non livrées, détaillées dans la [roadmap](roadmap.md) : voir où
+en est chaque agent d'un workspace, lancer la voix sans ouvrir l'app
+(widget, bouton Action, Siri), répondre aux questions sans quitter
+Heraldr.

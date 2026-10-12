@@ -45,6 +45,5 @@ renvoyer vers Claude mobile.
 ## Idées non priorisées
 
 - multi-machines (plusieurs QR)
-- historique des envois et renvoi rapide
 - widget et action du bouton Action pour lancer directement la voix
 - raccourci Siri « dispatch dans acme »
