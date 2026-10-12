@@ -9,15 +9,12 @@ final class NotificationTests: XCTestCase {
     }
 
     func testTapSurUneQuestionAppTuee() {
-        let app = launchAllowingNotifications()
+        let app = launchAllowingNotifications(environment: ["HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH": "1"])
         app.terminate()
 
         tapNotification()
 
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
-        waitFor(element("pairing.paste", in: app))
-        RunLoop.current.run(until: Date().addingTimeInterval(3))
-        XCTAssertEqual(app.state, .runningForeground, "l'app relancée par le tap ne doit pas planter")
+        assertQuestionOpened(in: app, capturedAs: "question-non-ouverte-app-tuee")
     }
 
     func testTapSurUneQuestionAppEnArrierePlan() {
@@ -26,11 +23,11 @@ final class NotificationTests: XCTestCase {
 
         tapNotification()
 
-        assertQuestionOpened(in: app)
+        assertQuestionOpened(in: app, capturedAs: "question-non-ouverte")
     }
 
-    private func launchAllowingNotifications() -> XCUIApplication {
-        let app = launch("question")
+    private func launchAllowingNotifications(environment: [String: String] = [:]) -> XCUIApplication {
+        let app = launch("question", environment: environment)
         waitFor(element("tile.wS", in: app))
         let allow = springboard.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Autoriser", "Allow"])).firstMatch
         if allow.waitForExistence(timeout: 3) {
@@ -46,13 +43,13 @@ final class NotificationTests: XCTestCase {
         banner.tap()
     }
 
-    private func assertQuestionOpened(in app: XCUIApplication) {
+    private func assertQuestionOpened(in app: XCUIApplication, capturedAs screen: String) {
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
         XCTAssertEqual(label(of: "target.workspace", in: app), "Acme")
         let card = element("question.card", in: app)
         waitFor(card)
         XCTAssertTrue(app.staticTexts["acme-main attend une réponse"].exists)
         XCTAssertTrue(app.staticTexts["La session ne s'est pas ouverte dans Claude."].exists)
-        capture("question-non-ouverte", in: app)
+        capture(screen, in: app)
     }
 }

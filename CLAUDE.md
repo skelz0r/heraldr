@@ -130,10 +130,11 @@ doit jamais accepter ce que le vrai refuse. Les garanties de la file
 
 Tests UI (`ios/HeraldrUITests/`, XCUITest) : l'app tourne sur le faux
 Mac (`launch("<preset>")` ou un scénario JSON dans
-`HERALDR_FAKE_MAC`), les éléments sont visés par
-`accessibilityIdentifier` (jamais par libellé ; tout élément qu'un test
-vise en reçoit un), et `capture("<écran>", in: app)` garde l'écran en
-clair et en sombre. Un parcours nouveau ou modifié a son test UI ; un
+`HERALDR_FAKE_MAC` ; `HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH=1` le garde
+pour la seule relance suivante, celle d'un tap sur une notif app tuée),
+les éléments sont visés par `accessibilityIdentifier` (jamais par
+libellé ; tout élément qu'un test vise en reçoit un), et
+`capture("<écran>", in: app)` garde l'écran en clair et en sombre. Un parcours nouveau ou modifié a son test UI ; un
 nouvel état à montrer a son preset dans `FakeMacScenario`. Jamais de
 patch temporaire de fausses données.
 

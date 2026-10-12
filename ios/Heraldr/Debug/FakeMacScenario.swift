@@ -49,8 +49,25 @@
 
         static let launchArgument = "-HeraldrFakeMac"
         static let environmentKey = "HERALDR_FAKE_MAC"
+        static let keptForRelaunchEnvironmentKey = "HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH"
+        static let keptForRelaunchDefaultsKey = "HeraldrFakeMacKeptForRelaunch"
 
-        static func fromLaunch(_ processInfo: ProcessInfo = .processInfo) -> FakeMacScenario? {
+        static func fromLaunch(_ processInfo: ProcessInfo = .processInfo, defaults: UserDefaults = .standard) -> FakeMacScenario? {
+            guard let scenario = requested(by: processInfo) else {
+                defer { defaults.removeObject(forKey: keptForRelaunchDefaultsKey) }
+                return defaults.string(forKey: keptForRelaunchDefaultsKey).flatMap { try? decoded($0) }
+            }
+            if processInfo.environment[keptForRelaunchEnvironmentKey] == "1" {
+                var relaunched = scenario
+                relaunched.notification = nil
+                defaults.set(try? relaunched.encoded(), forKey: keptForRelaunchDefaultsKey)
+            } else {
+                defaults.removeObject(forKey: keptForRelaunchDefaultsKey)
+            }
+            return scenario
+        }
+
+        private static func requested(by processInfo: ProcessInfo) -> FakeMacScenario? {
             if let json = processInfo.environment[environmentKey], let scenario = try? decoded(json) {
                 return scenario
             }
