@@ -482,8 +482,15 @@ attention aux erreurs de transcription).
 Consignes :
 - explore le code pour comprendre la demande, ne modifie rien ici
 - si la demande est ambiguë, pose tes questions avec AskUserQuestion
-- termine obligatoirement en dispatchant le travail avec /start
+- si c'est une simple question, sans travail à faire : réponds sans
+  /start avec `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" answer
+  <job_id>`, sur l'entrée standard un résumé d'une phrase, une ligne
+  vide puis la réponse complète en markdown
+- sinon, termine obligatoirement en dispatchant le travail avec /start
 ```
+
+`<job_id>` est écrit `{{job_id}}` par l'app et remplacé par l'id du job
+quand `dispatch.sh` le crée (§8.2).
 
 ### 6.2 Envoi vers Home
 
@@ -500,8 +507,14 @@ transcription).
 
 Consignes :
 - ne modifie rien ici
-- identifie le projet visé parmi les workspaces herdr ouverts : labels
-  avec `herdr workspace list`, dossiers avec
+- si c'est une simple question, sans travail à faire : réponds-y
+  toi-même, sans relais ni /start, en explorant ce qu'il faut (le
+  projet visé compris), puis remets ta réponse avec
+  `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" answer <job_id>`,
+  sur l'entrée standard un résumé d'une phrase, une ligne vide puis la
+  réponse complète en markdown
+- sinon, identifie le projet visé parmi les workspaces herdr ouverts :
+  labels avec `herdr workspace list`, dossiers avec
   `herdr pane list --workspace <workspace_id>` (cwd)
 - si plusieurs projets peuvent correspondre, pose la question avec
   AskUserQuestion avant tout relais
@@ -620,7 +633,9 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | texte brut | id du job ; code 2 pour un `pane_id` hors `[A-Za-z0-9]+:[A-Za-z0-9]+` ou une option inconnue |
 | `relay <workspace_id>` | demande brute | id du job ; code 2 vers Home ou un workspace inconnu |
 | `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
-| `status` | rien | une ligne par job : `id`, `workspace_id`, `agent`, `state`, `error`, séparés par des tabulations |
+| `answer <job_id>` | résumé sur la première ligne, ligne vide, réponse complète | rien ; code 2 pour un job inconnu ou une première ligne vide ; notif refusée : réponse gardée, raison sur stderr, code 0 |
+| `read-answer <job_id>` | rien | la réponse telle que remise ; code 2 sans réponse |
+| `status` | rien | une ligne par job : `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (vide sans réponse), séparés par des tabulations |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
 | `lexicon-get` | rien | la sauvegarde du lexique telle qu'écrite, rien sans sauvegarde (code 0) |
 | `lexicon-put` | le lexique (JSON de §5.2) | rien ; code 2 pour une entrée sans `version` entière lisible, sauvegarde précédente intacte |
@@ -631,8 +646,12 @@ de l'app : sa sortie reste lisible par l'app plus récente.
   ligne d'état inconnu
 - `error` : sur une ligne, tabulations et retours remplacés par des
   espaces
+- `answered` : absent d'un script plus ancien, l'app lit alors le job
+  sans réponse
+- `{{job_id}}` dans le prompt d'`enqueue` ou de `relay` devient l'id du
+  job
 - les jobs `sent` disparaissent après une heure, les `failed` après un
-  jour
+  jour, ceux qui ont une réponse sept jours après elle
 - les images d'`attach` vivent sous
   `~/.local/state/heraldr/attachments/` et disparaissent après une
   semaine, indépendamment des jobs : un envoi peut attendre dans la
@@ -646,9 +665,13 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 
 ### 8.3 Payload des notifications
 
-`aps.alert` (`title`, `subtitle`, `body`), `workspace_id`, `agent` et
-`session_url` facultatif. Sans `workspace_id` ou `agent`, le tap est
-ignoré.
+Question : `aps.alert` (`title`, `subtitle`, `body`), `workspace_id`,
+`agent` et `session_url` facultatif. Sans `workspace_id` ou `agent`, le
+tap est ignoré.
+
+Réponse : `aps.alert`, `kind` = `answer`, `job_id`, `workspace_id`,
+`agent`. Sans `kind` = `answer` ou `job_id`, la notif se lit comme une
+question.
 
 ## 9. Écarts connus
 

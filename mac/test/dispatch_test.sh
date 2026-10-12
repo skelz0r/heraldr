@@ -137,7 +137,7 @@ add_agent home-main w9 idle
 enqueue w1 home-main '~' "Mauvaise cible"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "l'envoi échoue sans rien envoyer" "$(job_states)|$(prompts_of home-main)" "failed |"
-check "l'app lit le workspace, l'agent, l'état et la raison de l'échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-)" "w1	home-main	failed	l'agent home-main appartient au workspace w9"
+check "l'app lit le workspace, l'agent, l'état et la raison de l'échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-5)" "w1	home-main	failed	l'agent home-main appartient au workspace w9"
 teardown_world
 
 echo "un envoi vers le Claude d'un tab part tel quel, sans /clear ni consigne"
@@ -240,8 +240,23 @@ Ajoute un sous-titre
 Consignes :
 - explore le code pour comprendre la demande, ne modifie rien ici
 - si la demande est ambiguë, pose tes questions avec AskUserQuestion
-- termine obligatoirement en dispatchant le travail avec /start"
+- si c'est une simple question, sans travail à faire : réponds sans /start avec \`/bin/sh \"\$HOME/.local/state/heraldr/dispatch.sh\" answer $(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1)\`, sur l'entrée standard un résumé d'une phrase, une ligne vide puis la réponse complète en markdown
+- sinon, termine obligatoirement en dispatchant le travail avec /start"
 check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	vid-o-studio-main"
+teardown_world
+
+echo "une réponse reste lisible une semaine, au-delà de l'heure des autres envois"
+setup_world
+add_agent home-main w1 idle
+enqueue w1 home-main '~' "Comment marche le cache ?"
+enqueue w1 home-main '~' "Corrige le cache"
+wait_until 25 '[ "$(job_states)" = "sent sent " ]'
+question="$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | head -1 | cut -f1)"
+printf 'Vidé au déploiement.\n\nDétail.\n' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" answer "$question" 2>/dev/null
+touch -t "$(date -v-2H +%Y%m%d%H%M)" "$HERALDR_STATE_DIR"/jobs/*/state
+check "après deux heures, seule la question répondue reste" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1,4,6)" "$question	sent	answered"
+touch -t "$(date -v-8d +%Y%m%d%H%M)" "$HERALDR_STATE_DIR/jobs/$question/answer"
+check "après huit jours, elle disparaît aussi" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status)" ""
 teardown_world
 
 echo "un relais vers Home ou un workspace inconnu est refusé"

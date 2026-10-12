@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http2";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { generateKeyPairSync } from "node:crypto";
 
 const hook = join(dirname(fileURLToPath(import.meta.url)), "..", "notify-hook.mjs");
+const dispatch = join(dirname(hook), "dispatch.sh");
 const debounceMs = 300;
 const sessionId = "6b1d0c1e-0000-4000-8000-000000000001";
 
@@ -100,6 +101,39 @@ function runHook(status) {
     child.stderr.on("data", (chunk) => (stderr += chunk));
     child.on("close", (code) => resolve({ code, stderr }));
   });
+}
+
+function stateDir() {
+  return join(world, "home", ".local", "state", "heraldr");
+}
+
+function runDispatch(args, input = "") {
+  return new Promise((resolve) => {
+    const child = spawn("/bin/sh", [join(stateDir(), "dispatch.sh"), ...args], {
+      env: {
+        ...process.env,
+        PATH: `${join(world, "herdr")}:${process.env.PATH}`,
+        HERALDR_STATE_DIR: stateDir(),
+        HERALDR_HOME: join(world, "home"),
+        HERALDR_APNS_ORIGIN: `http://localhost:${apns.address().port}`,
+      },
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => (stdout += chunk));
+    child.stderr.on("data", (chunk) => (stderr += chunk));
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+    child.stdin.end(input);
+  });
+}
+
+async function sentQuestion(text) {
+  mkdirSync(join(stateDir(), "plugin"), { recursive: true });
+  copyFileSync(dispatch, join(stateDir(), "dispatch.sh"));
+  copyFileSync(hook, join(stateDir(), "plugin", "notify-hook.mjs"));
+  const label = Buffer.from("acme_app").toString("base64");
+  const { stdout } = await runDispatch(["enqueue", "w1", "acme_app-main", label], text);
+  return stdout.trim();
 }
 
 before(async () => {
@@ -320,6 +354,77 @@ describe("notification d'un agent -main qui pose une question", () => {
 
     await runHook("blocked");
 
+    assert.equal(pushes.length, 0);
+  });
+});
+
+describe("réponse d'un -main à une simple question", () => {
+  const answer = "Le cache est vidé à chaque déploiement.\n\n## Détail\n\nLe job `purge` tourne après `deploy`.\n";
+
+  it("garde la réponse sur le Mac et pousse son résumé à l'iPhone, rattaché à l'envoi", async () => {
+    const jobId = await sentQuestion("Comment marche le cache ?");
+
+    const { code, stderr } = await runDispatch(["answer", jobId], answer);
+
+    assert.equal(code, 0, stderr);
+    assert.equal(stderr, "");
+    assert.equal(pushes.length, 1);
+    assert.deepEqual(pushes[0].body.aps.alert, {
+      title: "acme_app",
+      subtitle: "Réponse",
+      body: "Le cache est vidé à chaque déploiement.",
+    });
+    assert.equal(pushes[0].body.kind, "answer");
+    assert.equal(pushes[0].body.job_id, jobId);
+    assert.equal(pushes[0].body.workspace_id, "w1");
+    assert.equal(pushes[0].body.agent, "acme_app-main");
+    assert.equal((await runDispatch(["read-answer", jobId])).stdout, answer);
+  });
+
+  it("signale l'envoi à l'app dans status une fois la réponse remise", async () => {
+    const jobId = await sentQuestion("Comment marche le cache ?");
+
+    await runDispatch(["answer", jobId], answer);
+
+    const line = (await runDispatch(["status"])).stdout.split("\n").find((entry) => entry.startsWith(jobId));
+    assert.equal(line.split("\t")[5], "answered");
+  });
+
+  it("donne à Claude l'id de l'envoi à rappeler pour répondre", async () => {
+    const jobId = await sentQuestion("Comment marche le cache ?\n\nConsignes :\n- answer {{job_id}}");
+
+    assert.match(readFileSync(join(stateDir(), "jobs", jobId, "prompt"), "utf8"), new RegExp(`- answer ${jobId}$`, "m"));
+  });
+
+  it("garde la réponse sans notification tant que l'iPhone n'a pas envoyé son token", async () => {
+    const jobId = await sentQuestion("Comment marche le cache ?");
+    rmSync(join(stateDir(), "push-device.json"));
+
+    const { code } = await runDispatch(["answer", jobId], answer);
+
+    assert.equal(code, 0);
+    assert.equal(pushes.length, 0);
+    assert.equal((await runDispatch(["read-answer", jobId])).stdout, answer);
+  });
+
+  it("garde la réponse et oublie le token qu'APNs déclare mort", async () => {
+    const jobId = await sentQuestion("Comment marche le cache ?");
+    apnsAnswer = { status: 410, body: '{"reason":"Unregistered"}' };
+
+    const { code, stderr } = await runDispatch(["answer", jobId], answer);
+
+    assert.equal(code, 0);
+    assert.match(stderr, /notification non envoyée/);
+    assert.equal(existsSync(join(stateDir(), "push-device.json")), false);
+    assert.equal((await runDispatch(["read-answer", jobId])).stdout, answer);
+  });
+
+  it("refuse une réponse sans résumé ou pour un envoi inconnu", async () => {
+    const jobId = await sentQuestion("Comment marche le cache ?");
+
+    assert.equal((await runDispatch(["answer", jobId], "\nRéponse sans résumé")).code, 2);
+    assert.equal((await runDispatch(["answer", "20261010120000-1-deadbeef"], answer)).code, 2);
+    assert.equal((await runDispatch(["answer", "../../etc"], answer)).code, 2);
     assert.equal(pushes.length, 0);
   });
 });

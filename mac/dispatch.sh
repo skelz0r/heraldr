@@ -16,6 +16,7 @@ SENT_RETENTION_MINUTES=60
 FAILED_RETENTION_MINUTES=1440
 ATTACHMENT_RETENTION_MINUTES=10080
 ATTACHMENT_MAX_BYTES=20000000
+ANSWERED_RETENTION_MINUTES=10080
 CLEAR_TIMEOUT_SECONDS=20
 START_TIMEOUT_MS=60000
 
@@ -24,7 +25,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put" >&2
   exit 2
 }
 
@@ -68,7 +69,8 @@ $1
 Consignes :
 - explore le code pour comprendre la demande, ne modifie rien ici
 - si la demande est ambiguë, pose tes questions avec AskUserQuestion
-- termine obligatoirement en dispatchant le travail avec /start
+- si c'est une simple question, sans travail à faire : réponds sans /start avec \`/bin/sh "\$HOME/.local/state/heraldr/dispatch.sh" answer {{job_id}}\`, sur l'entrée standard un résumé d'une phrase, une ligne vide puis la réponse complète en markdown
+- sinon, termine obligatoirement en dispatchant le travail avec /start
 EOF
 }
 
@@ -105,7 +107,7 @@ create_job() {
   job_id="$(date -u +%Y%m%d%H%M%S)-$$-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
   job_dir="$JOBS_DIR/$job_id"
   mkdir -p "$job_dir.tmp"
-  cat > "$job_dir.tmp/prompt"
+  sed "s/{{job_id}}/$job_id/g" > "$job_dir.tmp/prompt"
   if [ ! -s "$job_dir.tmp/prompt" ]; then
     rm -rf "$job_dir.tmp"
     echo "empty prompt" >&2
@@ -294,7 +296,10 @@ prune_jobs() {
   [ -d "$ATTACHMENTS_DIR" ] && find "$ATTACHMENTS_DIR" -type f -mmin +"$ATTACHMENT_RETENTION_MINUTES" -delete 2>/dev/null
   [ -d "$JOBS_DIR" ] || return 0
   find "$JOBS_DIR" -mindepth 2 -maxdepth 2 -name state -mmin +"$SENT_RETENTION_MINUTES" -exec grep -lx sent {} + 2>/dev/null | while read -r state_file; do
-    rm -rf "$(dirname "$state_file")"
+    [ -f "$(dirname "$state_file")/answer" ] || rm -rf "$(dirname "$state_file")"
+  done
+  find "$JOBS_DIR" -mindepth 2 -maxdepth 2 -name answer -mmin +"$ANSWERED_RETENTION_MINUTES" 2>/dev/null | while read -r answer_file; do
+    rm -rf "$(dirname "$answer_file")"
   done
   find "$JOBS_DIR" -mindepth 2 -maxdepth 2 -name state -mmin +"$FAILED_RETENTION_MINUTES" -exec grep -lx failed {} + 2>/dev/null | while read -r state_file; do
     rm -rf "$(dirname "$state_file")"
@@ -323,13 +328,41 @@ print_status() {
     case "$job_dir" in *.tmp) continue ;; esac
     error=""
     [ -f "$job_dir/error" ] && error="$(tr '\t\n' '  ' < "$job_dir/error")"
-    printf '%s\t%s\t%s\t%s\t%s\n' \
+    answered=""
+    [ -f "$job_dir/answer" ] && answered="answered"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
       "$(basename "$job_dir")" \
       "$(cat "$job_dir/workspace_id" 2>/dev/null)" \
       "$(cat "$job_dir/agent" 2>/dev/null)" \
       "$(cat "$job_dir/state" 2>/dev/null)" \
-      "$error"
+      "$error" \
+      "$answered"
   done
+}
+
+answered_job_dir() {
+  printf '%s' "$1" | grep -Eq '^[0-9]{14}-[0-9]+-[0-9a-f]{8}$' || { echo "invalid job id: $1" >&2; exit 2; }
+  [ -d "$JOBS_DIR/$1" ] || { echo "job inconnu: $1" >&2; exit 2; }
+  printf '%s' "$JOBS_DIR/$1"
+}
+
+store_answer() {
+  job_dir="$(answered_job_dir "$1")" || exit 2
+  cat > "$job_dir/answer.tmp"
+  if [ -z "$(head -n 1 "$job_dir/answer.tmp" | tr -d '[:space:]')" ]; then
+    rm -f "$job_dir/answer.tmp"
+    echo "réponse vide ou sans résumé en première ligne" >&2
+    exit 2
+  fi
+  mv "$job_dir/answer.tmp" "$job_dir/answer"
+  [ -f "$PUSH_DEVICE_PATH" ] && [ -f "$PLUGIN_DIR/notify-hook.mjs" ] || { echo "réponse gardée, pas de notification : aucun iPhone enregistré" >&2; return 0; }
+  pushed="$(node "$PLUGIN_DIR/notify-hook.mjs" answer "$1" 2>&1)" || echo "réponse gardée, notification non envoyée : $pushed" >&2
+}
+
+print_answer() {
+  job_dir="$(answered_job_dir "$1")" || exit 2
+  [ -f "$job_dir/answer" ] || { echo "pas de réponse pour $1" >&2; exit 2; }
+  cat "$job_dir/answer"
 }
 
 install_notify_plugin() {
@@ -387,6 +420,8 @@ case "$command" in
   enqueue-pane) [ $# -eq 3 ] || fail_usage; enqueue_pane_job "$@" ;;
   relay) [ $# -eq 1 ] || fail_usage; relay_job "$1" ;;
   attach) [ $# -eq 1 ] || fail_usage; store_attachment "$1" ;;
+  answer) [ $# -eq 1 ] || fail_usage; store_answer "$1" ;;
+  read-answer) [ $# -eq 1 ] || fail_usage; print_answer "$1" ;;
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;

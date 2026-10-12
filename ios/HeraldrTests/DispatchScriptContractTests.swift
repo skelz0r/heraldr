@@ -37,7 +37,19 @@ struct DispatchScriptContractTests {
         let heredoc = try #require(script.firstMatch(of: #/standard_envelope\(\) \{\n  cat <<EOF\n(?<body>.*?)\nEOF\n/#.dotMatchesNewlines()))
         let project = Workspace(id: "w5", number: 5, label: "Video studio")
 
-        #expect(PromptEnvelope.wrap("Ajoute un sous-titre", for: project) == heredoc.body.replacingOccurrences(of: "$1", with: "Ajoute un sous-titre"))
+        let shellBody = heredoc.body.replacingOccurrences(of: "\\`", with: "`").replacingOccurrences(of: "\\$", with: "$")
+        #expect(PromptEnvelope.wrap("Ajoute un sous-titre", for: project) == shellBody.replacingOccurrences(of: "$1", with: "Ajoute un sous-titre"))
+    }
+
+    @Test("Home comme un projet savent remettre la réponse à une simple question à l'envoi qui l'a posée")
+    func answerCommand() {
+        let home = Workspace(id: "wA", number: 1, label: "Home")
+        let project = Workspace(id: "w5", number: 5, label: "Video studio")
+
+        for workspace in [home, project] {
+            #expect(PromptEnvelope.wrap("x", for: workspace).contains("dispatch.sh\" answer \(PromptEnvelope.jobIdPlaceholder)"))
+        }
+        #expect(!PromptEnvelope.forTab("x").contains("answer"))
     }
 
     @Test("Home, quel que soit son label, reçoit la consigne qui relaie au projet ; un projet ne la reçoit jamais")

@@ -1,6 +1,9 @@
 import Foundation
 
 enum PromptEnvelope {
+    static let jobIdPlaceholder = "{{job_id}}"
+    private static let answerCommand = "/bin/sh \"$HOME/.local/state/heraldr/dispatch.sh\" answer \(jobIdPlaceholder)"
+
     static func wrap(_ text: String, attachments: [String] = [], for workspace: Workspace) -> String {
         let request = request(text, attachments: attachments)
         return workspace.isHome ? home(request) : standard(request)
@@ -32,7 +35,10 @@ enum PromptEnvelope {
         Consignes :
         - explore le code pour comprendre la demande, ne modifie rien ici
         - si la demande est ambiguë, pose tes questions avec AskUserQuestion
-        - termine obligatoirement en dispatchant le travail avec /start
+        - si c'est une simple question, sans travail à faire : réponds sans \
+        /start avec `\(answerCommand)`, sur l'entrée standard un résumé \
+        d'une phrase, une ligne vide puis la réponse complète en markdown
+        - sinon, termine obligatoirement en dispatchant le travail avec /start
         """
     }
 
@@ -46,7 +52,12 @@ enum PromptEnvelope {
 
         Consignes :
         - ne modifie rien ici
-        - identifie le projet visé parmi les workspaces herdr ouverts : \
+        - si c'est une simple question, sans travail à faire : réponds-y \
+        toi-même, sans relais ni /start, en explorant ce qu'il faut (le \
+        projet visé compris), puis remets ta réponse avec \
+        `\(answerCommand)`, sur l'entrée standard un résumé d'une phrase, \
+        une ligne vide puis la réponse complète en markdown
+        - sinon, identifie le projet visé parmi les workspaces herdr ouverts : \
         labels avec `herdr workspace list`, dossiers avec \
         `herdr pane list --workspace <workspace_id>` (cwd)
         - si plusieurs projets peuvent correspondre, pose la question avec \
