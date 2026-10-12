@@ -27,7 +27,7 @@ XcodeGen added.
 | `bin/run-mac-tests` | tests of the dispatch script (`mac/test/dispatch_test.sh`, fake herdr) and of the notification hook (`node --test mac/test/notify_hook_test.mjs`, fake APNs) |
 | `bin/local-ci [push]` | `bin/lint` then all tests, iOS skipped if the diff since `origin/main` is docs only; `push` first pushes HEAD (with lease, never `main`), sets "Local CI" to pending on that commit, then to success, failure (failing step, HEAD or worktree changed during the run) or error (Ctrl-C, TERM, HUP); without `push`, no status |
 | `bin/open-ios-xcode` | generates then opens the project |
-| `bin/render-ios-icon` | regenerates AppIcon and logo from `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
+| `bin/render-ios-icon` | regenerates AppIcon and logo from `docs/branding/logo/voice-and-lanes-*.svg` (rsvg-convert) |
 
 `main` is protected on GitHub: the "Local CI" status must be success to
 merge a PR, without requiring the branch to be up to date (`strict`

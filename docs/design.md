@@ -121,10 +121,10 @@ iOS 26 `glassEffect`, no imitation material.
 "Voix et voies" (voice and lanes) logo, single source in
 `docs/branding/logo/`:
 
-- default and dark: `5-voies-dark.svg`, recolored for the palette:
+- default and dark: `voice-and-lanes-dark.svg`, recolored for the palette:
   wave and top lane `#FFFFFF`, middle lane `#C9CBD1`, bottom lane
   `#FF5A3C`, on a graphite gradient `#1A1B1F` → `#08090A`
-- tinted: `5-voies-tinted.svg`, unchanged (greyscale)
+- tinted: `voice-and-lanes-tinted.svg`, unchanged (greyscale)
 - stroke thickened from 60 to 80 px at render time, to stay readable at
   60 px; the path is not modified
 

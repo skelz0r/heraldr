@@ -19,9 +19,9 @@ render() {
     thickened "$1" | rsvg-convert -w 1024 -h 1024 -b black -o "${ASSETS}/AppIcon.appiconset/$2"
 }
 
-render 5-voies-dark.svg AppIcon.png
-render 5-voies-dark.svg AppIcon-dark.png
-render 5-voies-tinted.svg AppIcon-tinted.png
-thickened 5-voies-dark.svg > "${ASSETS}/Logo.imageset/Logo.svg"
+render voice-and-lanes-dark.svg AppIcon.png
+render voice-and-lanes-dark.svg AppIcon-dark.png
+render voice-and-lanes-tinted.svg AppIcon-tinted.png
+thickened voice-and-lanes-dark.svg > "${ASSETS}/Logo.imageset/Logo.svg"
 
-echo "App icon rendered from ${LOGO_DIR}/5-voies-dark.svg (stroke ${ICON_STROKE_WIDTH})"
+echo "App icon rendered from ${LOGO_DIR}/voice-and-lanes-dark.svg (stroke ${ICON_STROKE_WIDTH})"
