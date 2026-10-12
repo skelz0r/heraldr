@@ -55,3 +55,8 @@ custom_rules:
     regex: 'func\s+userNotificationCenter\([^)]*\)\s+async'
     message: "Variante à completion handler obligatoire : la variante async crashe au tap app hors premier plan (f4b5ff9)"
     severity: error
+  sleep_without_cancellation_check:
+    name: "Sleep sans contrôle d'annulation"
+    regex: '\n\s*try\?\s+await\s+Task\.sleep\([^\n]*\)\s*\n(?!\s*guard\s+!Task\.isCancelled)'
+    message: "try? avale l'annulation : la suite s'exécute quand même (notice effacée par un .task(id:) relancé). Enchaîne avec guard !Task.isCancelled else { return }"
+    severity: error

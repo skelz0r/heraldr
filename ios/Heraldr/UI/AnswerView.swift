@@ -73,6 +73,7 @@ struct CopyAnswerButton: View {
         .task(id: copied) {
             guard copied else { return }
             try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
             withAnimation { copied = false }
         }
     }
