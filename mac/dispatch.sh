@@ -57,7 +57,8 @@ lock_name() {
 }
 
 agent_name_for_label() {
-  slug="$(printf '%s' "$1" | tr 'A-Z' 'a-z' | LC_ALL=en_US.UTF-8 sed 's/[^abcdefghijklmnopqrstuvwxyz0123456789_-]/-/g')"
+  [ "$1" = "~" ] && { printf 'home-main'; return; }
+  slug="$(printf '%s' "$1" | LC_ALL=C tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | LC_ALL=en_US.UTF-8 sed 's/[^abcdefghijklmnopqrstuvwxyz0123456789_-]/-/g')"
   case "$slug" in
     [abcdefghijklmnopqrstuvwxyz]*) ;;
     *) slug="w-$slug" ;;

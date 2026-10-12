@@ -626,11 +626,15 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 ### 6.4 Nommage
 
 - agent herdr : `slug(label)-main`
-  - slug : minuscules, tout caractère hors `[a-z0-9_-]` devient `-`,
-    `w-` devant s'il ne commence pas par une lettre, tronqué à 27
-    caractères, `~` devient `home`
+  - slug : un label `~` donne `home`, quel que soit le workspace ;
+    sinon `A-Z` passent en minuscules, tout point de code Unicode hors
+    `[a-z0-9_-]` devient `-` (un emoji composé, drapeau ou teinte de
+    peau, ou une lettre suivie d'un accent combinant en donnent
+    plusieurs), `w-` devant s'il ne commence pas par une lettre,
+    tronqué à 27 caractères
   - exemples : `home-main`, `acme_app-main`,
-    `herdr-ios-companion-main`, `w-2025-notes-main` ; vecteurs
+    `herdr-ios-companion-main`, `w-2025-notes-main`,
+    `w--quipe----main` pour `Équipe 🇫🇷` ; vecteurs
     partagés par l'app et `dispatch.sh` dans
     `mac/test/agent-names.tsv`
   - contrainte herdr : `[a-z][a-z0-9_-]{0,31}`, unique parmi les agents
@@ -780,15 +784,9 @@ question.
 
 ## 9. Écarts connus
 
-- E1 : un emoji composé (drapeau, teinte de peau) dans un label compte
-  pour un caractère dans l'app et pour plusieurs dans `dispatch.sh` :
-  un relais de Home vers ce workspace viserait un autre agent que
-  l'app.
 - E2 : quand deux envois suivis passent `failed` entre deux
   rafraîchissements, seul le premier est annoncé ; le second ne l'est
   jamais.
-- E3 : un workspace autre que Home labellisé `~` vise `home-main` dans
-  l'app et `w---main` dans un relais de Home.
 
 ## 10. Hors périmètre
 
