@@ -4,9 +4,9 @@ Compagnon de développement voice first pour herdr et Claude Code. Depuis
 l'iPhone, tu dictes une idée et le développement démarre sur le Mac ;
 pendant la QA, tu dictes ta review au Claude qui a écrit la feature.
 
-Heraldr n'est pas un client herdr généraliste. Il ne marche que parce
-qu'il impose une façon précise d'organiser herdr et Claude, la mienne :
-c'est un setup personnel, installé directement sur mon iPhone, sans
+Ce n'est pas un client herdr généraliste. L'app ne marche que si herdr
+et Claude sont organisés d'une façon précise, la mienne : c'est un
+setup personnel, installé directement sur mon iPhone, sans
 TestFlight ni App Store. Pour piloter herdr finement depuis un
 téléphone, avec terminal, diffs et uploads, il y a
 [Heeler](https://github.com/ZingerLittleBee/Heeler) ; les deux
@@ -73,14 +73,18 @@ sequenceDiagram
   app->>wt: review, contexte gardé
 ```
 
-**Lancer une idée.** Gros bouton voix, tu parles, la dictée est
+### Lancer une idée
+
+Gros bouton voix, tu parles, la dictée est
 transcrite et nettoyée sur l'iPhone, tu relis, tu envoies. Le
 `<slug>-main` du workspace choisi (ou Home) reçoit la demande avec une
 consigne : explorer sans rien modifier, poser ses questions, finir par
 `/start`. Quand il pose une question, une notification arrive ; la
 toucher ouvre sa session dans l'app Claude pour répondre.
 
-**Itérer sur une feature en cours.** Pendant que tu testes sur le Mac,
+### Itérer sur une feature en cours
+
+Pendant que tu testes sur le Mac,
 appui long sur la tuile du workspace, « Cibler un tab de `<label>` »,
 et tu choisis le tab du worktree. Ce que tu dictes part au Claude de ce
 tab avec un simple avertissement de dictée, sans consigne et, par

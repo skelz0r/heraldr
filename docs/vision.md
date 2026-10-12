@@ -14,11 +14,11 @@ de QA finisse dans un coin de tête au lieu d'aller au Claude concerné.
 
 ## Compagnon du quotidien
 
-Heraldr accompagne le développement au quotidien : il fait le lien entre
-le moment où une idée ou une remarque surgit et le Claude qui doit la
-traiter. L'app ne montre ni terminal, ni diff, ni fichiers : le travail
-se fait et se lit sur le Mac. Elle ne sait que lancer, relancer et
-prévenir.
+Heraldr sert tous les jours, entre deux sessions devant le Mac ou en
+pleine QA : une idée ou une remarque arrive, elle part tout de suite au
+Claude qui doit la traiter. L'app ne montre pas de code, le travail se
+fait et se relit sur le Mac. Elle envoie, et elle prévient quand un
+`main` attend une réponse.
 
 La voix d'abord, parce que c'est ce qui coûte le moins quand on marche
 ou qu'on a les mains sur le Mac en pleine QA. Écrire et coller existent,
@@ -26,9 +26,9 @@ mais le bouton voix domine l'écran.
 
 ## Pourquoi opinionated
 
-Comme un framework opinionated, Heraldr n'a rien à configurer parce
-qu'il suppose une organisation unique. C'est ce qui permet à un geste
-de suffire :
+Comme un framework opinionated, Heraldr n'a rien à configurer : il
+suppose une seule organisation de herdr, et c'est pour ça qu'un geste
+suffit. Chaque convention a sa raison :
 
 - un agent par projet au nom prévisible (`<slug>-main`, tab 1) : l'app
   sait à qui parler sans rien demander, et le crée s'il manque
@@ -43,8 +43,8 @@ de suffire :
   par défaut, parce qu'on y itère sur une feature lancée et que le
   Claude doit garder son contexte
 
-Le prix : Heraldr ne sert à rien à quelqu'un qui organise herdr
-autrement. C'est assumé, l'app est faite pour un seul utilisateur et
+En contrepartie, Heraldr ne sert à rien à qui organise herdr
+autrement. C'est voulu : l'app est faite pour un seul utilisateur et
 son Mac.
 
 ## Positionnement face à Heeler
