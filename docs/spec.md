@@ -423,6 +423,40 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   chaque rafraîchissement, même après une relance. Sauvegarde absente,
   vide ou illisible : rien n'est repris. Appairage avec un lexique non
   vide : la sauvegarde n'est pas lue, elle est écrasée
+- journal des dictées, pour mesurer le lexique en usage réel, sans
+  rien afficher : chaque envoi réussi d'une dictée (pas d'un texte
+  écrit ou collé) ajoute une entrée au journal de l'iPhone
+  (`dictation-journal.jsonl`, Application Support), une ligne JSON par
+  envoi :
+
+  ```json
+  {"id":"5B1F…","salves":[{"edited":"Lance Acme et le GitHub.","hints":[{"applied":true,"heard":"guithub","term":"git hub"}],"previewed":"Lance Acme et le git hub.","proposed":"Lance Acme et le git hub.","raw":"lance ack me et le guithub","replaced":"lance Acme et le guithub","replacements":[{"heard":"ack me","term":"Acme"}]}],"sent":"Lance Acme et le GitHub.","sentAt":"2026-10-12T09:00:00Z","version":1}
+  ```
+
+  - une salve par dictée, dans l'ordre : `raw` la transcription brute,
+    `replaced` après le remplacement par le code d'avant le nettoyage,
+    `replacements` chaque remplacement fait par le code avant et après
+    le nettoyage (le texte entendu tel qu'écrit, le terme), `hints` les
+    variantes signalées au nettoyage, `applied` vrai quand la sortie du
+    modèle n'a plus l'entendu et contient le terme (faux sans
+    nettoyage), `proposed` le texte de la salve, `reason` la raison
+    d'une transcription brute gardée (absent si nettoyée), `previewed`
+    tout le texte de l'aperçu juste après la salve et `edited` ce qu'il
+    était devenu avant la salve suivante, ou à l'envoi pour la dernière
+    (les textes comparés par l'apprentissage)
+  - `sent` le texte envoyé, `sentAt` l'heure de l'envoi, `id` unique
+  - une ligne d'une version supérieure, ou un champ inconnu, est à
+    ignorer par qui lit le journal
+  - les entrées en attente partent sur le Mac (`journal-append`, §8.2)
+    juste après l'envoi et à chaque rafraîchissement réussi (§3), en
+    tâche de fond ; elles ne quittent l'iPhone qu'une fois reçues. Un
+    échec ne s'affiche pas, il est retenté au rafraîchissement suivant,
+    même après une relance. Au-delà de 500 entrées en attente, les plus
+    anciennes sont oubliées
+  - le journal ne quitte jamais l'iPhone et le Mac appairé : le
+    fichier en attente est exclu de la sauvegarde iCloud
+  - l'entrée garde le texte tel qu'au moment où on a tapé Envoyer,
+    même s'il est modifié pendant l'envoi
 
 ## 6. Ce que fait un envoi
 
@@ -693,7 +727,7 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
 | `lexicon-get` | rien | la sauvegarde du lexique telle qu'écrite, rien sans sauvegarde (code 0) |
 | `lexicon-put` | le lexique (JSON de §5.2) | rien ; code 2 pour une entrée sans `version` entière lisible, sauvegarde précédente intacte |
-| `journal-append` | entrées du journal des dictées, une ligne JSON chacune | rien ; code 2 pour une entrée vide, qui n'est pas un objet JSON, sans `version` entière ou sans `id` en `[A-Za-z0-9-]{1,64}`, journal intact et rien ajouté de l'envoi ; code 1 quand le journal ne peut pas être écrit ou reste pris par un autre ajout plus de 10 s |
+| `journal-append` | entrées du journal des dictées (§5.2), une ligne JSON chacune | rien ; code 2 pour une entrée vide, qui n'est pas un objet JSON, sans `version` entière ou sans `id` en `[A-Za-z0-9-]{1,64}`, journal intact et rien ajouté de l'envoi ; code 1 quand le journal ne peut pas être écrit ou reste pris par un autre ajout plus de 10 s |
 
 - `agent` : nom de l'agent, ou `pane_id` pour un envoi vers un tab
   (une app plus ancienne le compte dans le workspace)
