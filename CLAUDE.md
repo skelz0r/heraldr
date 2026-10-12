@@ -97,6 +97,9 @@ Frontières à mocker, et rien d'autre :
 - SSH et Mac : `FakeMac` (`ios/Heraldr/Debug/`), conforme à
   `MacTransport`, scénario décrit en données (`FakeMacScenario`) ;
   `AppModel(environment: .fake(scenario, mac:, suiteName:))`
+- SSH réel : seul le test de clé hôte épinglée vise le sshd du Mac
+  (`127.0.0.1:22`, Remote Login, prérequis du projet) et s'arrête
+  avant toute authentification
 - Keychain, UserDefaults, Foundation Models, Speech, caméra, horloge :
   injection (`now:` de `PairingCeremony.pair`)
 - jamais un type de l'app (`Dispatcher`, `HerdrClient`, `AppModel`…)
