@@ -181,8 +181,13 @@ La QA est faite par l'agent, en deux temps :
 
 1. Fin d'itération, au simulateur : `$PWD/bin/qa` joue les classes de
    tests UI touchées par le diff (quelques minutes, `--all` pour tout,
-   3 à 4 min, sur 3 clones du simulateur) et exporte les captures dans
-   `~/share/screenshots/<worktree>/`. Les regarder, en clair et en
+   3 à 4 min, sur 3 clones du simulateur), sur iPhone SE, le plus petit
+   écran d'iOS 26, et exporte les captures dans
+   `~/share/screenshots/<worktree>/`. Il note les durées dans
+   `build/qa-durations.tsv` du checkout principal et avertit quand un
+   test dépasse 45 s ou que `--all` grossit de 20 % : descendre une
+   vérification en test unitaire, fusionner des parcours, couper les
+   attentes fixes. Les regarder, en clair et en
    sombre (`docs/design.md`), avant de dire que l'UI est faite ; un
    défaut vu se corrige avec son test.
 2. Après un `bin/run-ios-device`, seulement si le diff touche l'une de
