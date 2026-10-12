@@ -501,6 +501,7 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `enqueue <workspace_id> <agent> <label_base64>` | prompt enveloppé | id du job |
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | texte brut | id du job ; code 2 pour un `pane_id` hors `[A-Za-z0-9]+:[A-Za-z0-9]+` ou une option inconnue |
 | `relay <workspace_id>` | demande brute | id du job ; code 2 vers Home ou un workspace inconnu |
+| `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
 | `status` | rien | une ligne par job : `id`, `workspace_id`, `agent`, `state`, `error`, séparés par des tabulations |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
 
@@ -512,6 +513,11 @@ de l'app : sa sortie reste lisible par l'app plus récente.
   espaces
 - les jobs `sent` disparaissent après une heure, les `failed` après un
   jour
+- les images d'`attach` vivent sous
+  `~/.local/state/heraldr/attachments/` et disparaissent après une
+  semaine, indépendamment des jobs : un envoi peut attendre dans la
+  file, et le Claude qui reçoit la demande peut la confier par /start
+  à une autre session qui les lira plus tard
 - `register-push` refuse un token hors `[0-9a-f]{64,200}`, une équipe
   hors `[A-Z0-9]{10}`
 

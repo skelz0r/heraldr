@@ -7,11 +7,14 @@ export PATH
 STATE_DIR="${HERALDR_STATE_DIR:-$HOME/.local/state/heraldr}"
 JOBS_DIR="$STATE_DIR/jobs"
 LOCKS_DIR="$STATE_DIR/locks"
+ATTACHMENTS_DIR="$STATE_DIR/attachments"
 SCRIPT_PATH="$STATE_DIR/dispatch.sh"
 PLUGIN_DIR="$STATE_DIR/plugin"
 PUSH_DEVICE_PATH="$STATE_DIR/push-device.json"
 SENT_RETENTION_MINUTES=60
 FAILED_RETENTION_MINUTES=1440
+ATTACHMENT_RETENTION_MINUTES=10080
+ATTACHMENT_MAX_BYTES=20000000
 CLEAR_TIMEOUT_SECONDS=20
 START_TIMEOUT_MS=60000
 
@@ -20,7 +23,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
   exit 2
 }
 
@@ -116,6 +119,21 @@ create_job() {
 
   nohup /bin/sh "$SCRIPT_PATH" run "$agent" </dev/null >/dev/null 2>&1 &
   echo "$job_id"
+}
+
+store_attachment() {
+  case "$1" in jpg|png) ;; *) echo "invalid extension: $1" >&2; exit 2 ;; esac
+  mkdir -p "$ATTACHMENTS_DIR" || { echo "attachments dir unavailable" >&2; exit 1; }
+  attachment="$ATTACHMENTS_DIR/$(date -u +%Y%m%d%H%M%S)-$$-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n').$1"
+  cat > "$attachment.tmp" || { rm -f "$attachment.tmp"; echo "attachment write failed" >&2; exit 1; }
+  size="$(wc -c < "$attachment.tmp" | tr -d ' ')"
+  if [ "$size" -eq 0 ] || [ "$size" -gt "$ATTACHMENT_MAX_BYTES" ]; then
+    rm -f "$attachment.tmp"
+    echo "invalid attachment size: $size" >&2
+    exit 2
+  fi
+  mv "$attachment.tmp" "$attachment" || { rm -f "$attachment.tmp"; echo "attachment write failed" >&2; exit 1; }
+  echo "$attachment"
 }
 
 set_state() {
@@ -272,6 +290,7 @@ process_job() {
 }
 
 prune_jobs() {
+  [ -d "$ATTACHMENTS_DIR" ] && find "$ATTACHMENTS_DIR" -type f -mmin +"$ATTACHMENT_RETENTION_MINUTES" -delete 2>/dev/null
   [ -d "$JOBS_DIR" ] || return 0
   find "$JOBS_DIR" -mindepth 2 -maxdepth 2 -name state -mmin +"$SENT_RETENTION_MINUTES" -exec grep -lx sent {} + 2>/dev/null | while read -r state_file; do
     rm -rf "$(dirname "$state_file")"
@@ -350,6 +369,7 @@ case "$command" in
   enqueue) [ $# -eq 3 ] || fail_usage; enqueue_job "$@" ;;
   enqueue-pane) [ $# -eq 3 ] || fail_usage; enqueue_pane_job "$@" ;;
   relay) [ $# -eq 1 ] || fail_usage; relay_job "$1" ;;
+  attach) [ $# -eq 1 ] || fail_usage; store_attachment "$1" ;;
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;

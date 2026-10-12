@@ -264,6 +264,37 @@ while IFS="$(printf '\t')" read -r label agent; do
 done < "$here/agent-names.tsv"
 teardown_world
 
+echo "une capture envoyée par l'iPhone est gardée sur le Mac, lisible par son chemin"
+setup_world
+printf 'faux jpeg' > "$sandbox/capture.jpg"
+path="$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg < "$sandbox/capture.jpg")"
+check "le chemin rendu est absolu, sous le dossier d'état, avec l'extension" "$(printf '%s' "$path" | grep -Ec "^$HERALDR_STATE_DIR/attachments/[^/]+\.jpg$")" "1"
+check "le fichier est l'image reçue, intacte" "$(cat "$path")" "faux jpeg"
+check "une image vide ou une extension inconnue sont refusées" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg < /dev/null 2>&1; echo $?)|$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach 'sh;rm' 2>&1; echo $?)" "invalid attachment size: 0
+2|invalid extension: sh;rm
+2"
+teardown_world
+
+echo "une capture que le Mac n'a pas pu écrire n'est jamais annoncée comme posée"
+setup_world
+mkdir -p "$HERALDR_STATE_DIR/attachments"
+chmod 500 "$HERALDR_STATE_DIR/attachments"
+output="$(echo image | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg 2>/dev/null)"
+status=$?
+chmod 700 "$HERALDR_STATE_DIR/attachments"
+check "échec signalé à l'app, sans chemin" "$status|$output" "1|"
+teardown_world
+
+echo "une capture reste disponible une semaine, pour un envoi qui attend ou une session lancée par /start"
+setup_world
+recent="$(echo recent | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach png)"
+old="$(echo old | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach png)"
+touch -t "$(date -v-6d +%Y%m%d%H%M)" "$recent"
+touch -t "$(date -v-8d +%Y%m%d%H%M)" "$old"
+/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status > /dev/null
+check "la capture de six jours est gardée, celle de huit jours supprimée" "$([ -f "$recent" ] && echo garde)|$([ -f "$old" ] && echo garde)" "garde|"
+teardown_world
+
 if [ $failures -gt 0 ]; then
   echo "$failures échec(s)"
   exit 1
