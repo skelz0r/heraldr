@@ -270,7 +270,15 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   le verrouillage automatique revient dès qu'il s'arrête (arrêt,
   annulation, erreur, fermeture de l'écran, passage en arrière-plan),
   donc pas pendant le nettoyage ; un verrouillage manuel ou un
-  changement d'app coupe toujours la dictée
+  changement d'app coupe toujours la dictée, qui enchaîne sur le
+  nettoyage comme « Arrêter la dictée » : au retour, l'aperçu montre
+  ce qui a été dicté
+- fermer l'écran pendant la dictée l'annule
+- le micro interrompt la musique ou le son d'une autre app (Spotify…)
+  au lieu de jouer par-dessus, et la rend dès qu'il s'arrête (arrêt,
+  annulation, erreur, arrière-plan, fermeture de l'écran), avant la
+  fin de la transcription : l'app prévient le système pour que l'autre
+  app reprenne d'elle-même, si elle le gère
 - « Annuler » ferme sans rien garder ; depuis une salve lancée de
   l'aperçu (§5.2), il revient à l'aperçu avec son texte intact ;
   « Arrêter la dictée » enchaîne sur le nettoyage

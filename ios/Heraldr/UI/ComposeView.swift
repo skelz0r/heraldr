@@ -70,7 +70,17 @@ struct ComposeView: View {
         .onChange(of: keepsScreenAwake, initial: true) { _, awake in
             UIApplication.shared.isIdleTimerDisabled = awake
         }
-        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background && dictation.phase == .recording {
+                Task { await finishDictation() }
+            }
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+            if dictation.phase != .idle {
+                Task { await dictation.cancel() }
+            }
+        }
         .sheet(isPresented: $choosingTarget) {
             TargetPicker(workspaceId: $workspaceId, tabId: $tabId)
                 .presentationDetents([.medium, .large])
