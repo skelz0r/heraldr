@@ -321,6 +321,33 @@ réponse d'un envoi qu'elle suit et n'a pas encore, notif ratée ou non.
 Un job `sent` répondu échappe à la purge d'une heure et part sept jours
 après sa réponse.
 
+## Faux Mac
+
+En Debug seulement (`ios/Heraldr/Debug/`, sous `#if DEBUG`), un
+double de la frontière SSH + Mac remplace `MacLink` : `FakeMac`, un
+acteur conforme à `MacTransport`, joue un scénario décrit en données
+(`FakeMacScenario`, Codable) : workspaces, tabs, agents et leurs
+états, jobs `queued`/`sent`/`failed`, réponses, historique et lexique
+de départ, échecs par commande (`enqueue`, `attach`, `tab.list`…) ou
+Mac injoignable. Il interprète les commandes que `Dispatcher` envoie à
+`dispatch.sh` (`status`, `enqueue`, `enqueue-pane`, `attach`,
+`read-answer`, `lexicon-get|put`) et répond aux requêtes herdr avec la
+forme du vrai, champs en plus compris. Un envoi part `sent` vers un
+agent prêt (qui passe alors `working`), `queued` vers un agent occupé
+ou déjà en file, `failed` vers un agent d'un autre workspace ou un pane
+sans Claude, comme `dispatch.sh`.
+
+L'app l'active au lancement par `-HeraldrFakeMac <preset>` (`demo`,
+`unpaired`, `unreachable`, `empty`) ou par la variable
+`HERALDR_FAKE_MAC` qui porte un scénario JSON entier (tests UI).
+Dans ce mode, `AppEnvironment.fake` prend une suite UserDefaults
+dédiée, vidée au lancement, un fichier de lexique temporaire, ne
+demande pas l'autorisation des notifications (alerte système qui
+bloquerait XCUITest) et n'ouvre aucun lien. Les tests d'`AppModel`
+le construisent directement et pilotent son état entre deux
+rafraîchissements (`update`, `setJob`, `hold`/`release` pour figer un
+appel en vol).
+
 ## App iOS
 
 - Swift 6, SwiftUI, iOS 26 minimum (Liquid Glass, SpeechAnalyzer,

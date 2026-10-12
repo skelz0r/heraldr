@@ -1,0 +1,49 @@
+#if DEBUG
+import Foundation
+
+extension AppEnvironment {
+    static let fakeDefaultsSuite = "com.skelz0r.heraldr.fake-mac"
+
+    static func fake(_ scenario: FakeMacScenario, mac: FakeMac? = nil, suiteName: String = fakeDefaultsSuite) -> AppEnvironment {
+        let mac = mac ?? FakeMac(scenario)
+        UserDefaults().removePersistentDomain(forName: suiteName)
+        let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+        if scenario.paired ?? true {
+            PairedMacStore.save(FakeMac.pairedMac, to: defaults)
+        }
+        if let entries = scenario.history,
+            let history = try? JSONDecoder().decode(SendHistory.self, from: JSONEncoder().encode(["entries": entries]))
+        {
+            SendHistoryStore.save(history, to: defaults)
+        }
+        let lexiconFile = URL.temporaryDirectory.appending(path: "\(suiteName)-lexicon.json")
+        try? FileManager.default.removeItem(at: lexiconFile)
+        let lexiconStore = DictationLexiconStore(fileURL: lexiconFile, defaults: defaults)
+        if let lexicon = scenario.lexicon {
+            lexiconStore.save(lexicon)
+        }
+        return AppEnvironment(
+            defaults: defaults,
+            lexiconStore: lexiconStore,
+            connect: { _ in mac },
+            pair: { code in
+                let parsed: PairingCode
+                do throws(PairingCode.ParseError) {
+                    parsed = try PairingCode(parsing: code)
+                } catch {
+                    throw PairingError.invalidCode(error)
+                }
+                guard let bootstrap = parsed.bootstrap else { throw PairingError.configOnlyCode }
+                guard bootstrap.expiresAt > .now else { throw PairingError.expired }
+                return FakeMac.pairedMac
+            },
+            requestNotifications: {},
+            openURL: { _ in false })
+    }
+
+    static var launch: AppEnvironment {
+        guard let scenario = FakeMacScenario.fromLaunch() else { return .live }
+        return .fake(scenario)
+    }
+}
+#endif
