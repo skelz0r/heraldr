@@ -215,7 +215,7 @@ la glisse vers le bas), à mi-hauteur et extensible, en deux sections.
 « Dictée » : « Lexique », avec le nombre de termes, ouvre la liste du
 lexique de dictée (§5.2), « Lexique de dictée » :
 
-- une ligne par terme, dans l'ordre du lexique, les plus récents
+- une ligne par terme, en couleur de texte neutre (pas l'accent), dans l'ordre du lexique, les plus récents
   d'abord : le terme, et dessous ses variantes entendues séparées par
   des virgules ; en pied, « Les plus récents d'abord. Une variante
   saisie ici, ou de plusieurs mots, est remplacée par son terme dans

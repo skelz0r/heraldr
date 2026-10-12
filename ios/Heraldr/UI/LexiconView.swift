@@ -22,6 +22,7 @@ struct LexiconView: View {
                             Button { editing = TermDraft(term) } label: {
                                 row(for: term)
                             }
+                            .tint(.primary)
                             .swipeActions {
                                 Button("Supprimer", systemImage: "trash", role: .destructive) {
                                     lexicon.forget(term.id)
