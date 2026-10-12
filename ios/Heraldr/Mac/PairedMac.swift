@@ -16,16 +16,16 @@ struct PairedMac: Codable, Equatable, Sendable {
 enum PairedMacStore {
     private static let key = "paired-mac"
 
-    static func load() -> PairedMac? {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+    static func load(from defaults: UserDefaults = .standard) -> PairedMac? {
+        guard let data = defaults.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(PairedMac.self, from: data)
     }
 
-    static func save(_ mac: PairedMac) {
-        UserDefaults.standard.set(try? JSONEncoder().encode(mac), forKey: key)
+    static func save(_ mac: PairedMac, to defaults: UserDefaults = .standard) {
+        defaults.set(try? JSONEncoder().encode(mac), forKey: key)
     }
 
-    static func forget() {
-        UserDefaults.standard.removeObject(forKey: key)
+    static func forget(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: key)
     }
 }

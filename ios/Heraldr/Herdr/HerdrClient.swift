@@ -115,7 +115,7 @@ private struct TabList: Decodable {
 }
 
 struct HerdrClient: Sendable {
-    let link: MacLink
+    let link: any MacTransport
 
     func workspaces() async throws -> [Workspace] {
         let list: WorkspaceList = try await call("workspace.list")

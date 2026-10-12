@@ -1,5 +1,4 @@
 import Foundation
-import HeelerSSH
 
 struct DispatchJob: Identifiable, Equatable, Sendable {
     enum State: String, Sendable {
@@ -31,7 +30,7 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
 }
 
 struct Dispatcher: Sendable {
-    let link: MacLink
+    let link: any MacTransport
 
     private static let stateDirectory = "\"$HOME/.local/state/heraldr\""
     private static let script = "\"$HOME/.local/state/heraldr/dispatch.sh\""
@@ -62,7 +61,7 @@ struct Dispatcher: Sendable {
     func upload(_ image: Data) async throws -> String {
         let result = try await link.run("/bin/sh \(Self.script) attach jpg", input: image)
         guard result.exitStatus == 0 else { throw failure(result) }
-        return String(decoding: result.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func send(_ text: String, attachments: [String] = [], to workspace: Workspace) async throws -> String {
@@ -85,13 +84,13 @@ struct Dispatcher: Sendable {
         try await installScript()
         let result = try await link.run("/bin/sh \(Self.script) \(arguments)", input: Data(prompt.utf8))
         guard result.exitStatus == 0 else { throw failure(result) }
-        return String(decoding: result.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func jobs() async throws -> [DispatchJob] {
         let result = try await link.run("[ -f \(Self.script) ] && /bin/sh \(Self.script) status || true")
         guard result.exitStatus == 0 else { throw failure(result) }
-        return DispatchJob.parse(statusOutput: String(decoding: result.stdout, as: UTF8.self))
+        return DispatchJob.parse(statusOutput: result.output)
     }
 
     var lexiconMirror: LexiconMirror {
@@ -112,7 +111,7 @@ struct Dispatcher: Sendable {
     func answer(toJob jobId: String) async throws -> Answer {
         let result = try await link.run("/bin/sh \(Self.script) read-answer \(quoted(jobId))")
         guard result.exitStatus == 0 else { throw failure(result) }
-        guard let answer = Answer(scriptOutput: String(decoding: result.stdout, as: UTF8.self)) else {
+        guard let answer = Answer(scriptOutput: result.output) else {
             throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "réponse illisible")
         }
         return answer
@@ -137,7 +136,7 @@ struct Dispatcher: Sendable {
         "'" + argument.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    private func failure(_ result: SSHExecResult) -> MacLinkError {
-        .commandFailed(status: result.exitStatus, stderr: String(decoding: result.stderr, as: UTF8.self))
+    private func failure(_ result: CommandResult) -> MacLinkError {
+        .commandFailed(status: result.exitStatus, stderr: result.errorOutput)
     }
 }

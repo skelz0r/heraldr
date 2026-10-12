@@ -1,7 +1,5 @@
 import Foundation
 import Observation
-import UIKit
-import UserNotifications
 
 @MainActor
 @Observable
@@ -81,8 +79,8 @@ final class AppModel {
     private(set) var jobs: [DispatchJob] = []
     private(set) var agents: [Agent] = []
     private(set) var tabs: [Tab] = []
-    private(set) var history = SendHistoryStore.load() {
-        didSet { SendHistoryStore.save(history) }
+    private(set) var history: SendHistory {
+        didSet { SendHistoryStore.save(history, to: environment.defaults) }
     }
     private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
@@ -94,18 +92,21 @@ final class AppModel {
     private var pushDeviceRegistered = false
     private var notificationsRequested = false
 
-    private var link: MacLink?
-    private var deviceKey: DeviceKey?
+    private let environment: AppEnvironment
+    private var link: (any MacTransport)?
     private var pollTask: Task<Void, Never>?
-    private let lexiconKeeper = LexiconKeeper()
+    private let lexiconKeeper: LexiconKeeper
     private var lexiconBackupTask: Task<Void, Never>?
     private let dictationJournal = DictationJournal()
     private var refreshing = false
     private var refreshRequestedWhileRefreshing = false
 
-    init() {
-        if let mac = PairedMacStore.load(), let key = try? DeviceKeyStore.load() {
-            attach(mac, deviceKey: key)
+    init(environment: AppEnvironment = .live) {
+        self.environment = environment
+        history = SendHistoryStore.load(from: environment.defaults)
+        lexiconKeeper = LexiconKeeper(store: environment.lexiconStore)
+        if let mac = PairedMacStore.load(from: environment.defaults) {
+            attach(mac)
         }
     }
 
@@ -162,17 +163,16 @@ final class AppModel {
     }
 
     func pair(code: String) async throws {
-        let key = try DeviceKeyStore.loadOrCreate()
-        let mac = try await PairingCeremony.pair(code: code, deviceKey: key)
-        PairedMacStore.save(mac)
-        attach(mac, deviceKey: key)
+        let mac = try await environment.pair(code)
+        PairedMacStore.save(mac, to: environment.defaults)
+        attach(mac)
         lexiconKeeper.paired()
         await refresh()
     }
 
     func forgetMac() async {
         await link?.disconnect()
-        PairedMacStore.forget()
+        PairedMacStore.forget(from: environment.defaults)
         link = nil
         mac = nil
         workspaces = []
@@ -245,7 +245,7 @@ final class AppModel {
     func open(_ question: QuestionNotification) async {
         selectedWorkspaceId = question.workspaceId
         selectedTabId = nil
-        if let url = question.sessionURL, await UIApplication.shared.open(url, options: [.universalLinksOnly: true]) {
+        if let url = question.sessionURL, await environment.openURL(url) {
             unopenedQuestion = nil
             return
         }
@@ -286,10 +286,7 @@ final class AppModel {
     private func requestNotificationsOnce() async {
         guard !notificationsRequested else { return }
         notificationsRequested = true
-        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
-        if granted {
-            UIApplication.shared.registerForRemoteNotifications()
-        }
+        await environment.requestNotifications()
     }
 
     private func registerPushDeviceIfNeeded() async {
@@ -411,10 +408,10 @@ final class AppModel {
         pollTask = nil
     }
 
-    private func attach(_ mac: PairedMac, deviceKey: DeviceKey) {
+    private func attach(_ mac: PairedMac) {
+        guard let link = environment.connect(mac) else { return }
         self.mac = mac
-        self.deviceKey = deviceKey
-        link = MacLink(mac: mac, deviceKey: deviceKey)
+        self.link = link
         connection = .connecting
     }
 

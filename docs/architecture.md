@@ -70,6 +70,20 @@ XcodeGen déclare le package local
 Chemin du socket : `~/.config/herdr/herdr.sock` (à confirmer via la
 session herdr par défaut).
 
+Ces deux usages passent par le protocole `MacTransport` (`Mac/`) :
+`run` (exec d'une commande, résultat `CommandResult` propre à l'app,
+code de sortie et sorties) et `exchangeWithHerdr` (une requête JSON
+sur `herdr.sock`). `MacLink`, l'acteur SSH qui garde la connexion et
+se reconnecte, en est la seule implémentation réelle ; `Dispatcher` et
+`HerdrClient` ne connaissent que le protocole, et rien hors de `Mac/`
+et `Pairing/` n'importe HeelerSSH. `AppModel` reçoit un
+`AppEnvironment` : les UserDefaults (historique, Mac appairé), le
+fichier du lexique, la fabrique de transport pour un Mac appairé
+(`MacLink` et la clé du Keychain en vrai), l'appairage, la demande
+d'autorisation des notifications et l'ouverture d'un lien. C'est la
+couture des tests d'`AppModel` et du faux Mac de la QA (voir *Faux
+Mac*).
+
 ## Dispatch
 
 L'app embarque un script shell versionné (`mac/dispatch.sh`). Chaque
