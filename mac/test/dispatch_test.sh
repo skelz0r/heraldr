@@ -62,7 +62,7 @@ wait_until() {
   deadline=$((SECONDS + $1))
   shift
   while [ $SECONDS -lt $deadline ]; do
-    eval "$@" && return 0
+    eval "$*" && return 0
     sleep 0.3
   done
   return 1
@@ -100,7 +100,7 @@ add_agent acme_app-main w2 blocked
 enqueue w2 acme_app-main 'acme_app' "Corrige le bug"
 sleep 3
 check "rien n'est envoyé pendant que l'agent attend une réponse" "$(prompts_of acme_app-main)" ""
-set_status acme_app-main done
+set_status acme_app-main "done"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "dès qu'il est done : /clear puis la demande" "$(prompts_of acme_app-main)" "done|/clear
 done|Corrige le bug"
@@ -153,7 +153,7 @@ teardown_world
 
 echo "un envoi vers un tab ne vide le contexte que si on le demande"
 setup_world
-add_agent wB:pG wB done
+add_agent wB:pG wB "done"
 enqueue_pane wB wB:pG clear "Repars de zéro"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "/clear puis le texte brut" "$(prompts_of wB:pG)" "done|/clear

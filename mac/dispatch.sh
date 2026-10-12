@@ -187,7 +187,7 @@ acquire_lock() {
 }
 
 release_lock() {
-  rm -rf "$LOCKS_DIR/$1"
+  rm -rf "${LOCKS_DIR:?}/$1"
 }
 
 next_job_for() {
@@ -245,8 +245,7 @@ start_agent() {
   pane_id="$(printf '%s' "$split" | json_value result.pane.pane_id)" || { fail_job "$job_dir" "pane split sans pane_id"; return 1; }
 
   remote_control_name="$(printf '%s' "$label" | sed 's/^~$/home/')—main"
-  started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$START_TIMEOUT_MS" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"
-  if [ $? -ne 0 ]; then
+  if ! started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$START_TIMEOUT_MS" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"; then
     case "$started" in
       *agent_not_ready*) return 0 ;;
     esac
@@ -295,7 +294,7 @@ process_job() {
     return 1
   fi
 
-  waited="$(herdr agent wait "$agent" --until idle --until done 2>&1)" || { fail_job "$job_dir" "agent wait: $waited"; return 1; }
+  waited="$(herdr agent wait "$agent" --until idle --until "done" 2>&1)" || { fail_job "$job_dir" "agent wait: $waited"; return 1; }
 
   if valid_pane_id "$agent"; then
     check_pane_target "$job_dir" "$agent" "$workspace_id" || return 1
