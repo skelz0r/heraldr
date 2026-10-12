@@ -154,6 +154,30 @@ au job : `prune_jobs` (appelé par `run` et `status`) efface celles de
 plus d'une semaine, assez pour un envoi resté en file ou une session
 lancée plus tard par /start.
 
+## Sauvegarde du lexique de dictée
+
+```text
+iPhone (dictation-lexicon.json) ──exec dispatch.sh lexicon-put──> ~/.config/heraldr/lexique.json
+                                <──exec dispatch.sh lexicon-get── (après un appairage, lexique vide)
+```
+
+`LexiconKeeper` (module `Voice`) tient le lexique pour toute l'app :
+`AppModel.lexicon` le lit et le modifie, l'aperçu et les Réglages
+passent par lui. Chaque changement est écrit dans le fichier local et
+lève `lexicon-backup-needed` (UserDefaults) ; `sync` écrit le lexique
+entier sur le Mac et ne baisse le drapeau que si rien n'a changé
+pendant l'écriture. `AppModel` lance `sync` 2 s après un changement et
+après chaque rafraîchissement réussi, sur le `MacLink` déjà ouvert,
+via `Dispatcher.lexiconMirror` (`install` puis `lexicon-get` ou
+`lexicon-put`).
+
+`pair` appelle `paired()` : lexique vide, `lexicon-restore-pending`
+est levé et `sync` lit le Mac avant toute écriture ; sinon le prochain
+`sync` écrase le Mac. Le drapeau survit à une relance, pour qu'une
+lecture ratée ne laisse jamais une écriture écraser la sauvegarde.
+`LexiconMirror` (deux closures) est la couture des tests, qui simulent
+le Mac sans SSH.
+
 ## Notifications
 
 ```text

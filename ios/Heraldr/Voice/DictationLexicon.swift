@@ -134,6 +134,12 @@ struct DictationLexicon: Codable, Equatable, Sendable {
         return true
     }
 
+    func restoring(from backup: DictationLexicon) -> DictationLexicon {
+        var restored = backup
+        for term in terms.reversed() { restored.place(term) }
+        return restored
+    }
+
     mutating func forget(_ id: DictationTerm.ID) {
         terms.removeAll { $0.id == id }
     }

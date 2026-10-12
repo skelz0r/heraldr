@@ -33,7 +33,12 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
   « Voir l'original » montre la transcription brute.
 - [ ] Dicter « on push la branche », corriger en « git push » dans
   l'aperçu et envoyer, puis redicter la même phrase : l'aperçu propose
-  « git push ».
+  « git push », même Apple Intelligence désactivé.
+- [ ] Réglages > Lexique : le terme « git push » et sa variante
+  « on push » apparaissent ; le pied dit « Sauvegardé sur le Mac » et
+  `~/.config/heraldr/lexique.json` les contient sur le Mac.
+- [ ] Désinstaller l'app, la réinstaller et l'appairer : notice
+  « Lexique restauré depuis le Mac », la liste est revenue.
 - [ ] Après une dictée, corriger un mot au clavier, puis « Dicter la
   suite » : la nouvelle salve s'ajoute à la ligne, la correction reste ;
   « Voir l'original » montre les deux salves. Relancer « Dicter la

@@ -2,17 +2,18 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var lexicon = DictationLexiconStore.standard.load()
+    @Environment(AppModel.self) private var model
     private let build = BuildInfo.current
 
     var body: some View {
+        @Bindable var model = model
         NavigationStack {
             List {
                 Section("Dictée") {
                     NavigationLink {
-                        LexiconView(lexicon: $lexicon)
+                        LexiconView(lexicon: $model.lexicon, backup: model.lexiconBackup)
                     } label: {
-                        LabeledContent("Lexique", value: "\(lexicon.terms.count)")
+                        LabeledContent("Lexique", value: "\(model.lexicon.terms.count)")
                     }
                 }
                 Section("Build installé") {
@@ -28,7 +29,6 @@ struct SettingsView: View {
                 }
             }
             .textSelection(.enabled)
-            .onChange(of: lexicon) { DictationLexiconStore.standard.save(lexicon) }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

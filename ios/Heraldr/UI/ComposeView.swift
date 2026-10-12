@@ -29,7 +29,6 @@ struct ComposeView: View {
     @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var importFailed = false
     @State private var dictation = Dictation()
-    @State private var lexicon = DictationLexiconStore.standard.load()
     @State private var dictationError: String?
     @State private var dictatingFollowUp = false
     @State private var sending = false
@@ -441,7 +440,7 @@ struct ComposeView: View {
     private func startDictation() async {
         dictationError = nil
         do {
-            try await dictation.start(vocabulary: lexicon.vocabulary)
+            try await dictation.start(vocabulary: model.lexicon.vocabulary)
         } catch {
             dictationError = error.localizedDescription
         }
@@ -454,7 +453,7 @@ struct ComposeView: View {
             return
         }
         stage = .cleaning(raw: raw)
-        let cleaned = await TranscriptCleaner.clean(raw, lexicon: lexicon)
+        let cleaned = await TranscriptCleaner.clean(raw, lexicon: model.lexicon)
         append(cleaned)
         stage = .preview
     }
@@ -492,8 +491,7 @@ struct ComposeView: View {
         sending = true
         sendError = nil
         defer { sending = false }
-        lexicon.learn(sent: text, origin: origin)
-        DictationLexiconStore.standard.save(lexicon)
+        model.lexicon.learn(sent: text, origin: origin)
         do {
             try await model.send(
                 text, images: slots.compactMap(\.attachment?.jpeg), to: target, clearingContext: target.tab != nil && clearsContext)

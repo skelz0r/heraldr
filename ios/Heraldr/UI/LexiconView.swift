@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LexiconView: View {
     @Binding var lexicon: DictationLexicon
+    let backup: LexiconKeeper.BackupState
     @State private var editing: TermDraft?
 
     var body: some View {
@@ -28,7 +29,7 @@ struct LexiconView: View {
                             }
                         }
                     } footer: {
-                        Text("Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.")
+                        Text("Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.\n\n\(backupStatus)")
                     }
                 }
             }
@@ -43,6 +44,17 @@ struct LexiconView: View {
             TermForm(draft: draft) { text, heard in
                 lexicon.define(text, heard: heard, replacing: draft.original)
             }
+        }
+    }
+
+    private var backupStatus: String {
+        switch backup {
+        case .restorePending:
+            "Le lexique sauvegardé sur le Mac sera repris à la prochaine connexion."
+        case .changesPending:
+            "Pas encore sauvegardé sur le Mac : ce sera fait à la prochaine connexion."
+        case .savedOnMac(let date):
+            "Sauvegardé sur le Mac \(date.formatted(.relative(presentation: .named)))."
         }
     }
 

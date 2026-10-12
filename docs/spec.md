@@ -197,7 +197,11 @@ lexique de dictée (§5.2), « Lexique de dictée » :
   des virgules ; en pied, « Les plus récents d'abord. Une variante
   saisie ici, ou de plusieurs mots, est remplacée par son terme dans
   chaque dictée ; une variante apprise d'un seul mot est seulement
-  signalée au nettoyage. »
+  signalée au nettoyage. », puis l'état de la sauvegarde sur le Mac
+  (§5.2) : « Sauvegardé sur le Mac <il y a …>. », « Pas encore
+  sauvegardé sur le Mac : ce sera fait à la prochaine connexion. » ou,
+  restauration en attente, « Le lexique sauvegardé sur le Mac sera
+  repris à la prochaine connexion. »
 - balayer une ligne supprime le terme et ses variantes
   (« Supprimer ») ; pas de « Tout vider »
 - taper une ligne ouvre « Modifier le terme », le bouton « + »
@@ -383,6 +387,24 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   fichier d'une version supérieure n'est pas lu. Les corrections de
   l'ancien lexique (UserDefaults) sont reprises une fois : chaque voulu
   devient un terme appris, chaque entendu une de ses variantes apprises
+- sauvegarde sur le Mac (`lexicon-put`, §8.2), sans jamais que la
+  dictée ne lise le Mac : après chaque changement (2 s après le
+  dernier) et à chaque rafraîchissement réussi (§3), tant que le
+  dernier changement n'est pas sauvegardé, le lexique entier est
+  écrit, en tâche de fond. Un échec ne s'affiche pas : il est retenté
+  au rafraîchissement suivant, et la liste (§4.5) dit que la
+  sauvegarde attend. La sauvegarde du Mac est écrasée, jamais
+  fusionnée : une modification faite sur le Mac est perdue
+- restauration, seulement juste après un appairage (§2) avec un
+  lexique vide sur l'iPhone, typiquement après une réinstallation :
+  l'app lit la sauvegarde (`lexicon-get`) avant toute écriture, la
+  reprend telle quelle (un terme appris entre-temps sur l'iPhone
+  l'emporte sur celui du Mac) et l'annonce : « Lexique restauré depuis
+  le Mac », « <n> termes repris de la sauvegarde. ». Tant que la
+  lecture échoue, rien n'est écrit sur le Mac et elle est retentée à
+  chaque rafraîchissement, même après une relance. Sauvegarde absente,
+  vide ou illisible : rien n'est repris. Appairage avec un lexique non
+  vide : la sauvegarde n'est pas lue, elle est écrasée
 
 ## 6. Ce que fait un envoi
 
@@ -570,7 +592,8 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 
 L'app ne parle au Mac que par SSH, et ce contrat change en même temps
 des deux côtés : le script est réinstallé par l'app avant chaque
-`enqueue` et `register-push`, le hook avec `register-push`. `status`
+`enqueue`, `register-push`, `lexicon-get` et `lexicon-put`, le hook
+avec `register-push`. `status`
 lit le script déjà installé, qui peut venir d'une version précédente
 de l'app : sa sortie reste lisible par l'app plus récente.
 
