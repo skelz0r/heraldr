@@ -230,10 +230,12 @@ teardown_world
 echo "Home relaie une demande au -main du workspace du projet, avec la consigne standard"
 setup_world
 add_workspace w5 5 'Vidéo studio'
-relay w5 "Ajoute un sous-titre"
+relay w5 "
+  Ajoute un sous-titre
+"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "l'agent du projet est créé dans son workspace, nommé comme le fait l'app" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Vidéo studio—main"
-check "il reçoit /clear puis la demande enveloppée qui finit par /start" "$(prompts_of vid-o-studio-main)" "idle|/clear
+check "il reçoit /clear puis la demande sans ses blancs autour, comme dans l'app, enveloppée et finie par /start" "$(prompts_of vid-o-studio-main)" "idle|/clear
 idle|Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
 
 Ajoute un sous-titre

@@ -65,6 +65,10 @@ agent_name_for_label() {
   printf '%s-main' "$(printf '%s' "$slug" | cut -c1-27)"
 }
 
+trimmed_input() {
+  LC_ALL=en_US.UTF-8 awk 'BEGIN { RS = "\001" } { sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); printf "%s", $0 }'
+}
+
 standard_envelope() {
   cat <<EOF
 Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
@@ -96,7 +100,7 @@ relay_job() {
   workspace="$(herdr workspace get "$workspace_id" 2>&1)" || { echo "workspace introuvable: $workspace_id" >&2; exit 2; }
   label="$(printf '%s' "$workspace" | json_value result.workspace.label)" || { echo "workspace sans label: $workspace_id" >&2; exit 2; }
   [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "relais vers Home impossible" >&2; exit 2; }
-  request="$(cat)"
+  request="$(trimmed_input)"
   [ -n "$request" ] || { echo "empty prompt" >&2; exit 2; }
   standard_envelope "$request" | create_job "$workspace_id" "$(agent_name_for_label "$label")" "$label" clear
 }

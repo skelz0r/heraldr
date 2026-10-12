@@ -728,7 +728,7 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `install` | le script | rien |
 | `enqueue <workspace_id> <agent> <label_base64>` | prompt enveloppé | id du job |
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | texte brut | id du job ; code 2 pour un `pane_id` hors `[A-Za-z0-9]+:[A-Za-z0-9]+` ou une option inconnue |
-| `relay <workspace_id>` | demande brute | id du job ; code 2 vers Home ou un workspace inconnu |
+| `relay <workspace_id>` | demande brute, sans ses blancs autour comme dans l'app | id du job ; code 2 vers Home, un workspace inconnu ou une demande vide |
 | `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
 | `answer <job_id>` | résumé sur la première ligne, ligne vide, réponse complète | rien ; code 2 pour un job inconnu ou une première ligne vide ; notif refusée : réponse gardée, raison sur stderr, code 0 |
 | `read-answer <job_id>` | rien | la réponse telle que remise ; code 2 sans réponse |
