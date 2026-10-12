@@ -172,6 +172,11 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 - « Préparation du micro… », puis « Parle, je t'écoute. », puis la
   transcription en direct (SpeechAnalyzer, sur l'appareil), onde de
   niveau et chrono
+- tant que le micro est actif, l'écran ne se verrouille pas tout seul ;
+  le verrouillage automatique revient dès qu'il s'arrête (arrêt,
+  annulation, erreur, fermeture de l'écran, passage en arrière-plan),
+  donc pas pendant le nettoyage ; un verrouillage manuel ou un
+  changement d'app coupe toujours la dictée
 - « Annuler » ferme sans rien garder ; depuis une salve lancée de
   l'aperçu (§5.2), il revient à l'aperçu avec son texte intact ;
   « Arrêter la dictée » enchaîne sur le nettoyage
