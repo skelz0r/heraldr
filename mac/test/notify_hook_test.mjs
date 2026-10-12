@@ -84,8 +84,8 @@ function lastToolAlreadyRun() {
       { type: "assistant", message: { content: [toolUse] } },
       { type: "user", message: { content: [toolResult] } },
     ]
-      .map((entry) => JSON.stringify(entry))
-      .join("\n") + "\n",
+      .map((entry) => `${JSON.stringify(entry)}\n`)
+      .join(""),
   );
 }
 

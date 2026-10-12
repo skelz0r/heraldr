@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 struct PairingCodeVectors: Decodable {
@@ -32,17 +33,17 @@ struct PairingCodeVectors: Decodable {
         var testDescription: String { name }
     }
 
-    static let shared: PairingCodeVectors = {
-        let url = Bundle(for: BundleMarker.self).url(forResource: "pairing-code-v1", withExtension: "json")!
-        return try! JSONDecoder().decode(PairingCodeVectors.self, from: Data(contentsOf: url))
-    }()
+    static func shared() throws -> PairingCodeVectors {
+        let url = try #require(Bundle(for: BundleMarker.self).url(forResource: "pairing-code-v1", withExtension: "json"))
+        return try JSONDecoder().decode(PairingCodeVectors.self, from: Data(contentsOf: url))
+    }
 
     private final class BundleMarker {}
 }
 
 @Suite("Code d'appairage HERDR-PAIR:1, vecteurs de test partagés avec le plugin Heeler")
 struct PairingCodeTests {
-    @Test("un code valide se décode vers le payload attendu", arguments: PairingCodeVectors.shared.valid)
+    @Test("un code valide se décode vers le payload attendu", arguments: try PairingCodeVectors.shared().valid)
     func decodesValidVector(vector: PairingCodeVectors.Valid) throws {
         let code = try PairingCode(parsing: vector.code)
 
@@ -54,12 +55,12 @@ struct PairingCodeTests {
         #expect(code.bootstrap.map { Int($0.expiresAt.timeIntervalSince1970) } == vector.payload.expiresAt)
     }
 
-    @Test("un code canonique se réencode à l'identique", arguments: PairingCodeVectors.shared.valid.filter { $0.decodeOnly != true })
+    @Test("un code canonique se réencode à l'identique", arguments: try PairingCodeVectors.shared().valid.filter { $0.decodeOnly != true })
     func roundTripsCanonicalVector(vector: PairingCodeVectors.Valid) throws {
         #expect(try PairingCode(parsing: vector.code).canonicalCode == vector.code)
     }
 
-    @Test("un code invalide est refusé avec l'erreur attendue", arguments: PairingCodeVectors.shared.invalid)
+    @Test("un code invalide est refusé avec l'erreur attendue", arguments: try PairingCodeVectors.shared().invalid)
     func rejectsInvalidVector(vector: PairingCodeVectors.Invalid) {
         #expect(throws: PairingCode.ParseError(rawValue: vector.error)!) {
             try PairingCode(parsing: vector.code)

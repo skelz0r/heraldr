@@ -80,6 +80,7 @@ warn_on_stale_spec() {
 }
 
 run_local_ci() {
+    run_check "Lint" ./bin/lint
     run_tests
     warn_on_stale_spec
     printf '\n=== Durations ===\n%s' "$step_durations"

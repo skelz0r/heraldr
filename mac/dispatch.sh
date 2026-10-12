@@ -461,7 +461,7 @@ append_journal() {
     sleep 0.2
   done
   [ -s "$incoming" ] || reject_journal
-  touch "$JOURNAL_PATH" && : > "$fresh" || fail_journal
+  { touch "$JOURNAL_PATH" && : > "$fresh"; } || fail_journal
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in "{"*) ;; *) reject_journal ;; esac
     printf '%s' "$line" > "$entry" || fail_journal
