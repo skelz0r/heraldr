@@ -1,93 +1,59 @@
-# QA manuelle
+# QA sur l'iPhone
 
-Heraldr s'installe directement sur l'iPhone (`bin/run-ios-device`), sans
-TestFlight. Avant de garder un build qui touche un parcours ci-dessous,
-dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
+Ce qui reste à la main : ce que ni les tests (unitaires, `dispatch.sh`,
+hook, tests UI sur le faux Mac) ni `bin/qa` ne voient, parce qu'il
+faut le vrai iPhone et le vrai Mac : SSH réel (LAN, Tailscale), vrai
+herdr et vrai Claude, dictée et Apple Intelligence, caméra, push APNs,
+lien vers l'app Claude, verrouillage d'écran.
 
-## Principes
+Personne ne déroule cette liste en entier. Après un
+`bin/run-ios-device`, l'agent présente à l'utilisateur 3 à 5 cases au
+plus, choisies parmi les zones que touche le diff (chemins entre
+parenthèses), et jamais une case que les tests couvrent déjà. Un
+défaut trouvé se reproduit d'abord en test (faux Mac, `fake-herdr`)
+quand c'est possible, puis se corrige.
 
-- Tester ce que les tests automatiques ne voient pas : vrai SSH (LAN et
-  Tailscale), vrai herdr, vrai Claude, dictée et Apple Intelligence,
-  caméra, push APNs, lien universel vers l'app Claude, rendu au doigt.
-- Le comportement attendu est dans `docs/spec.md`. En cas de doute, la
-  spec fait foi.
-- Un bug trouvé se note avec l'écran, le parcours, le résultat observé
-  et une capture dans `~/share/screenshots/`. Une régression sur un
-  parcours ci-dessous se corrige avant de continuer.
+## Envoi de bout en bout (Dispatch/, mac/dispatch.sh, Mac/)
 
-## Smoke test
+- [ ] Écrire une demande vers un projet sans `-main` : l'agent naît
+  dans le tab 1, sa session porte `<label>—main` dans Claude mobile, il
+  reçoit `/clear` puis la consigne.
+- [ ] Envoyer à Home une demande qui vise un projet ouvert : Home la
+  relaie, c'est le `-main` du projet qui lance `/start`.
+- [ ] Joindre deux captures depuis la photothèque et envoyer : le
+  `-main` lit les images par leur chemin et les décrit.
 
+## Réseau (Mac/, Pairing/)
+
+- [ ] Wi-Fi coupé, Tailscale actif : l'app joint le Mac par Tailscale.
+  Tailscale coupé aussi : pastille orange, liste gardée ; une fois le
+  réseau revenu, « Rafraîchir » la remet en vert.
+- [ ] « Oublier ce Mac », puis appairer en scannant le QR de
+  `heeler.pair` : retour sur l'écran principal, Home en cible.
 - [ ] Installer par-dessus la version précédente : l'app s'ouvre
-  appairée, Home en cible, les workspaces dans l'ordre herdr.
-- [ ] Écrire une demande vers un projet dont le `-main` est prêt :
-  notice « Envoyé », sur le Mac `/clear` puis la consigne, l'état de
-  la cible passe à « Travaille sur ta demande ».
-- [ ] Envoyer vers un projet sans `-main` : l'agent apparaît dans le
-  tab 1 et reçoit la demande ; sa session Remote Control porte
-  `<label>—main` dans Claude mobile.
-- [ ] Envoyer vers un agent qui travaille : notice « En file », badge
-  « en attente », la demande part quand il a fini.
+  appairée, l'historique et le lexique sont gardés.
+
+## Dictée (Voice/, UI/ComposeView.swift)
+
+- [ ] Dicter une demande avec des hésitations : « Dictée nettoyée »,
+  « Voir l'original » montre la transcription brute.
 - [ ] Dicter plus longtemps que le verrouillage automatique : l'écran
-  reste allumé ; après l'arrêt, il se verrouille au délai habituel.
+  reste allumé, puis se verrouille au délai habituel après l'arrêt.
 - [ ] Avec Spotify en lecture, dicter puis arrêter : la musique se
   coupe pendant l'écoute et reprend seule à l'arrêt, sans erreur dans
   Spotify ; idem avec « Annuler » et en verrouillant l'iPhone pendant
   la dictée (au retour, l'aperçu montre ce qui a été dicté).
-- [ ] Dicter une demande avec des hésitations : « Dictée nettoyée »,
-  « Voir l'original » montre la transcription brute.
-- [ ] Dicter « on push la branche », corriger en « git push » dans
-  l'aperçu et envoyer, puis redicter la même phrase : l'aperçu propose
-  « git push », même Apple Intelligence désactivé.
-- [ ] Après ces deux envois, `tail -2 ~/.config/heraldr/journal-dictees.jsonl`
-  sur le Mac : une ligne par envoi dicté, la seconde avec le
-  remplacement « on push » → « git push » ; rien pour un envoi écrit.
-- [ ] Réglages > Lexique : le terme « git push » et sa variante
-  « on push » apparaissent ; le pied dit « Sauvegardé sur le Mac » et
-  `~/.config/heraldr/lexique.json` les contient sur le Mac.
-- [ ] Désinstaller l'app, la réinstaller et l'appairer : notice
-  « Lexique restauré depuis le Mac », la liste est revenue.
-- [ ] Après une dictée, corriger un mot au clavier, puis « Dicter la
-  suite » : la nouvelle salve s'ajoute à la ligne, la correction reste ;
-  « Voir l'original » montre les deux salves. Relancer « Dicter la
-  suite » puis « Annuler » : retour à l'aperçu, texte intact.
-- [ ] Coller une demande depuis le presse-papier, puis avec un
-  presse-papier vide : notice « Presse-papier vide ».
-- [ ] Joindre deux captures depuis l'aperçu, en retirer une, envoyer
-  à un projet : le `-main` reçoit la demande avec le chemin de la
-  capture et la décrit. Faire une capture, « Copier et supprimer »,
-  puis Coller : l'aperçu s'ouvre avec la vignette. Renvoyer depuis
-  l'historique : « 1 capture jointe », le même chemin repart.
-- [ ] Envoyer à Home une demande qui vise un projet ouvert : Home la
-  relaie, l'envoi s'affiche sur la ligne du projet et c'est son `-main`
-  qui lance `/start`.
-- [ ] Appui long sur un workspace avec une feature en cours : le menu
-  liste ses tabs qui ont un Claude ; en choisir un, son nom s'affiche
-  sous celui du workspace dans la cible. Envoyer un retour sans cocher « Envoyer /clear
-  avant » : le Claude du tab reçoit l'avertissement de dictée puis le
-  texte, sans consigne, contexte gardé.
-  Un tap sur la tuile revient sur `main`.
+- [ ] Dicter « on push la branche », corriger en « git push » et
+  envoyer, puis redicter : l'aperçu propose « git push » ;
+  `tail -1 ~/.config/heraldr/journal-dictees.jsonl` sur le Mac montre
+  le remplacement.
+- [ ] Désinstaller, réinstaller, appairer : « Lexique restauré depuis
+  le Mac ».
+
+## Notifications (Push/, mac/notify-hook.mjs)
+
 - [ ] Faire poser une question AskUserQuestion à un `-main` : la notif
   arrive avec label, agent et question ; le tap ouvre la session dans
-  l'app Claude, app en arrière-plan comme app tuée.
-- [ ] Envoyer à un projet une simple question (« comment marche X
-  dans Y ») : pas de /start, la notif « Réponse » porte le résumé ; le
-  tap ouvre la feuille avec la question et la réponse complète, app en
-  arrière-plan comme app tuée. L'historique la range dans « Questions ».
-  Même question envoyée à Home : Home répond lui-même, sans relais.
-- [ ] Couper le Wi-Fi avec Tailscale actif : l'app joint le Mac par
-  Tailscale. Couper aussi Tailscale : la pastille du Mac passe en
-  orange, la liste reste ; « Rafraîchir » une fois le réseau revenu la
-  remet en vert.
-- [ ] Lancer l'app réseau coupé : « Mac injoignable », puis
-  « Réessayer » une fois le réseau revenu.
-- [ ] Envoyer une demande Mac injoignable : l'aperçu montre l'erreur ;
-  fermer l'aperçu, l'historique garde le texte en « Échec ». Une fois
-  le Mac revenu, « Renvoyer » : notice d'envoi, nouvelle entrée qui
-  passe « En file » puis « Envoyé ». « Copier » colle bien le texte.
-
-## Quand l'appairage change
-
-- [ ] « Oublier ce Mac », puis appairer avec le QR de `heeler.pair` :
-  retour sur l'écran principal, Home en cible.
-- [ ] Coller un code expiré : « Le code a expiré : relance heeler.pair
-  sur le Mac ».
+  l'app Claude.
+- [ ] Envoyer une simple question à un projet : notif « Réponse » avec
+  le résumé, le tap ouvre la feuille avec la réponse complète.

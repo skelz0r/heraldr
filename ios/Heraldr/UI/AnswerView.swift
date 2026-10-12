@@ -8,7 +8,8 @@ struct AnswerSheet: View {
         NavigationStack {
             AnswerContent(
                 question: presented.question, answer: presented.answer, loading: presented.loading,
-                failure: presented.failure)
+                failure: presented.failure
+            )
             .navigationTitle(presented.targetLabel)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -72,6 +73,7 @@ struct CopyAnswerButton: View {
         .task(id: copied) {
             guard copied else { return }
             try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
             withAnimation { copied = false }
         }
     }

@@ -44,6 +44,9 @@ renvoyer vers Claude mobile.
 
 ## Idées non priorisées
 
+- passer à Xcode 26.6 (ou 27) : celui de Heeler, qui retirerait le
+  patch de `SessionDriver.swift` ; à faire dans une branche dédiée,
+  avec `bin/local-ci` et `bin/qa --all`
 - multi-machines (plusieurs QR)
 - widget et action du bouton Action pour lancer directement la voix
 - raccourci Siri « dispatch dans acme »

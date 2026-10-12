@@ -77,7 +77,7 @@ struct PairingCode: Equatable, Sendable {
         switch (payload["seed"], payload["exp"]) {
         case (nil, nil):
             bootstrap = nil
-        case let (seedValue?, expiryValue?):
+        case (let seedValue?, let expiryValue?):
             guard
                 let seedText = seedValue as? String,
                 let seed = Base64URL.decode(seedText),

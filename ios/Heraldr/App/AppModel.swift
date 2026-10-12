@@ -1,7 +1,5 @@
 import Foundation
 import Observation
-import UIKit
-import UserNotifications
 
 @MainActor
 @Observable
@@ -81,10 +79,9 @@ final class AppModel {
     private(set) var jobs: [DispatchJob] = []
     private(set) var agents: [Agent] = []
     private(set) var tabs: [Tab] = []
-    private(set) var history = SendHistoryStore.load() {
-        didSet { SendHistoryStore.save(history) }
+    private(set) var history: SendHistory {
+        didSet { SendHistoryStore.save(history, to: environment.defaults) }
     }
-    private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
     private(set) var selectedTabId: String?
     var notice: Notice?
@@ -94,18 +91,22 @@ final class AppModel {
     private var pushDeviceRegistered = false
     private var notificationsRequested = false
 
-    private var link: MacLink?
-    private var deviceKey: DeviceKey?
+    private let environment: AppEnvironment
+    private var link: (any MacTransport)?
     private var pollTask: Task<Void, Never>?
-    private let lexiconKeeper = LexiconKeeper()
+    private let lexiconKeeper: LexiconKeeper
     private var lexiconBackupTask: Task<Void, Never>?
-    private let dictationJournal = DictationJournal()
+    private let dictationJournal: DictationJournal
     private var refreshing = false
     private var refreshRequestedWhileRefreshing = false
 
-    init() {
-        if let mac = PairedMacStore.load(), let key = try? DeviceKeyStore.load() {
-            attach(mac, deviceKey: key)
+    init(environment: AppEnvironment = .live) {
+        self.environment = environment
+        history = SendHistoryStore.load(from: environment.defaults)
+        lexiconKeeper = LexiconKeeper(store: environment.lexiconStore)
+        dictationJournal = DictationJournal(fileURL: environment.dictationJournalFile)
+        if let mac = PairedMacStore.load(from: environment.defaults) {
+            attach(mac)
         }
     }
 
@@ -158,21 +159,21 @@ final class AppModel {
 
     func targetState(for target: Target) -> TargetState {
         .resolve(
-            for: target.workspace, tab: target.tab, agents: agents, jobs: jobs, lastSentAt: lastSentAt[target.id], now: .now)
+            for: target.workspace, tab: target.tab, agents: agents, jobs: jobs,
+            lastSentAt: history.lastAccepted(to: target)?.createdAt, now: .now)
     }
 
     func pair(code: String) async throws {
-        let key = try DeviceKeyStore.loadOrCreate()
-        let mac = try await PairingCeremony.pair(code: code, deviceKey: key)
-        PairedMacStore.save(mac)
-        attach(mac, deviceKey: key)
+        let mac = try await environment.pair(code)
+        PairedMacStore.save(mac, to: environment.defaults)
+        attach(mac)
         lexiconKeeper.paired()
         await refresh()
     }
 
     func forgetMac() async {
         await link?.disconnect()
-        PairedMacStore.forget()
+        PairedMacStore.forget(from: environment.defaults)
         link = nil
         mac = nil
         workspaces = []
@@ -245,7 +246,7 @@ final class AppModel {
     func open(_ question: QuestionNotification) async {
         selectedWorkspaceId = question.workspaceId
         selectedTabId = nil
-        if let url = question.sessionURL, await UIApplication.shared.open(url, options: [.universalLinksOnly: true]) {
+        if let url = question.sessionURL, await environment.openURL(url) {
             unopenedQuestion = nil
             return
         }
@@ -254,7 +255,8 @@ final class AppModel {
 
     func open(_ notification: AnswerNotification) async {
         let entry = history.entry(forJob: notification.jobId)
-        let label = entry?.targetLabel
+        let label =
+            entry?.targetLabel
             ?? workspaces.first { $0.id == notification.workspaceId }?.label
             ?? notification.workspaceId
         presentedAnswer = PresentedAnswer(
@@ -286,10 +288,7 @@ final class AppModel {
     private func requestNotificationsOnce() async {
         guard !notificationsRequested else { return }
         notificationsRequested = true
-        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
-        if granted {
-            UIApplication.shared.registerForRemoteNotifications()
-        }
+        await environment.requestNotifications()
     }
 
     private func registerPushDeviceIfNeeded() async {
@@ -348,18 +347,18 @@ final class AppModel {
                 attachments.append(try await dispatcher.upload(image))
                 history.attach(entryId, paths: attachments)
             }
-            let jobId = if let paneId {
-                try await dispatcher.send(
-                    text, attachments: attachments, toPane: paneId, in: workspace, clearingContext: clearingContext)
-            } else {
-                try await dispatcher.send(text, attachments: attachments, to: workspace)
-            }
+            let jobId =
+                if let paneId {
+                    try await dispatcher.send(
+                        text, attachments: attachments, toPane: paneId, in: workspace, clearingContext: clearingContext)
+                } else {
+                    try await dispatcher.send(text, attachments: attachments, to: workspace)
+                }
             history.accept(entryId, jobId: jobId)
         } catch {
             history.fail(entryId, error: error.localizedDescription)
             throw error
         }
-        lastSentAt[target.id] = .now
         notice = Self.notice(afterSendingTo: target, state: state, clearingContext: clearingContext)
         await refresh()
     }
@@ -368,7 +367,9 @@ final class AppModel {
         let label = target.tab == nil ? target.workspace.label : target.label
         switch state {
         case .missing:
-            return Notice(kind: .sent, title: "Envoyé à \(label)", detail: "Le Mac lance Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label)), puis lui transmet la demande.")
+            return Notice(
+                kind: .sent, title: "Envoyé à \(label)",
+                detail: "Le Mac lance Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label)), puis lui transmet la demande.")
         case .agent(let status, _) where status.isReady && (target.tab == nil || clearingContext):
             return Notice(kind: .sent, title: "Envoyé à \(label)", detail: "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
         case .agent(let status, _) where status.isReady:
@@ -411,23 +412,31 @@ final class AppModel {
         pollTask = nil
     }
 
-    private func attach(_ mac: PairedMac, deviceKey: DeviceKey) {
+    private func attach(_ mac: PairedMac) {
+        guard let link = environment.connect(mac) else { return }
         self.mac = mac
-        self.deviceKey = deviceKey
-        link = MacLink(mac: mac, deviceKey: deviceKey)
+        self.link = link
         connection = .connecting
     }
 
     private func announceFailures(previous: [DispatchJob], current: [DispatchJob], workspaces: [Workspace]) {
-        let known = Set(previous.filter { $0.state == .failed }.map(\.id))
-        let tracked = Set(previous.map(\.id))
-        guard let failed = current.first(where: { $0.state == .failed && !known.contains($0.id) && tracked.contains($0.id) }) else {
+        let awaitedInHistory = Set(history.entries.filter { $0.status != .failed }.compactMap(\.jobId))
+        let knownFailures = Set(previous.filter { $0.state == .failed }.map(\.id)).subtracting(awaitedInHistory)
+        let tracked = Set(previous.map(\.id)).union(awaitedInHistory)
+        let failures = current.filter { $0.state == .failed && !knownFailures.contains($0.id) && tracked.contains($0.id) }
+        guard let first = failures.first else { return }
+        func label(of job: DispatchJob) -> String {
+            history.entry(forJob: job.id)?.targetLabel
+                ?? workspaces.first { $0.id == job.workspaceId }?.label
+                ?? job.workspaceId
+        }
+        guard failures.count > 1 else {
+            notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(label(of: first))", detail: first.error ?? "erreur inconnue")
             return
         }
-        let label = history.entries.first { $0.jobId == failed.id }?.targetLabel
-            ?? workspaces.first { $0.id == failed.workspaceId }?.label
-            ?? failed.workspaceId
-        notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(label)", detail: failed.error ?? "erreur inconnue")
+        notice = Notice(
+            kind: .failed, title: "Échec de \(failures.count) envois",
+            detail: failures.map { "\(label(of: $0)) : \($0.error ?? "erreur inconnue")" }.joined(separator: "\n"))
     }
 
     private func schedulePolling() {

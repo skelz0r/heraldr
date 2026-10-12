@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct HeraldrApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel()
+    @State private var model = AppModel(environment: .launch)
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {

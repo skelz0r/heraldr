@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @Suite("Lexique de dictée")
@@ -175,13 +176,15 @@ struct DictationLexiconTests {
     @Test("les corrections de l'ancien lexique deviennent des termes avec leurs variantes, une seule fois")
     func legacyCorrectionsAreMigrated() throws {
         let store = try temporaryStore()
-        store.defaults.set(Data("""
-            {"corrections":[
-              {"heard":"ak me","meant":"Acme","count":1,"learnedAt":781000300},
-              {"heard":"on push","meant":"git push","count":3,"learnedAt":781000200},
-              {"heard":"ack me","meant":"acme","count":2,"learnedAt":781000100}
-            ]}
-            """.utf8), forKey: "dictation-lexicon")
+        store.defaults.set(
+            Data(
+                """
+                {"corrections":[
+                  {"heard":"ak me","meant":"Acme","count":1,"learnedAt":781000300},
+                  {"heard":"on push","meant":"git push","count":3,"learnedAt":781000200},
+                  {"heard":"ack me","meant":"acme","count":2,"learnedAt":781000100}
+                ]}
+                """.utf8), forKey: "dictation-lexicon")
 
         let migrated = store.load()
 

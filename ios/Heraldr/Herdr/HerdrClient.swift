@@ -7,7 +7,7 @@ enum AgentStatus: String, Codable, Sendable {
     case done
     case unknown
 
-    init(from decoder: Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
         self = AgentStatus(rawValue: raw) ?? .unknown
     }
@@ -74,8 +74,8 @@ struct Agent: Decodable, Equatable, Sendable {
     let name: String?
     let kind: String?
     let paneId: String?
-    let workspaceId: String
-    let tabId: String
+    let workspaceId: String?
+    let tabId: String?
     let agentStatus: AgentStatus
 
     var isClaude: Bool { kind == "claude" }
@@ -102,34 +102,53 @@ private struct HerdrEnvelope<Payload: Decodable>: Decodable {
     let error: HerdrError?
 }
 
+private struct LossyList<Element: Decodable>: Decodable {
+    let elements: [Element]
+
+    private struct Skipped: Decodable {}
+
+    init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        var elements: [Element] = []
+        while !container.isAtEnd {
+            if let element = try? container.decode(Element.self) {
+                elements.append(element)
+            } else {
+                _ = try container.decode(Skipped.self)
+            }
+        }
+        self.elements = elements
+    }
+}
+
 private struct WorkspaceList: Decodable {
-    let workspaces: [Workspace]
+    let workspaces: LossyList<Workspace>
 }
 
 private struct AgentList: Decodable {
-    let agents: [Agent]
+    let agents: LossyList<Agent>
 }
 
 private struct TabList: Decodable {
-    let tabs: [Tab]
+    let tabs: LossyList<Tab>
 }
 
 struct HerdrClient: Sendable {
-    let link: MacLink
+    let link: any MacTransport
 
     func workspaces() async throws -> [Workspace] {
         let list: WorkspaceList = try await call("workspace.list")
-        return Workspace.ordered(list.workspaces)
+        return Workspace.ordered(list.workspaces.elements)
     }
 
     func agents() async throws -> [Agent] {
         let list: AgentList = try await call("agent.list")
-        return list.agents
+        return list.agents.elements
     }
 
     func tabs() async throws -> [Tab] {
         let list: TabList = try await call("tab.list")
-        return list.tabs.sorted { $0.number < $1.number }
+        return list.tabs.elements.sorted { $0.number < $1.number }
     }
 
     private func call<Result: Decodable>(_ method: String) async throws -> Result {

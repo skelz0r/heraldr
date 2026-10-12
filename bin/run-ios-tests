@@ -7,20 +7,47 @@ PROJECT_NAME="Heraldr"
 SCHEME="Heraldr"
 SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-iPhone 17 Pro}"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-tests"
+RESULT_BUNDLE="${DERIVED_DATA}/Heraldr.xcresult"
+MINIMUM_TEST_COUNT_FILE="${IOS_DIR}/minimum-test-count"
 
 "${PROJECT_DIR}/bin/generate-ios"
 
-ONLY_TESTING=()
+ONLY_TESTING=(-skip-testing:HeraldrUITests)
 if [ -n "${1:-}" ]; then
-    ONLY_TESTING=(-only-testing:"HeraldrTests/$1")
+    ONLY_TESTING=(-only-testing:"$1")
+    [[ "$1" == */* || "$1" == Heraldr*Tests ]] || ONLY_TESTING=(-only-testing:"HeraldrTests/$1")
 fi
 
+rm -rf "${RESULT_BUNDLE}"
 xcodebuild test \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
     -destination "platform=iOS Simulator,name=${SIMULATOR}" \
     -derivedDataPath "${DERIVED_DATA}" \
+    -resultBundlePath "${RESULT_BUNDLE}" \
     "${ONLY_TESTING[@]}" \
-    2>&1 | grep -E "✔|✘|Test run|error:|\*\* TEST"
+    2>&1 | xcbeautify --disable-logging --renderer terminal
+
+summary="$(xcrun xcresulttool get test-results summary --path "${RESULT_BUNDLE}" --compact)"
+executed="$(printf '%s' "$summary" | plutil -extract totalTestCount raw -o - -)"
+skipped="$(printf '%s' "$summary" | plutil -extract skippedTests raw -o - -)"
+executed=$((executed - skipped))
+printf '\n%s tests executed\n' "$executed"
+
+if [ "$executed" -eq 0 ]; then
+    echo "No test executed: check the scheme and bin/generate-ios" >&2
+    exit 1
+fi
+
+if [ -z "${1:-}" ]; then
+    minimum="$(cat "${MINIMUM_TEST_COUNT_FILE}")"
+    if [ "$executed" -lt "$minimum" ]; then
+        echo "Only $executed tests executed, $minimum expected (${MINIMUM_TEST_COUNT_FILE#"${PROJECT_DIR}"/}): a test target or suite went missing" >&2
+        exit 1
+    fi
+    if [ "$executed" -gt "$minimum" ]; then
+        echo "Raise ${MINIMUM_TEST_COUNT_FILE#"${PROJECT_DIR}"/} to $executed in the same commit as the new tests"
+    fi
+fi
 
 "${PROJECT_DIR}/bin/run-mac-tests"

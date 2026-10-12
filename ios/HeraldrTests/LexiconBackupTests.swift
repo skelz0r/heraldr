@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @MainActor
@@ -31,7 +32,7 @@ struct LexiconBackupTests {
         }
 
         nonisolated var mirror: LexiconMirror {
-            LexiconMirror(fetch: { try await self.read() }, store: { try await self.write($0) })
+            LexiconMirror(fetch: { try await self.read() }, store: { await self.write($0) })
         }
     }
 
@@ -85,7 +86,9 @@ struct LexiconBackupTests {
         #expect(keeper.lexicon == local)
     }
 
-    @Test("lecture du Mac impossible pendant la restauration : sa sauvegarde n'est pas écrasée, elle est reprise à la connexion suivante avec ce qui a été appris entre-temps")
+    @Test(
+        "lecture du Mac impossible pendant la restauration : sa sauvegarde n'est pas écrasée, elle est reprise à la connexion suivante avec ce qui a été appris entre-temps"
+    )
     func restoreIsRetriedWithoutOverwritingMac() async {
         let backup = lexicon([("Acme", ["ack me"])])
         let mac = FakeMac(file: backup.json)

@@ -28,6 +28,7 @@ struct HistoryView: View {
                     ForEach(Section.allCases, id: \.self) { Text($0.rawValue) }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("history.section")
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
@@ -141,9 +142,11 @@ struct HistoryView: View {
             actionButton("Renvoyer", systemImage: "arrow.clockwise") {
                 resend(entry)
             }
+            .accessibilityIdentifier("history.resend")
             actionButton(copied ? "Copié" : "Copier", systemImage: copied ? "checkmark" : "doc.on.doc", done: copied) {
                 copy(entry)
             }
+            .accessibilityIdentifier("history.copy")
         }
         .padding(.vertical, -6)
     }

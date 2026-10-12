@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORKTREE="$(basename "${PROJECT_DIR}")"
+SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-Heraldr ${WORKTREE}}"
+DERIVED_DATA="${PROJECT_DIR}/build/qa"
+RESULT_BUNDLE="${DERIVED_DATA}/qa.xcresult"
+ATTACHMENTS="${DERIVED_DATA}/attachments"
+SCREENSHOTS="${HOME}/share/screenshots/${WORKTREE}"
+BASE_BRANCH="origin/main"
+DEVICE_TYPE="${QA_DEVICE_TYPE:-iPhone SE (3rd generation)}"
+DURATIONS="$(dirname "$(git -C "${PROJECT_DIR}" rev-parse --path-format=absolute --git-common-dir)")/build/qa-durations.tsv"
+ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacAndVoiceTests)
+
+usage() {
+    cat <<EOF
+Usage: bin/qa [--all | <flow>...]
+
+Plays the UI flows touched by the diff since ${BASE_BRANCH} on the
+simulator dedicated to this worktree ("${SIMULATOR}", ${DEVICE_TYPE},
+the smallest screen iOS 26 runs on), against the fake Mac, then
+exports light and dark screenshots to ${SCREENSHOTS}/ and records
+test durations in ${DURATIONS}.
+
+Flows: ${ALL_FLOWS[*]}
+EOF
+}
+
+flows_for_path() {
+    case "$1" in
+        ios/Heraldr/UI/Home* | ios/Heraldr/UI/Components.swift | ios/Heraldr/UI/Theme.swift | ios/Heraldr/Herdr/* | ios/Heraldr/Mac/*)
+            printf '%s\n' HomeScreenTests MacAndVoiceTests ;;
+        ios/Heraldr/Voice/*)
+            printf '%s\n' SendFlowTests MacAndVoiceTests ;;
+        ios/Heraldr/UI/Compose* | ios/Heraldr/Dispatch/*)
+            echo SendFlowTests ;;
+        ios/Heraldr/UI/* | ios/Heraldr/Pairing/*)
+            echo SheetsTests ;;
+        ios/Heraldr/Push/*)
+            echo NotificationTests ;;
+        ios/Heraldr/App/* | ios/Heraldr/Debug/* | ios/HeraldrUITests/Screen.swift | ios/project.yml)
+            printf '%s\n' "${ALL_FLOWS[@]}" ;;
+        ios/HeraldrUITests/*.swift)
+            basename "$1" .swift ;;
+    esac
+}
+
+flows_from_diff() {
+    local base paths
+    base="$(git -C "${PROJECT_DIR}" merge-base HEAD "${BASE_BRANCH}")" || return 1
+    paths="$(git -C "${PROJECT_DIR}" diff --name-only "${base}")" || return 1
+    paths+=$'\n'"$(git -C "${PROJECT_DIR}" ls-files --others --exclude-standard)" || return 1
+    while IFS= read -r path; do [ -n "$path" ] && flows_for_path "$path"; done <<< "$paths" | sort -u
+}
+
+simulator_udid() {
+    local found udid device_type
+    found="$(xcrun simctl list devices available -j | plutil -extract devices json -o - - |
+        python3 -c 'import json,sys; name=sys.argv[1]; print(next((d["udid"] + " " + d["deviceTypeIdentifier"] for r in json.load(sys.stdin).values() for d in r if d["name"] == name), ""))' "${SIMULATOR}")"
+    udid="${found%% *}"
+    device_type="$(xcrun simctl list devicetypes -j | plutil -extract devicetypes json -o - - |
+        python3 -c 'import json,sys; name=sys.argv[1]; print(next(t["identifier"] for t in json.load(sys.stdin) if t["name"] == name))' "${DEVICE_TYPE}")"
+    if [ -n "$udid" ] && [ "${found#* }" != "$device_type" ]; then
+        xcrun simctl shutdown "$udid" 2>/dev/null || true
+        xcrun simctl delete "$udid"
+        udid=""
+    fi
+    if [ -z "$udid" ]; then
+        udid="$(xcrun simctl create "${SIMULATOR}" "${device_type}")"
+    fi
+    printf '%s' "$udid"
+}
+
+prepare_simulator() {
+    xcrun simctl boot "$1" 2>/dev/null || true
+    xcrun simctl bootstatus "$1" -b >/dev/null
+    xcrun simctl ui "$1" appearance light
+    xcrun simctl status_bar "$1" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+}
+
+export_screenshots() {
+    rm -rf "${ATTACHMENTS}"
+    xcrun xcresulttool export attachments --path "${RESULT_BUNDLE}" --output-path "${ATTACHMENTS}" >/dev/null
+    mkdir -p "${SCREENSHOTS}"
+    python3 - "${ATTACHMENTS}" "${SCREENSHOTS}" <<'PYTHON'
+import json, re, shutil, sys
+source, destination = sys.argv[1:]
+for test in json.load(open(f"{source}/manifest.json")):
+    for attachment in test["attachments"]:
+        match = re.match(r"(.+-(light|dark))_\d+_", attachment.get("suggestedHumanReadableName", ""))
+        if match and attachment["exportedFileName"].endswith(".png"):
+            shutil.copy(f"{source}/{attachment['exportedFileName']}", f"{destination}/{match.group(1)}.png")
+            print(f"  {destination}/{match.group(1)}.png")
+PYTHON
+}
+
+record_durations() {
+    python3 - "${RESULT_BUNDLE}" "${DURATIONS}" "$1" "$(git -C "${PROJECT_DIR}" rev-parse --short HEAD)" \
+        "$(git -C "${PROJECT_DIR}" branch --show-current)" "$(sysctl -n vm.loadavg | awk '{print $3}')" "$(sysctl -n hw.ncpu)" <<'PYTHON'
+import datetime, json, os, statistics, subprocess, sys
+bundle, history, scope, revision, branch, load, cpus = sys.argv[1:]
+SLOWEST_TEST_LIMIT, GROWTH_LIMIT, BASELINE_RUNS, MINIMUM_BASELINE_RUNS = 45, 1.2, 10, 5
+COLUMNS = ["recorded_at", "revision", "branch", "scope", "load_5min", "cpu_count", "tests", "total_s", "slowest_test", "slowest_test_s"]
+
+def xcresult(kind):
+    return json.loads(subprocess.run(["xcrun", "xcresulttool", "get", "test-results", kind, "--path", bundle], capture_output=True, check=True).stdout)
+
+def test_cases(node, owner=""):
+    if node.get("nodeType") == "Test Suite":
+        owner = node["name"]
+    if node.get("nodeType") == "Test Case":
+        yield f"{owner}/{node['name'].removesuffix('()')}", node.get("durationInSeconds", 0)
+    for child in node.get("children", []):
+        yield from test_cases(child, owner)
+
+def quiet(run):
+    return float(run["load_5min"]) <= int(run["cpu_count"])
+
+summary = xcresult("summary")
+durations = dict(case for node in xcresult("tests")["testNodes"] for case in test_cases(node))
+slowest = max(durations.items(), key=lambda item: item[1], default=("", 0))
+run = dict(zip(COLUMNS, [
+    datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), revision, branch, scope, load, cpus,
+    len(durations), round(summary["finishTime"] - summary["startTime"]), slowest[0], round(slowest[1]),
+]))
+
+past = []
+if os.path.exists(history):
+    with open(history) as lines:
+        past = [dict(zip(COLUMNS, line.rstrip("\n").split("\t"))) for line in list(lines)[1:]]
+os.makedirs(os.path.dirname(history), exist_ok=True)
+with open(history, "a") as output:
+    if output.tell() == 0:
+        output.write("\t".join(COLUMNS) + "\n")
+    output.write("\t".join(str(run[column]) for column in COLUMNS) + "\n")
+
+warnings = [f"{name} took {round(seconds)}s, above {SLOWEST_TEST_LIMIT}s" for name, seconds in sorted(durations.items(), key=lambda item: -item[1]) if seconds > SLOWEST_TEST_LIMIT]
+baseline = [int(past_run["total_s"]) for past_run in past if past_run["scope"] == "all" and quiet(past_run)][-BASELINE_RUNS:]
+if scope == "all" and quiet(run) and len(baseline) >= MINIMUM_BASELINE_RUNS and run["total_s"] > statistics.median(baseline) * GROWTH_LIMIT:
+    warnings.append(f"bin/qa --all took {run['total_s']}s, more than {round((GROWTH_LIMIT - 1) * 100)}% above the {round(statistics.median(baseline))}s median of the last {len(baseline)} quiet runs")
+if warnings:
+    print("\nWarning: the UI tests are getting slow (not blocking): move a check down to a unit test, merge flows that relaunch the app, or cut fixed waits")
+    for warning in warnings:
+        print(f"  - {warning}")
+    print(f"  History: {history}")
+PYTHON
+}
+
+case "${1:-}" in
+    -h | --help) usage; exit 0 ;;
+    --all) FLOWS=("${ALL_FLOWS[@]}"); SCOPE=all ;;
+    "")
+        touched="$(flows_from_diff)" || { echo "QA: cannot diff against ${BASE_BRANCH}, run git fetch or bin/qa --all" >&2; exit 1; }
+        FLOWS=()
+        while IFS= read -r flow; do [ -n "$flow" ] && FLOWS+=("$flow"); done <<< "$touched"
+        ;;
+    *) FLOWS=("$@") ;;
+esac
+SCOPE="${SCOPE:-partial}"
+
+if [ ${#FLOWS[@]} -eq 0 ]; then
+    echo "QA: no UI flow touched since ${BASE_BRANCH}, nothing to play (bin/qa --all to play everything)"
+    exit 0
+fi
+
+UDID="$(simulator_udid)"
+prepare_simulator "${UDID}"
+"${PROJECT_DIR}/bin/generate-ios"
+
+ONLY_TESTING=()
+for flow in "${FLOWS[@]}"; do ONLY_TESTING+=(-only-testing:"HeraldrUITests/${flow}"); done
+
+printf 'QA on %s (%s): %s\n' "${SIMULATOR}" "${UDID}" "${FLOWS[*]}"
+rm -rf "${RESULT_BUNDLE}"
+status=0
+xcodebuild test \
+    -parallel-testing-enabled YES \
+    -parallel-testing-worker-count "${QA_WORKERS:-3}" \
+    -project "${PROJECT_DIR}/ios/Heraldr.xcodeproj" \
+    -scheme Heraldr \
+    -destination "platform=iOS Simulator,id=${UDID}" \
+    -derivedDataPath "${DERIVED_DATA}" \
+    -resultBundlePath "${RESULT_BUNDLE}" \
+    "${ONLY_TESTING[@]}" \
+    2>&1 | xcbeautify --quiet --disable-logging --renderer terminal || status=$?
+
+printf '\nScreenshots, light and dark, to look at:\n'
+export_screenshots
+
+if [ "$status" -ne 0 ]; then
+    printf '\nQA FAILED: see the failures above and %s\n' "${RESULT_BUNDLE}" >&2
+    exit "$status"
+fi
+record_durations "${SCOPE}" || printf '\nWarning: test durations not recorded\n'
+printf '\nQA passed: %s\n' "${FLOWS[*]}"

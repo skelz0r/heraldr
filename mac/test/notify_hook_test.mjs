@@ -70,7 +70,12 @@ function showQuestion(question) {
 }
 
 function lastToolAlreadyRun() {
-  const toolUse = { type: "tool_use", id: "toolu_1", name: "Bash", input: { command: "git status", description: "Show working tree status" } };
+  const toolUse = {
+    type: "tool_use",
+    id: "toolu_1",
+    name: "Bash",
+    input: { command: "git status", description: "Show working tree status" },
+  };
   const toolResult = { type: "tool_result", tool_use_id: "toolu_1", content: "On branch main" };
   writeFileSync(
     join(world, "home", ".claude", "projects", "-Users-me-work-acme", `${sessionId}.jsonl`),
@@ -79,8 +84,8 @@ function lastToolAlreadyRun() {
       { type: "assistant", message: { content: [toolUse] } },
       { type: "user", message: { content: [toolResult] } },
     ]
-      .map((entry) => JSON.stringify(entry))
-      .join("\n") + "\n",
+      .map((entry) => `${JSON.stringify(entry)}\n`)
+      .join(""),
   );
 }
 

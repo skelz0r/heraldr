@@ -109,6 +109,13 @@ struct SendHistory: Codable, Equatable, Sendable {
         }
     }
 
+    func lastAccepted(to target: Target) -> SentRequest? {
+        entries.first { entry in
+            entry.workspaceId == target.workspace.id && entry.tabId == target.tab?.id
+                && (entry.status == .queued || entry.status == .sent)
+        }
+    }
+
     func entry(forJob jobId: String) -> SentRequest? {
         entries.first { $0.jobId == jobId }
     }

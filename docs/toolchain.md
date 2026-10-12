@@ -14,14 +14,16 @@ Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
 
 | Script | Rôle |
 | --- | --- |
-| `bin/setup-ios` | vérifie Xcode 26, xcode-select, XcodeGen, initialise le submodule Heeler |
+| `bin/setup-ios` | vérifie Xcode 26, xcode-select, XcodeGen, installe et vérifie les outils épinglés (shellcheck 0.11.0, SwiftLint 0.65.1, Biome 2.5.15, xcbeautify 3.2.1, AXe 1.8.0 ; swift-format vient d'Xcode), initialise le submodule Heeler |
 | `bin/generate-ios` | `xcodegen generate`, applique `Vendor/patches/*.patch` au submodule |
 | `bin/build-ios [simulator\|device]` | build |
 | `bin/run-ios` | build et lancement simulateur |
 | `bin/run-ios-device [uuid]` | build puis install sur l'iPhone par le skill global `ios-device-install` : `devicectl` si l'iPhone est joignable, sinon page d'install OTA via Tailscale (attente device busy, déverrouillage keychain CI comme local_events) |
-| `bin/run-ios-tests [suite]` | tests unitaires en simulateur (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro par défaut), puis `bin/run-mac-tests` |
+| `bin/run-ios-tests [suite]` | tests unitaires en simulateur (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro par défaut), sortie complète par xcbeautify, warnings compris, puis `bin/run-mac-tests` ; lit le `.xcresult` et échoue si aucun test n'a tourné ou, suite complète, sous le plancher de `ios/minimum-test-count` (à relever avec les tests ajoutés). Les tests UI n'y tournent pas |
+| `bin/lint` | shellcheck (`.shellcheckrc`), `xcrun swift-format lint --strict` (`.swift-format`), SwiftLint en CLI (`.swiftlint.yml`), Biome (`biome.json`), et deux garde-fous : `agent_status` lu seulement pour un agent, pas de section « Écarts connus » remplie dans la spec ; 2 s |
+| `bin/qa [--all\|<classe>...]` | joue les classes de `HeraldrUITests` touchées par le diff depuis `origin/main` sur le simulateur « Heraldr <worktree> » (créé au besoin, visé par udid, barre d'état figée à 9:41), contre le faux Mac, et exporte les captures clair et sombre dans `~/share/screenshots/<worktree>/`, sur 3 clones en parallèle (`QA_WORKERS`) ; 3 à 4 min pour `--all` |
 | `bin/run-mac-tests` | tests du script de dispatch (`mac/test/dispatch_test.sh`, faux herdr) et du hook de notification (`node --test mac/test/notify_hook_test.mjs`, faux APNs) |
-| `bin/local-ci [push]` | tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse d'abord le HEAD (lease, jamais `main`), pose « Local CI » en pending sur ce commit puis en success, failure (étape en échec, HEAD ou worktree modifié pendant le run) ou error (Ctrl-C, TERM, HUP) ; sans `push`, aucun statut |
+| `bin/local-ci [push]` | `bin/lint` puis tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse d'abord le HEAD (lease, jamais `main`), pose « Local CI » en pending sur ce commit puis en success, failure (étape en échec, HEAD ou worktree modifié pendant le run) ou error (Ctrl-C, TERM, HUP) ; sans `push`, aucun statut |
 | `bin/open-ios-xcode` | génère puis ouvre le projet |
 | `bin/render-ios-icon` | régénère AppIcon et logo depuis `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
 
@@ -69,3 +71,32 @@ Deux écarts avec Heeler, qui compile avec Xcode 26.6 :
   build simulateur
 
 Le skill `dev-ios` couvre les builds distants sur build-mac si besoin.
+
+## Hook des agents
+
+`.claude/settings.json` déclare un hook Stop : quand l'agent s'apprête
+à rendre la main, `.claude/hooks/lint-before-stop` lance `bin/lint`
+(2 s) si le worktree est sale ou la branche en avance sur
+`origin/main`, et rend le code 2 avec les erreurs sur stderr, que
+Claude Code renvoie à l'agent pour qu'il corrige avant de répondre.
+Une seule relance par tour (`stop_hook_active`) pour ne jamais boucler.
+Ni build ni tests.
+
+## Simulateur et captures
+
+Commandes utiles pour regarder l'app à la main, toujours par `--udid`
+ou udid, jamais `booted` (plusieurs worktrees partagent la machine) :
+
+- lancer sur le faux Mac : `xcrun simctl launch <udid>
+  com.skelz0r.heraldr.dev -HeraldrFakeMac demo` (presets : `demo`,
+  `history`, `question`, `unpaired`, `unreachable`, `connecting`,
+  `empty`), ou `SIMCTL_CHILD_HERALDR_FAKE_MAC='<json>'` pour un
+  scénario entier
+- `xcrun simctl ui <udid> appearance dark|light`, `status_bar <udid>
+  override --time 9:41`, `io <udid> screenshot <fichier>`
+- AXe : `axe describe-ui --udid <udid>`, `axe tap --id <identifier>
+  --udid <udid>`, `axe type '<texte>' --udid <udid>`
+
+Un simulateur resté longtemps démarré peut ignorer le changement
+d'apparence (tout reste clair) : `xcrun simctl shutdown` puis `boot`
+le remet d'aplomb.

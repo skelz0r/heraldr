@@ -79,7 +79,11 @@ enum PairingCeremony {
         } catch {
             throw PairingError.enrollmentFailed("\(error)")
         }
-        let text = String(decoding: response, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        try checkEnrollment(String(decoding: response, as: UTF8.self), of: deviceKey)
+    }
+
+    static func checkEnrollment(_ response: String, of deviceKey: DeviceKey) throws(PairingError) {
+        let text = response.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.hasPrefix("HERDR-ENROLL:OK:") {
             let enrolled = String(text.dropFirst("HERDR-ENROLL:OK:".count))
             guard enrolled == deviceKey.fingerprint else {

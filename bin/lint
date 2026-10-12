@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${PROJECT_DIR}" || exit 1
+
+SWIFT_PATHS=(ios/Heraldr ios/HeraldrTests ios/HeraldrUITests)
+SHELL_SCRIPTS=(bin/* mac/dispatch.sh mac/test/fake-herdr mac/test/*.sh)
+failures=0
+
+check() {
+    local name="$1"
+    shift
+    if ! output="$("$@" 2>&1)"; then
+        printf '=== %s ===\n%s\n' "$name" "$output" >&2
+        failures=$((failures + 1))
+    fi
+}
+
+aggregated_agent_status_unread() {
+    local readers
+    readers="$(find ios/Heraldr -name '*.swift' -not -path 'ios/Heraldr/Debug/*' -exec awk '
+        /^(private |fileprivate )?(struct|enum|class|extension) / { owner = $0 }
+        /"agent_status"/ && owner !~ /^(private )?struct Agent[: ]/ { print FILENAME ":" FNR ": " $0 }
+    ' {} +)"
+    [ -z "$readers" ] && return 0
+    printf 'agent_status is only read for an agent (agent.list): the aggregated status of workspace.list or tab.list colours a -main with another tab state (dbc14b8, c255199, 4307cf4)\n%s\n' "$readers"
+    return 1
+}
+
+no_known_gaps_in_spec() {
+    local section
+    section="$(awk '/^## [0-9]+\. Écarts connus/ { inside = 1; next } /^## / { inside = 0 } inside && NF' docs/spec.md)"
+    [ -z "$section" ] && return 0
+    printf 'docs/spec.md lists known gaps: fix the bug in this branch, or describe the real behaviour in the spec\n%s\n' "$section"
+    return 1
+}
+
+check shellcheck shellcheck "${SHELL_SCRIPTS[@]}"
+check swift-format xcrun swift-format lint --strict --recursive "${SWIFT_PATHS[@]}"
+check swiftlint swiftlint lint --strict --quiet
+check biome biome check --error-on-warnings .
+check "agent_status" aggregated_agent_status_unread
+check "spec gaps" no_known_gaps_in_spec
+
+if [ "$failures" -gt 0 ]; then
+    printf 'Lint failed: %s check(s)\n' "$failures" >&2
+    exit 1
+fi
+echo "Lint passed"

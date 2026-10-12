@@ -92,27 +92,30 @@ enum SSHDialer {
     }
 }
 
-actor MacLink {
+actor MacLink: MacTransport {
     private(set) var mac: PairedMac
     private let identity: SSHIdentity
+    private let defaults: UserDefaults
     private var connection: SSHConnection?
     private var home: String?
 
-    init(mac: PairedMac, deviceKey: DeviceKey) {
+    init(mac: PairedMac, deviceKey: DeviceKey, defaults: UserDefaults) {
         self.mac = mac
         self.identity = SSHIdentity(deviceKey)
+        self.defaults = defaults
     }
 
-    func run(_ command: String, input: Data = Data(), timeout: Duration = .seconds(20)) async throws -> SSHExecResult {
-        try await withReconnect { connection in
+    func run(_ command: String, input: Data, timeout: Duration) async throws -> CommandResult {
+        let result = try await withReconnect { connection in
             try await connection.execute(command, input: input, timeout: timeout)
         }
+        return CommandResult(exitStatus: result.exitStatus, stdout: result.stdout, stderr: result.stderr)
     }
 
     func herdrSocketPath() async throws -> String {
         if let home { return "\(home)/.config/herdr/herdr.sock" }
         let result = try await run("printf %s \"$HOME\"")
-        let resolved = String(decoding: result.stdout, as: UTF8.self)
+        let resolved = result.output
         guard result.exitStatus == 0, resolved.hasPrefix("/") else {
             throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "HOME introuvable")
         }
@@ -155,7 +158,7 @@ actor MacLink {
             identity: identity)
         if dialed.address != mac.addresses.first {
             mac = mac.preferring(dialed.address)
-            PairedMacStore.save(mac)
+            PairedMacStore.save(mac, to: defaults)
         }
         connection = dialed.connection
         return dialed.connection

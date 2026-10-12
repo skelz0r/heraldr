@@ -13,15 +13,16 @@ extension Color {
     static let voiceGlow = Color(light: 0xFF5A3C, dark: 0xFF5A3C)
 
     init(light: UInt32, dark: UInt32, lightOpacity: CGFloat = 1, darkOpacity: CGFloat = 1) {
-        self.init(uiColor: UIColor { traits in
-            let isDark = traits.userInterfaceStyle == .dark
-            let hex = isDark ? dark : light
-            return UIColor(
-                red: CGFloat((hex >> 16) & 0xFF) / 255,
-                green: CGFloat((hex >> 8) & 0xFF) / 255,
-                blue: CGFloat(hex & 0xFF) / 255,
-                alpha: isDark ? darkOpacity : lightOpacity)
-        })
+        self.init(
+            uiColor: UIColor { traits in
+                let isDark = traits.userInterfaceStyle == .dark
+                let hex = isDark ? dark : light
+                return UIColor(
+                    red: CGFloat((hex >> 16) & 0xFF) / 255,
+                    green: CGFloat((hex >> 8) & 0xFF) / 255,
+                    blue: CGFloat(hex & 0xFF) / 255,
+                    alpha: isDark ? darkOpacity : lightOpacity)
+            })
     }
 
     static let wallBase = Color(light: 0xF1F1F3, dark: 0x0B0B0D)

@@ -126,7 +126,9 @@ function apnsKey() {
 function providerToken(key, teamId) {
   const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const input = `${encode({ alg: "ES256", kid: key.keyId })}.${encode({ iss: teamId, iat: Math.floor(Date.now() / 1000) })}`;
-  const signature = createSign("SHA256").update(input).sign({ key: createPrivateKey(key.pem), dsaEncoding: "ieee-p1363" });
+  const signature = createSign("SHA256")
+    .update(input)
+    .sign({ key: createPrivateKey(key.pem), dsaEncoding: "ieee-p1363" });
   return `${input}.${signature.toString("base64url")}`;
 }
 

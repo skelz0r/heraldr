@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @Suite("Correction d'une dictée par le lexique")
@@ -32,7 +33,8 @@ struct DictationCorrectionTests {
 
     private let acme = (
         proposed: "Ouvre le tableau de bord de ack me demain matin.",
-        sent: "Ouvre le tableau de bord de Acme demain matin.")
+        sent: "Ouvre le tableau de bord de Acme demain matin."
+    )
 
     @Test("« ack me » dicté donne « Acme » dans le texte proposé, quelle que soit la sortie du modèle")
     func knownVariantIsAlwaysReplaced() async {
@@ -45,11 +47,12 @@ struct DictationCorrectionTests {
             await TranscriptCleaner.clean(raw, lexicon: lexicon, model: Self.unavailable),
         ]
 
-        #expect(outcomes.map(\.text) == [
-            "Envoie la facture à Acme ce soir",
-            "Envoie la facture à Acme ce soir.",
-            "Envoie la facture à Acme ce soir",
-        ])
+        #expect(
+            outcomes.map(\.text) == [
+                "Envoie la facture à Acme ce soir",
+                "Envoie la facture à Acme ce soir.",
+                "Envoie la facture à Acme ce soir",
+            ])
         #expect(outcomes.map(\.raw) == [raw, raw, raw])
     }
 
@@ -70,9 +73,10 @@ struct DictationCorrectionTests {
 
     @Test("le nettoyage ne reçoit que trois variantes au plus, celles entendues dans la dictée")
     func onlyHeardVariantsAreHinted() async {
-        let lexicon = learned(["alpha", "bravo", "charlie", "delta", "echo"].map { word in
-            (proposed: "Lance \(word)x vers la prod ce soir.", sent: "Lance \(word) one vers la prod ce soir.")
-        })
+        let lexicon = learned(
+            ["alpha", "bravo", "charlie", "delta", "echo"].map { word in
+                (proposed: "Lance \(word)x vers la prod ce soir.", sent: "Lance \(word) one vers la prod ce soir.")
+            })
         let recorder = Recorder()
         let model = CleaningModel { instructions, _ in
             await recorder.record(instructions)

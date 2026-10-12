@@ -19,9 +19,12 @@ struct LexiconView: View {
                 List {
                     Section {
                         ForEach(lexicon.terms) { term in
-                            Button { editing = TermDraft(term) } label: {
+                            Button {
+                                editing = TermDraft(term)
+                            } label: {
                                 row(for: term)
                             }
+                            .tint(.primary)
                             .swipeActions {
                                 Button("Supprimer", systemImage: "trash", role: .destructive) {
                                     lexicon.forget(term.id)
@@ -29,7 +32,9 @@ struct LexiconView: View {
                             }
                         }
                     } footer: {
-                        Text("Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.\n\n\(backupStatus)")
+                        Text(
+                            "Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.\n\n\(backupStatus)"
+                        )
                     }
                 }
             }
@@ -38,6 +43,7 @@ struct LexiconView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Ajouter un terme", systemImage: "plus") { editing = TermDraft() }
+                    .accessibilityIdentifier("lexicon.add")
             }
         }
         .sheet(item: $editing) { draft in
@@ -130,10 +136,10 @@ private struct TermForm: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuler") { dismiss() }
+                    Button("Annuler", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Enregistrer") {
+                    Button("Enregistrer", systemImage: "checkmark", role: .confirm) {
                         if save(draft.text, draft.heard) { dismiss() }
                     }
                     .disabled(!isValid)

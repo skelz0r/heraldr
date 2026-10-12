@@ -1,21 +1,26 @@
 import Foundation
 import Testing
+
 @testable import Heraldr
 
 @Suite("Contrat entre l'app et dispatch.sh")
 struct DispatchScriptContractTests {
     @Test("les lignes de dispatch.sh status deviennent les envois affichés par l'app")
     func statusLines() {
-        let jobs = DispatchJob.parse(statusOutput: """
-            20261010120000-41-ab12cd34\tw1\thome-main\tqueued\t
-            20261010120100-42-ef56ab78\tw5\tvideo-studio-main\tfailed\tl'agent video-studio-main appartient au workspace w9
+        let jobs = DispatchJob.parse(
+            statusOutput: """
+                20261010120000-41-ab12cd34\tw1\thome-main\tqueued\t
+                20261010120100-42-ef56ab78\tw5\tvideo-studio-main\tfailed\tl'agent video-studio-main appartient au workspace w9
 
-            """)
+                """)
 
-        #expect(jobs == [
-            DispatchJob(id: "20261010120000-41-ab12cd34", workspaceId: "w1", agent: "home-main", state: .queued, error: nil),
-            DispatchJob(id: "20261010120100-42-ef56ab78", workspaceId: "w5", agent: "video-studio-main", state: .failed, error: "l'agent video-studio-main appartient au workspace w9"),
-        ])
+        #expect(
+            jobs == [
+                DispatchJob(id: "20261010120000-41-ab12cd34", workspaceId: "w1", agent: "home-main", state: .queued, error: nil),
+                DispatchJob(
+                    id: "20261010120100-42-ef56ab78", workspaceId: "w5", agent: "video-studio-main", state: .failed,
+                    error: "l'agent video-studio-main appartient au workspace w9"),
+            ])
         #expect(jobs.map(\.isPending) == [true, false])
     }
 
@@ -79,11 +84,12 @@ struct DispatchScriptContractTests {
 
     @Test("un envoi vers un tab prévient d'une dictée possible, sans consigne ni /start")
     func tabEnvelope() {
-        #expect(PromptEnvelope.forTab("  Le bouton est trop petit\n") == """
-            Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+        #expect(
+            PromptEnvelope.forTab("  Le bouton est trop petit\n") == """
+                Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
 
-            Le bouton est trop petit
-            """)
+                Le bouton est trop petit
+                """)
     }
 
     @Test("les captures jointes sont citées par leur chemin sur le Mac, après le texte, vers un main comme vers un tab")

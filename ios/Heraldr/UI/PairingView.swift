@@ -1,4 +1,5 @@
 import SwiftUI
+import Vision
 import VisionKit
 
 struct PairingView: View {
@@ -28,13 +29,14 @@ struct PairingView: View {
                         .textSelection(.enabled)
                     Text("puis scanne le QR affiché, valable deux minutes.").font(.subheadline).foregroundStyle(.secondary)
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
                 .glassEffect(.regular, in: .rect(cornerRadius: 22, style: .continuous))
 
                 scanner
                     .frame(maxWidth: .infinity)
-                    .frame(height: 320)
+                    .frame(minHeight: 180, maxHeight: 320)
                     .clipShape(.rect(cornerRadius: 28, style: .continuous))
                     .overlay {
                         if pairing {
@@ -67,6 +69,7 @@ struct PairingView: View {
                 }
                 .buttonStyle(.glass)
                 .disabled(pairing)
+                .accessibilityIdentifier("pairing.paste")
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)

@@ -19,7 +19,10 @@ FAILED_RETENTION_MINUTES=1440
 ATTACHMENT_RETENTION_MINUTES=10080
 ATTACHMENT_MAX_BYTES=20000000
 ANSWERED_RETENTION_MINUTES=10080
-CLEAR_TIMEOUT_SECONDS=20
+CLEAR_TIMEOUT_SECONDS="${HERALDR_CLEAR_TIMEOUT_SECONDS:-20}"
+PROMPT_START_TIMEOUT_MS=10000
+STALLED_PROMPT_GRACE_MS=30000
+SEQUENCE_LOCK_STALE_MINUTES=1
 START_TIMEOUT_MS=60000
 
 json_value() {
@@ -54,12 +57,17 @@ lock_name() {
 }
 
 agent_name_for_label() {
-  slug="$(printf '%s' "$1" | tr 'A-Z' 'a-z' | LC_ALL=en_US.UTF-8 sed 's/[^abcdefghijklmnopqrstuvwxyz0123456789_-]/-/g')"
+  [ "$1" = "~" ] && { printf 'home-main'; return; }
+  slug="$(printf '%s' "$1" | LC_ALL=C tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | LC_ALL=en_US.UTF-8 sed 's/[^abcdefghijklmnopqrstuvwxyz0123456789_-]/-/g')"
   case "$slug" in
     [abcdefghijklmnopqrstuvwxyz]*) ;;
     *) slug="w-$slug" ;;
   esac
   printf '%s-main' "$(printf '%s' "$slug" | cut -c1-27)"
+}
+
+trimmed_input() {
+  LC_ALL=en_US.UTF-8 awk 'BEGIN { RS = "\001" } { sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); printf "%s", $0 }'
 }
 
 standard_envelope() {
@@ -93,7 +101,7 @@ relay_job() {
   workspace="$(herdr workspace get "$workspace_id" 2>&1)" || { echo "workspace introuvable: $workspace_id" >&2; exit 2; }
   label="$(printf '%s' "$workspace" | json_value result.workspace.label)" || { echo "workspace sans label: $workspace_id" >&2; exit 2; }
   [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "relais vers Home impossible" >&2; exit 2; }
-  request="$(cat)"
+  request="$(trimmed_input)"
   [ -n "$request" ] || { echo "empty prompt" >&2; exit 2; }
   standard_envelope "$request" | create_job "$workspace_id" "$(agent_name_for_label "$label")" "$label" clear
 }
@@ -106,7 +114,7 @@ create_job() {
   valid_queue_target "$agent" || { echo "invalid agent name: $agent" >&2; exit 2; }
   [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
 
-  job_id="$(date -u +%Y%m%d%H%M%S)-$$-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
+  job_id="$(date -u +%Y%m%d%H%M%S)-$(next_sequence)-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
   job_dir="$JOBS_DIR/$job_id"
   mkdir -p "$job_dir.tmp"
   sed "s/{{job_id}}/$job_id/g" > "$job_dir.tmp/prompt"
@@ -141,6 +149,18 @@ store_attachment() {
   echo "$attachment"
 }
 
+next_sequence() {
+  mkdir -p "$LOCKS_DIR"
+  until mkdir "$LOCKS_DIR/sequence" 2>/dev/null; do
+    [ -n "$(find "$LOCKS_DIR/sequence" -maxdepth 0 -mmin +"$SEQUENCE_LOCK_STALE_MINUTES" 2>/dev/null)" ] && rmdir "$LOCKS_DIR/sequence" 2>/dev/null
+    sleep 0.05
+  done
+  sequence=$(( $(cat "$STATE_DIR/sequence" 2>/dev/null || echo 0) + 1 ))
+  printf '%s' "$sequence" > "$STATE_DIR/sequence"
+  rmdir "$LOCKS_DIR/sequence"
+  printf '%012d' "$sequence"
+}
+
 set_state() {
   printf '%s' "$2" > "$1/state.tmp" && mv "$1/state.tmp" "$1/state"
 }
@@ -167,7 +187,7 @@ acquire_lock() {
 }
 
 release_lock() {
-  rm -rf "$LOCKS_DIR/$1"
+  rm -rf "${LOCKS_DIR:?}/$1"
 }
 
 next_job_for() {
@@ -225,8 +245,7 @@ start_agent() {
   pane_id="$(printf '%s' "$split" | json_value result.pane.pane_id)" || { fail_job "$job_dir" "pane split sans pane_id"; return 1; }
 
   remote_control_name="$(printf '%s' "$label" | sed 's/^~$/home/')—main"
-  started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$START_TIMEOUT_MS" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"
-  if [ $? -ne 0 ]; then
+  if ! started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$START_TIMEOUT_MS" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"; then
     case "$started" in
       *agent_not_ready*) return 0 ;;
     esac
@@ -275,7 +294,7 @@ process_job() {
     return 1
   fi
 
-  waited="$(herdr agent wait "$agent" --until idle --until done 2>&1)" || { fail_job "$job_dir" "agent wait: $waited"; return 1; }
+  waited="$(herdr agent wait "$agent" --until idle --until "done" 2>&1)" || { fail_job "$job_dir" "agent wait: $waited"; return 1; }
 
   if valid_pane_id "$agent"; then
     check_pane_target "$job_dir" "$agent" "$workspace_id" || return 1
@@ -289,7 +308,10 @@ process_job() {
     sleep 1
   fi
 
-  prompted="$(herdr agent prompt "$agent" "$(cat "$job_dir/prompt")" 2>&1)" || { fail_job "$job_dir" "prompt: $prompted"; return 1; }
+  prompted="$(herdr agent prompt "$agent" "$(cat "$job_dir/prompt")" --wait --until working --until blocked --timeout "$PROMPT_START_TIMEOUT_MS" 2>&1)" || case "$prompted" in
+    *agent_prompt_stalled*) herdr agent wait "$agent" --until working --until blocked --timeout "$STALLED_PROMPT_GRACE_MS" >/dev/null 2>&1 ;;
+    *) fail_job "$job_dir" "prompt: $prompted"; return 1 ;;
+  esac
   date -u +%Y-%m-%dT%H:%M:%SZ > "$job_dir/sent_at"
   set_state "$job_dir" sent
 }
@@ -439,7 +461,7 @@ append_journal() {
     sleep 0.2
   done
   [ -s "$incoming" ] || reject_journal
-  touch "$JOURNAL_PATH" && : > "$fresh" || fail_journal
+  { touch "$JOURNAL_PATH" && : > "$fresh"; } || fail_journal
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in "{"*) ;; *) reject_journal ;; esac
     printf '%s' "$line" > "$entry" || fail_journal

@@ -38,6 +38,28 @@ if ! command -v xcodegen &> /dev/null; then
 fi
 echo "ok: $(xcodegen --version)"
 
+check_tool() {
+    local tool="$1" formula="$2" pinned="$3" installed
+    if ! command -v "$tool" &> /dev/null; then
+        echo "Installing $formula..."
+        brew install "$formula"
+    fi
+    installed="$("$tool" --version 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
+    if [ "$installed" != "$pinned" ]; then
+        echo "$tool $installed installed, $pinned pinned: bin/lint and bin/qa expect $pinned"
+        echo "  brew upgrade $formula, or raise the pin in bin/setup-ios with the fixes it requires"
+        exit 1
+    fi
+    echo "ok: $tool $installed"
+}
+
+check_tool shellcheck shellcheck 0.11.0
+check_tool swiftlint swiftlint 0.65.1
+check_tool biome biome 2.5.15
+check_tool xcbeautify xcbeautify 3.2.1
+check_tool axe cameroncooke/axe/axe 1.8.0
+echo "ok: swift-format $(xcrun swift-format --version) (Xcode toolchain)"
+
 if [ ! -f "${PROJECT_DIR}/Vendor/Heeler/Packages/HeelerSSH/Package.swift" ]; then
     echo "Initializing the Heeler submodule..."
     git -C "${PROJECT_DIR}" submodule update --init Vendor/Heeler
@@ -49,4 +71,6 @@ echo "iOS development environment ready"
 echo ""
 echo "Next steps:"
 echo "  bin/run-ios          build and launch in the simulator"
+echo "  bin/lint             shellcheck, swift-format, SwiftLint, Biome"
+echo "  bin/qa               UI flows touched by the diff, screenshots"
 echo "  bin/run-ios-device   build, install and launch on the iPhone"

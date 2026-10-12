@@ -34,13 +34,16 @@ struct HomeView: View {
         .overlay(alignment: .top) {
             if let question = model.unopenedQuestion {
                 UnopenedQuestionCard(question: question) { model.unopenedQuestion = nil }
+                    .accessibilityIdentifier("question.card")
                     .transition(.move(edge: .top).combined(with: .opacity))
             } else if let notice = model.notice {
                 NoticeToast(notice: notice)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("notice")
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .onTapGesture { model.notice = nil }
                     .task(id: notice.id) {
-                        try? await Task.sleep(for: .seconds(5))
+                        guard (try? await Task.sleep(for: .seconds(5))) != nil, model.notice?.id == notice.id else { return }
                         withAnimation { model.notice = nil }
                     }
             }
@@ -99,22 +102,26 @@ struct HomeView: View {
                     .minimumScaleFactor(0.6)
                     .padding(.top, 6)
                     .contentTransition(.opacity)
+                    .accessibilityIdentifier("target.workspace")
                 Text(target.tabName)
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .contentTransition(.opacity)
+                    .accessibilityIdentifier("target.tab")
                 let state = model.targetState(for: target)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         StatusDot(status: state.dotStatus)
                         Text(state.headline)
                             .font(.callout.weight(.semibold))
+                            .accessibilityIdentifier("target.state")
                     }
                     Text(state.nextSend(to: target))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 18)
+                        .accessibilityIdentifier("target.next")
                 }
                 .padding(.top, 10)
             } else {
@@ -126,7 +133,11 @@ struct HomeView: View {
         .padding(.top, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .containerRelativeFrame(.vertical, alignment: .top) { height, _ in height * targetShare }
-        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { targetBottom = $0 }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.frame(in: .global).maxY
+        } action: {
+            targetBottom = $0
+        }
     }
 
     @ViewBuilder
@@ -139,6 +150,7 @@ struct HomeView: View {
                 Text(detail).font(.footnote).foregroundStyle(.secondary).lineLimit(4)
                 Button("Réessayer") { Task { await model.refresh() } }
                     .buttonStyle(.glassProminent)
+                    .accessibilityIdentifier("home.retry")
             }
         default:
             HStack(spacing: 10) {
@@ -165,14 +177,17 @@ struct HomeView: View {
             .glassEffect(.regular.interactive(), in: .capsule)
         }
         .tint(.primary)
+        .accessibilityIdentifier("home.mac")
     }
 
     private var historyButton: some View {
         roundButton("Historique des envois", systemImage: "clock.arrow.circlepath") { showingHistory = true }
+            .accessibilityIdentifier("home.history")
     }
 
     private var settingsButton: some View {
         roundButton("Réglages", systemImage: "gearshape") { showingSettings = true }
+            .accessibilityIdentifier("home.settings")
     }
 
     private func roundButton(_ label: String, systemImage: String, action: @escaping () -> Void) -> some View {
@@ -243,6 +258,7 @@ struct HomeView: View {
         ) {
             select(workspace)
         }
+        .accessibilityIdentifier("tile.\(workspace.id)")
         .contextMenu {
             Section("Cibler un tab de \(workspace.label)") {
                 Button(Tab.mainName) { select(workspace) }
@@ -265,8 +281,11 @@ struct HomeView: View {
     private var actionBar: some View {
         HStack(spacing: 16) {
             sideButton("Écrire", systemImage: "pencil") { open(.write) }
+                .accessibilityIdentifier("home.write")
             VoiceDrop { open(.voice) }
+                .accessibilityIdentifier("home.voice")
             sideButton("Coller", systemImage: "doc.on.clipboard") { paste() }
+                .accessibilityIdentifier("home.paste")
         }
         .padding(.bottom, 8)
         .disabled(model.selectedWorkspace == nil)
@@ -337,7 +356,8 @@ struct WorkspaceTile: View {
         .buttonStyle(.plain)
         .glassEffect(
             isSelected ? .regular.tint(.selectedGlass).interactive() : .regular.tint(.restingGlass).interactive(),
-            in: .rect(cornerRadius: 20, style: .continuous))
+            in: .rect(cornerRadius: 20, style: .continuous)
+        )
         .shadow(color: isSelected ? .selectedGlow : .clear, radius: 13, y: 6)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -355,11 +375,12 @@ struct VoiceDrop: View {
                 .shadow(color: Color.voiceGlow.opacity(0.7), radius: 4)
                 .frame(width: size, height: size)
                 .background {
-                    Circle().fill(RadialGradient(
-                        colors: [Color.voiceGlow.opacity(0.55), Color.voiceGlow.opacity(0)],
-                        center: UnitPoint(x: 0.5, y: 1.15),
-                        startRadius: 0,
-                        endRadius: size * 0.78))
+                    Circle().fill(
+                        RadialGradient(
+                            colors: [Color.voiceGlow.opacity(0.55), Color.voiceGlow.opacity(0)],
+                            center: UnitPoint(x: 0.5, y: 1.15),
+                            startRadius: 0,
+                            endRadius: size * 0.78))
                 }
                 .contentShape(.circle)
         }

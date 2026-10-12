@@ -202,19 +202,24 @@ struct ComposeView: View {
     private var previewStage: some View {
         VStack(spacing: 14) {
             HStack {
-                Button { dismiss() } label: {
+                Button {
+                    dismiss()
+                } label: {
                     Image(systemName: "xmark").font(.system(size: 18, weight: .bold)).frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel("Fermer")
+                .accessibilityIdentifier("compose.close")
                 Spacer()
                 Text("Aperçu").font(.headline)
                 Spacer()
                 Color.clear.frame(width: 44, height: 44)
             }
 
-            Button { choosingTarget = true } label: {
+            Button {
+                choosingTarget = true
+            } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.right").font(.title3.weight(.heavy)).foregroundStyle(Color.heraldrAccent)
                     Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1).minimumScaleFactor(0.7)
@@ -229,13 +234,18 @@ struct ComposeView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22, style: .continuous))
+            .accessibilityIdentifier("compose.target")
 
             if let target {
                 let state = model.targetState(for: target)
-                Label("\(state.headline). \(state.nextSend(to: target, clearingContext: clearsContext))", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                Label(
+                    "\(state.headline). \(state.nextSend(to: target, clearingContext: clearsContext))",
+                    systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock"
+                )
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("compose.state")
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -243,6 +253,7 @@ struct ComposeView: View {
                     .font(.system(size: 19, weight: .medium))
                     .scrollContentBackground(.hidden)
                     .focused($editorFocused)
+                    .accessibilityIdentifier("compose.text")
                     .overlay(alignment: .topLeading) {
                         if text.isEmpty {
                             Text("Que doit faire l'agent ?")
@@ -275,24 +286,31 @@ struct ComposeView: View {
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .disabled(sending || remainingSlots == 0)
                 .accessibilityLabel("Joindre des captures")
+                .accessibilityIdentifier("compose.attach")
                 .onChange(of: pickedPhotos) { _, picked in
                     guard !picked.isEmpty else { return }
                     pickedPhotos = []
                     enqueueImports(picked.map { item in { try? await item.loadTransferable(type: Data.self) } })
                 }
-                Button { dictateFollowUp() } label: {
+                Button {
+                    dictateFollowUp()
+                } label: {
                     Label(text.isEmpty ? "Dicter" : "Dicter la suite", systemImage: "mic.fill")
                         .font(.footnote.weight(.bold))
+                        .fixedSize()
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .disabled(sending)
+                .accessibilityIdentifier("compose.dictate")
             }
 
             if target?.tab != nil {
-                Button { clearsContext.toggle() } label: {
+                Button {
+                    clearsContext.toggle()
+                } label: {
                     Label("Envoyer /clear avant", systemImage: clearsContext ? "checkmark.square.fill" : "square")
                         .font(.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -300,11 +318,13 @@ struct ComposeView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(clearsContext ? .isSelected : [])
+                .accessibilityIdentifier("compose.clear")
             }
 
             if targetVanished {
                 Text("Ce tab n'existe plus : choisis une autre cible.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("compose.vanished")
             }
 
             if importFailed {
@@ -315,6 +335,7 @@ struct ComposeView: View {
             if let sendError {
                 Text(sendError).font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("compose.error")
             }
 
             Button {
@@ -331,8 +352,10 @@ struct ComposeView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .capsule)
+            .accessibilityIdentifier("compose.send")
             .disabled(
-                sending || importing || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil)
+                sending || importing || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil
+            )
             .opacity(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
         .padding(.horizontal, 16)
@@ -369,7 +392,9 @@ struct ComposeView: View {
                     }
                 }
                 .overlay(alignment: .topTrailing) {
-                    Button { remove(slot) } label: {
+                    Button {
+                        remove(slot)
+                    } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .heavy))
                             .frame(width: 20, height: 20)
@@ -469,11 +494,12 @@ struct ComposeView: View {
     }
 
     private func append(_ salve: CleanedTranscript) {
-        let dictated = if case .dictated(let dictated) = origin {
-            dictated.appending(salve, after: text)
-        } else {
-            DictatedText(salve, after: text)
-        }
+        let dictated =
+            if case .dictated(let dictated) = origin {
+                dictated.appending(salve, after: text)
+            } else {
+                DictatedText(salve, after: text)
+            }
         text = dictated.text
         origin = .dictated(dictated)
     }
@@ -526,15 +552,19 @@ struct LevelWave: View {
             let time = timeline.date.timeIntervalSinceReferenceDate
             HStack(spacing: 5) {
                 ForEach(0..<bars, id: \.self) { index in
-                    let phase = sin(time * 6 + Double(index) * 0.7) * 0.5 + 0.5
-                    let height = 8 + CGFloat(level) * 56 * CGFloat(0.35 + 0.65 * phase)
                     Capsule()
                         .fill(Color.heraldrAccent)
-                        .frame(width: 5, height: height)
+                        .frame(width: 5, height: barHeight(index, at: time))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func barHeight(_ index: Int, at time: TimeInterval) -> CGFloat {
+        let phase: Double = sin(time * 6 + Double(index) * 0.7) * 0.5 + 0.5
+        let swing: Double = 0.35 + 0.65 * phase
+        return 8 + CGFloat(Double(level) * 56 * swing)
     }
 }
 
@@ -579,6 +609,7 @@ struct TargetPicker: View {
         }
         .tint(.primary)
         .accessibilityLabel(target.label)
+        .accessibilityIdentifier("picker.\(target.id)")
     }
 }
 
@@ -602,14 +633,14 @@ struct RawTranscriptSheet: View {
     }
 }
 
-private extension CleanedTranscript {
-    var isCleaned: Bool {
+extension CleanedTranscript {
+    fileprivate var isCleaned: Bool {
         if case .cleaned = self { true } else { false }
     }
 }
 
-private extension [CleanedTranscript] {
-    var lastRawReason: String? {
+extension [CleanedTranscript] {
+    fileprivate var lastRawReason: String? {
         reversed().lazy.compactMap(\.reason).first
     }
 }

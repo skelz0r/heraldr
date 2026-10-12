@@ -2,10 +2,15 @@
 
 Ce que fait Heraldr, écran par écran, et ce qu'il attend du Mac. Elle
 est normative : un écart entre la spec et le code se résout en faveur
-de la spec, ou se note dans *Écarts connus* tant qu'il n'est pas
-corrigé. Le comment (SSH, runner, hook) est dans
+de la spec, dans la branche qui le trouve ; un bug qu'on ne peut pas
+corriger tout de suite est décrit tel qu'il se comporte. Le comment (SSH, runner, hook) est dans
 [architecture](architecture.md), le pourquoi dans
 [décisions](decisions.md).
+
+L'app est en français, quelle que soit la langue de l'iPhone : ses
+textes, et ce que le système formate pour elle (dates relatives,
+libellés VoiceOver des symboles), l'app n'étant localisée qu'en
+français.
 
 ## 1. Conventions herdr supposées
 
@@ -90,7 +95,7 @@ que fera le prochain envoi :
 | aucun agent `<slug>-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1, nommé `<slug>-main`. |
 | envoi en file ou en cours vers cet agent | Envoi en cours… | Un nouvel envoi partira juste après. |
 | `idle` ou `done` | Prêt | Un envoi vide son contexte puis transmet la demande. |
-| `working`, envoi de l'app depuis moins d'une heure | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
+| `working`, envoi de l'app vers cette cible accepté par le Mac depuis moins d'une heure (historique, gardé à la relance) | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
 | `working` | Travaille | Un nouvel envoi attendra la fin de son travail. |
 | `blocked` | Te pose une question : réponds dans Claude mobile | Un nouvel envoi attendra que tu lui aies répondu. |
 | état inconnu de herdr | État inconnu | Un nouvel envoi attendra qu'il soit prêt. |
@@ -210,7 +215,7 @@ la glisse vers le bas), à mi-hauteur et extensible, en deux sections.
 « Dictée » : « Lexique », avec le nombre de termes, ouvre la liste du
 lexique de dictée (§5.2), « Lexique de dictée » :
 
-- une ligne par terme, dans l'ordre du lexique, les plus récents
+- une ligne par terme, en couleur de texte neutre (pas l'accent), dans l'ordre du lexique, les plus récents
   d'abord : le terme, et dessous ses variantes entendues séparées par
   des virgules ; en pied, « Les plus récents d'abord. Une variante
   saisie ici, ou de plusieurs mots, est remplacée par son terme dans
@@ -227,7 +232,7 @@ lexique de dictée (§5.2), « Lexique de dictée » :
   (un champ), section « Variantes entendues » (un champ « Entendu » par
   variante, plus un vide, balayer pour retirer, « Ajouter une
   variante »), sans correction automatique ni majuscule imposée,
-  « Annuler » et « Enregistrer »
+  « Annuler » (croix) et « Enregistrer » (coche)
 - « Enregistrer » reste désactivé tant que le terme et chaque variante
   remplie ne comptent pas de 1 à 3 mots, ou que deux d'entre eux sont
   égaux sans tenir compte de la casse, des accents ni de la
@@ -478,11 +483,12 @@ envoi vers un tab suit §6.3.
 3. agent `working` ou `blocked` : l'envoi attend sur le Mac et part dès
    qu'il redevient `idle` ou `done`
 4. plusieurs envois vers un même agent partent dans l'ordre, chacun
-   précédé de son `/clear`
+   précédé de son `/clear` ; le suivant attend que Claude ait commencé
+   puis fini le précédent
 5. un agent du même nom dans un autre workspace n'est jamais visé :
    l'envoi échoue
 
-Notice après l'envoi (5 s, fermée au tap) :
+Notice après l'envoi (5 s, fermée au tap ; une notice qui en remplace une autre reste à son tour 5 s) :
 
 | Agent au moment de l'envoi | Notice |
 | --- | --- |
@@ -497,7 +503,12 @@ contexte. »
 
 Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
 vers <label> » (`<label> — <tab>` pour un tab) avec sa raison, une
-seule fois.
+seule fois. Suivi : gardé dans l'historique sans être déjà en échec
+(même s'il échoue avant le rafraîchissement qui suit l'envoi, ou
+pendant que l'app était fermée), ou vu sur le Mac au rafraîchissement
+précédent (un relais de Home). Plusieurs échecs découverts au même
+rafraîchissement donnent une seule notice, « Échec de <n> envois »,
+avec une ligne « <label> : <raison> » par envoi.
 
 Avec des captures, l'app les pose d'abord sur le Mac (`attach`, §8.2),
 une par une, puis crée le job ; la demande les cite par leur chemin
@@ -625,11 +636,15 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 ### 6.4 Nommage
 
 - agent herdr : `slug(label)-main`
-  - slug : minuscules, tout caractère hors `[a-z0-9_-]` devient `-`,
-    `w-` devant s'il ne commence pas par une lettre, tronqué à 27
-    caractères, `~` devient `home`
+  - slug : un label `~` donne `home`, quel que soit le workspace ;
+    sinon `A-Z` passent en minuscules, tout point de code Unicode hors
+    `[a-z0-9_-]` devient `-` (un emoji composé, drapeau ou teinte de
+    peau, ou une lettre suivie d'un accent combinant en donnent
+    plusieurs), `w-` devant s'il ne commence pas par une lettre,
+    tronqué à 27 caractères
   - exemples : `home-main`, `acme_app-main`,
-    `herdr-ios-companion-main`, `w-2025-notes-main` ; vecteurs
+    `herdr-ios-companion-main`, `w-2025-notes-main`,
+    `w--quipe----main` pour `Équipe 🇫🇷` ; vecteurs
     partagés par l'app et `dispatch.sh` dans
     `mac/test/agent-names.tsv`
   - contrainte herdr : `[a-z][a-z0-9_-]{0,31}`, unique parmi les agents
@@ -718,7 +733,10 @@ de l'app : sa sortie reste lisible par l'app plus récente.
   dernière liste reçue est gardée (aucun tab avant la première), le
   reste de l'écran est inchangé
 - tolérance : tout autre champ est ignoré, un `agent_status` inconnu
-  devient « État inconnu »
+  devient « État inconnu » ; un agent sans `tab_id` ou `workspace_id`
+  est lu (il ne compte pour aucun workspace ni tab), et un élément
+  illisible d'une liste (champ attendu absent ou d'un autre type) est
+  ignoré sans masquer les autres
 
 ### 8.2 `dispatch.sh`
 
@@ -727,7 +745,7 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `install` | le script | rien |
 | `enqueue <workspace_id> <agent> <label_base64>` | prompt enveloppé | id du job |
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | texte brut | id du job ; code 2 pour un `pane_id` hors `[A-Za-z0-9]+:[A-Za-z0-9]+` ou une option inconnue |
-| `relay <workspace_id>` | demande brute | id du job ; code 2 vers Home ou un workspace inconnu |
+| `relay <workspace_id>` | demande brute, sans ses blancs autour comme dans l'app | id du job ; code 2 vers Home, un workspace inconnu ou une demande vide |
 | `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
 | `answer <job_id>` | résumé sur la première ligne, ligne vide, réponse complète | rien ; code 2 pour un job inconnu ou une première ligne vide ; notif refusée : réponse gardée, raison sur stderr, code 0 |
 | `read-answer <job_id>` | rien | la réponse telle que remise ; code 2 sans réponse |
@@ -777,19 +795,7 @@ Réponse : `aps.alert`, `kind` = `answer`, `job_id`, `workspace_id`,
 `agent`. Sans `kind` = `answer` ou `job_id`, la notif se lit comme une
 question.
 
-## 9. Écarts connus
-
-- E1 : un emoji composé (drapeau, teinte de peau) dans un label compte
-  pour un caractère dans l'app et pour plusieurs dans `dispatch.sh` :
-  un relais de Home vers ce workspace viserait un autre agent que
-  l'app.
-- E2 : quand deux envois suivis passent `failed` entre deux
-  rafraîchissements, seul le premier est annoncé ; le second ne l'est
-  jamais.
-- E3 : un workspace autre que Home labellisé `~` vise `home-main` dans
-  l'app et `w---main` dans un relais de Home.
-
-## 10. Hors périmètre
+## 9. Hors périmètre
 
 - réponse aux questions de l'agent depuis l'app
 - notif de fin de tâche

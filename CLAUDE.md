@@ -14,14 +14,16 @@ directement sur l'iPhone.
 ## Commandes
 
 ```sh
-bin/setup-ios                # Xcode, XcodeGen, submodule Heeler
+bin/setup-ios                # Xcode, XcodeGen, submodule Heeler, outils de lint épinglés
 bin/generate-ios             # ios/project.yml -> .xcodeproj, patches Heeler
 bin/build-ios [simulator|device]
 bin/run-ios                  # simulateur
 bin/run-ios-device [uuid]    # iPhone, signature par clé App Store Connect, install OTA hors LAN
-bin/run-ios-tests [suite]    # tests de l'app (iPhone 17 Pro), puis bin/run-mac-tests
+bin/run-ios-tests [suite]    # tests unitaires de l'app, puis bin/run-mac-tests ; échoue si 0 test ou sous le plancher
 bin/run-mac-tests            # dispatch.sh (faux herdr) et hook (faux APNs), sans Xcode
-bin/local-ci                 # tous les contrôles (iOS sauté si diff docs only)
+bin/lint                     # shellcheck, swift-format, SwiftLint, Biome, garde-fous (2 s)
+bin/qa [--all|<classe>...]   # tests UI touchés par le diff sur le faux Mac, captures clair et sombre
+bin/local-ci                 # lint puis tests (iOS sauté si diff docs only)
 bin/local-ci push            # contrôles puis push sans CI distante
 ```
 
@@ -39,15 +41,17 @@ ce chemin absolu.
 
 ```
 ios/Heraldr/
-├── App/        # HeraldrApp, AppModel (@Observable, état de l'écran)
+├── App/        # HeraldrApp, AppModel (@Observable, état de l'écran), AppEnvironment (injection)
+├── Debug/      # FakeMac et ses scénarios (#if DEBUG) : tests d'AppModel, tests UI, QA
 ├── Dispatch/   # AgentName (slug), PromptEnvelope (consignes), Dispatcher (exec dispatch.sh), SendHistory
 ├── Herdr/      # HerdrClient : API JSON sur herdr.sock, Workspace, Agent
-├── Mac/        # MacLink (actor SSH, reconnexion), PairedMac
+├── Mac/        # MacTransport (protocole), MacLink (actor SSH, reconnexion), PairedMac
 ├── Pairing/    # PairingCode (HERDR-PAIR:1), PairingCeremony, DeviceKey (Keychain)
 ├── Push/       # PushDevice, QuestionNotification, AppDelegate
 ├── Voice/      # Dictation (SpeechAnalyzer), TranscriptCleaner (Foundation Models), DictationLexicon, LexiconKeeper (sauvegarde sur le Mac)
 └── UI/
 ios/HeraldrTests/   # Swift Testing
+ios/HeraldrUITests/ # XCUITest sur le faux Mac, une classe par parcours
 mac/                # dispatch.sh, notify-hook.mjs
 mac/test/           # dispatch_test.sh + fake-herdr, notify_hook_test.mjs, agent-names.tsv
 ```
@@ -94,7 +98,12 @@ Frontières à mocker, et rien d'autre :
 
 - herdr : `mac/test/fake-herdr` dans le PATH, monde décrit en fichiers
 - APNs : serveur HTTP/2 local (`HERALDR_APNS_ORIGIN`)
-- SSH : pas de couture aujourd'hui, voir ci-dessous
+- SSH et Mac : `FakeMac` (`ios/Heraldr/Debug/`), conforme à
+  `MacTransport`, scénario décrit en données (`FakeMacScenario`) ;
+  `AppModel(environment: .fake(scenario, mac:, suiteName:))`
+- SSH réel : seul le test de clé hôte épinglée vise le sshd du Mac
+  (`127.0.0.1:22`, Remote Login, prérequis du projet) et s'arrête
+  avant toute authentification
 - Keychain, UserDefaults, Foundation Models, Speech, caméra, horloge :
   injection (`now:` de `PairingCeremony.pair`)
 - jamais un type de l'app (`Dispatcher`, `HerdrClient`, `AppModel`…)
@@ -110,30 +119,38 @@ Où placer un test :
   lu par les deux, déclaré en ressource de `HeraldrTests` dans
   `project.yml`
 
-Pas de test aujourd'hui pour `AppModel` (choix de la notice, échec
-annoncé, état de la cible) ni pour l'exec SSH : `AppModel` crée
-lui-même `MacLink` et lit des stores statiques. Les garanties qui
-coûtent cher (file, workspace, ordre) sont tenues par `dispatch.sh` et
-testées là. Introduire un protocole de transport sous `MacLink` le jour
-où un bug de ce côté passe inaperçu, pas avant.
+`AppModel` se teste par sa surface publique (`refresh`, `send`,
+`resend`, `open`, `targetState`…) contre `FakeMac`
+(`ios/HeraldrTests/AppModelTests.swift`) : notice, échec annoncé,
+cible, rafraîchissement. `FakeMac` est un double de la frontière, à
+faire évoluer comme `dispatch.sh` et herdr quand ils changent : il ne
+doit jamais accepter ce que le vrai refuse. Les garanties de la file
+(workspace, ordre, attente) restent tenues et testées par
+`dispatch.sh`.
 
-Pas de tests UI (XCUITest) : sans couture SSH, l'app ne dépasse pas
-l'écran d'appairage en simulateur. Le jour où il en faut, ajouter une
-cible `HeraldrUITests` dans `project.yml`, cibler les éléments par
-`accessibilityIdentifier` (jamais par libellé), garder la capture avec
-`XCTAttachment(screenshot:)` en `.keepAlways`, l'exporter du
-`.xcresult` et la regarder ; captures livrables dans
-`~/share/screenshots/`.
+Tests UI (`ios/HeraldrUITests/`, XCUITest) : l'app tourne sur le faux
+Mac (`launch("<preset>")` ou un scénario JSON dans
+`HERALDR_FAKE_MAC` ; `HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH=1` le garde
+pour la seule relance suivante, celle d'un tap sur une notif app tuée),
+les éléments sont visés par `accessibilityIdentifier` (jamais par
+libellé ; tout élément qu'un test vise en reçoit un), et
+`capture("<écran>", in: app)` garde l'écran en clair et en sombre. Un parcours nouveau ou modifié a son test UI ; un
+nouvel état à montrer a son preset dans `FakeMacScenario`. Jamais de
+patch temporaire de fausses données.
 
 Un test qui casse sans changement de comportement voulu : dire si
 c'est le test ou le code qui a tort, ne jamais l'adapter en silence.
 
 Fin d'itération : `$PWD/bin/run-ios-tests` (ou `bin/run-mac-tests` si
-seuls les scripts Mac ont changé), puis `docs/spec.md` à jour.
+seuls les scripts Mac ont changé), `$PWD/bin/qa` si l'UI ou l'app ont
+changé (voir *QA*), puis `docs/spec.md` à jour. Le lint tourne seul :
+le hook Stop du projet (`.claude/settings.json`) lance `bin/lint` avant
+de rendre la main, et `bin/local-ci` aussi.
 
 Plusieurs worktrees qui lancent leurs tests en même temps sur le même
-simulateur se font planter : passer un autre simulateur avec
-`IOS_TEST_SIMULATOR_NAME`.
+simulateur se font planter : `bin/qa` crée et vise par son udid un
+simulateur propre au worktree (« Heraldr <worktree> »), à passer aussi
+à `bin/run-ios-tests` avec `IOS_TEST_SIMULATOR_NAME`. Jamais `booted`.
 
 ## Spécification
 
@@ -145,9 +162,11 @@ Tout changement de comportement de l'app (`ios/Heraldr`) ou des
 scripts Mac (`mac/dispatch.sh`, `mac/notify-hook.mjs`) DOIT mettre à
 jour la spec dans le même commit ou la même PR : écran, état, règle,
 texte affiché, commande ou sortie de `dispatch.sh`, payload, tolérance
-à un champ inconnu. Un bug découvert sans correction immédiate va dans
-*Écarts connus* sous un nouvel identifiant `E<n>` ; sa correction l'en
-retire.
+à un champ inconnu. Aucun écart entre la spec et le code : un bug
+découvert se corrige dans la branche, avec son test ; s'il ne peut
+vraiment pas l'être tout de suite, la spec décrit le comportement réel.
+`bin/lint` échoue si une section « Écarts connus » réapparaît avec du
+contenu.
 
 `bin/local-ci` avertit (sans bloquer) quand ces chemins ont changé
 depuis `origin/main` sans la spec. Un refactoring sans effet visible
@@ -156,12 +175,26 @@ n'appelle pas de mise à jour : le dire dans la PR.
 Le comment va dans `docs/architecture.md`, le pourquoi et les options
 écartées dans `docs/decisions.md`.
 
-## QA manuelle
+## QA
 
-`QA.md` : smoke test sur le vrai iPhone pour ce que l'automatique ne
-voit pas (SSH réel, herdr, dictée, Apple Intelligence, push, lien vers
-l'app Claude). Le faire évoluer seulement quand un parcours critique
-change.
+La QA est faite par l'agent, en deux temps :
+
+1. Fin d'itération, au simulateur : `$PWD/bin/qa` joue les classes de
+   tests UI touchées par le diff (quelques minutes, `--all` pour tout,
+   3 à 4 min, sur 3 clones du simulateur), sur iPhone SE, le plus petit
+   écran d'iOS 26, et exporte les captures dans
+   `~/share/screenshots/<worktree>/`. Il note les durées dans
+   `build/qa-durations.tsv` du checkout principal et avertit quand un
+   test dépasse 45 s ou que `--all` grossit de 20 % : descendre une
+   vérification en test unitaire, fusionner des parcours, couper les
+   attentes fixes. Les regarder, en clair et en
+   sombre (`docs/design.md`), avant de dire que l'UI est faite ; un
+   défaut vu se corrige avec son test.
+2. Après un `bin/run-ios-device`, seulement si le diff touche l'une de
+   ses zones : présenter à l'utilisateur 3 à 5 cases de `QA.md` au
+   plus, celles de ces zones, jamais la liste entière. `QA.md` ne garde
+   que ce qui exige le vrai iPhone et le vrai Mac ; une case qu'un test
+   peut couvrir en sort.
 
 ## Git
 
@@ -197,4 +230,4 @@ Heeler au premier build. Après merge :
 - `docs/toolchain.md` : scripts, signature, écarts avec Heeler
 - `docs/risks.md` : spikes et points vérifiés
 - `docs/roadmap.md`, `docs/vision.md`, `docs/design.md`
-- `QA.md` : smoke test sur l'iPhone
+- `QA.md` : ce qui exige le vrai iPhone et le vrai Mac, 3 à 5 cases par itération

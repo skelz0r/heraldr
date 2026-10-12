@@ -70,6 +70,20 @@ XcodeGen déclare le package local
 Chemin du socket : `~/.config/herdr/herdr.sock` (à confirmer via la
 session herdr par défaut).
 
+Ces deux usages passent par le protocole `MacTransport` (`Mac/`) :
+`run` (exec d'une commande, résultat `CommandResult` propre à l'app,
+code de sortie et sorties) et `exchangeWithHerdr` (une requête JSON
+sur `herdr.sock`). `MacLink`, l'acteur SSH qui garde la connexion et
+se reconnecte, en est la seule implémentation réelle ; `Dispatcher` et
+`HerdrClient` ne connaissent que le protocole, et rien hors de `Mac/`
+et `Pairing/` n'importe HeelerSSH. `AppModel` reçoit un
+`AppEnvironment` : les UserDefaults (historique, Mac appairé), le
+fichier du lexique, la fabrique de transport pour un Mac appairé
+(`MacLink` et la clé du Keychain en vrai), l'appairage, la demande
+d'autorisation des notifications et l'ouverture d'un lien. C'est la
+couture des tests d'`AppModel` et du faux Mac de la QA (voir *Faux
+Mac*).
+
 ## Dispatch
 
 L'app embarque un script shell versionné (`mac/dispatch.sh`). Chaque
@@ -80,7 +94,7 @@ envoi fait deux exec SSH :
    l'app installée)
 2. `enqueue <workspace_id> <agent> <label_base64>` : le prompt enveloppé
    arrive brut sur stdin et devient un job
-   `~/.local/state/heraldr/jobs/<horodatage>-<id>/`, puis le
+   `~/.local/state/heraldr/jobs/<horodatage>-<séquence>-<aléa>/`, puis le
    script lance son runner détaché :
    `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
 
@@ -91,7 +105,13 @@ Un job est un dossier de fichiers texte : `workspace_id`, `agent`,
 Le runner, détaché, survit à la mise en veille du téléphone (spike 7).
 Il fixe son PATH (`/opt/homebrew/bin` absent en exec SSH), prend le
 verrou de l'agent (`mkdir` atomique, pid dedans pour reprendre un verrou
-mort) et traite les jobs de l'agent dans l'ordre d'horodatage :
+mort) et traite les jobs de l'agent dans l'ordre de leur nom :
+l'horodatage à la seconde, puis un compteur sur 12 chiffres tenu sous
+un verrou `sequence` (un `mkdir` qui n'est jamais volé tant qu'il a
+moins d'une minute, même sans pid écrit), qui départage deux envois de
+la même seconde
+(le pid qu'il remplace se comparait comme du texte, `10000` avant
+`9999`, et repart de zéro après 99999) :
 
 1. résout le tab 1 du workspace (`herdr tab list --workspace`, numéro 1)
 2. cherche l'agent `<agent>` (`herdr agent get`)
@@ -106,8 +126,17 @@ mort) et traite les jobs de l'agent dans l'ordre d'horodatage :
 5. `herdr agent prompt <agent> "/clear"` sans `--wait` (spike 1 :
    `--wait` échoue en `agent_prompt_stalled`), puis attente du
    changement de `agent_session.value`
-6. `herdr agent prompt <agent> "<prompt enveloppé>"` sans attendre la
-   fin du travail
+6. `herdr agent prompt <agent> "<prompt enveloppé>" --wait --until
+   working --until blocked` : rend la main dès que herdr voit Claude
+   travailler, sans attendre la fin. Sans cette attente, herdr montre
+   encore l'agent `idle` le temps de détecter le nouveau tour, et le
+   job suivant passait son `agent wait` puis envoyait son `/clear`
+   pendant que Claude démarrait le précédent. Un `agent_prompt_stalled`
+   (rien vu en 5 s, comme pour `/clear`) compte comme envoyé, le texte
+   est parti, mais le runner attend encore jusqu'à 30 s (`agent wait
+   --until working --until blocked`) que herdr voie Claude travailler :
+   un démarrage lent n'est pas vidé par le `/clear` suivant. Un tour
+   assez court pour finir avant d'être vu coûte ces 30 s au job suivant
 7. `state` passe à `sent`, ou `failed` avec l'erreur ; les jobs `sent`
    sont supprimés après une heure, les `failed` après un jour
 
@@ -291,6 +320,33 @@ ajoute la colonne `answered` : l'app récupère par `read-answer` toute
 réponse d'un envoi qu'elle suit et n'a pas encore, notif ratée ou non.
 Un job `sent` répondu échappe à la purge d'une heure et part sept jours
 après sa réponse.
+
+## Faux Mac
+
+En Debug seulement (`ios/Heraldr/Debug/`, sous `#if DEBUG`), un
+double de la frontière SSH + Mac remplace `MacLink` : `FakeMac`, un
+acteur conforme à `MacTransport`, joue un scénario décrit en données
+(`FakeMacScenario`, Codable) : workspaces, tabs, agents et leurs
+états, jobs `queued`/`sent`/`failed`, réponses, historique et lexique
+de départ, échecs par commande (`enqueue`, `attach`, `tab.list`…) ou
+Mac injoignable. Il interprète les commandes que `Dispatcher` envoie à
+`dispatch.sh` (`status`, `enqueue`, `enqueue-pane`, `attach`,
+`read-answer`, `lexicon-get|put`) et répond aux requêtes herdr avec la
+forme du vrai, champs en plus compris. Un envoi part `sent` vers un
+agent prêt (qui passe alors `working`), `queued` vers un agent occupé
+ou déjà en file, `failed` vers un agent d'un autre workspace ou un pane
+sans Claude, comme `dispatch.sh`.
+
+L'app l'active au lancement par `-HeraldrFakeMac <preset>` (`demo`,
+`unpaired`, `unreachable`, `empty`) ou par la variable
+`HERALDR_FAKE_MAC` qui porte un scénario JSON entier (tests UI).
+Dans ce mode, `AppEnvironment.fake` prend une suite UserDefaults
+dédiée, vidée au lancement, un fichier de lexique temporaire, ne
+demande pas l'autorisation des notifications (alerte système qui
+bloquerait XCUITest) et n'ouvre aucun lien. Les tests d'`AppModel`
+le construisent directement et pilotent son état entre deux
+rafraîchissements (`update`, `setJob`, `hold`/`release` pour figer un
+appel en vol).
 
 ## App iOS
 
