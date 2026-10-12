@@ -1,0 +1,12 @@
+Heraldr
+Copyright (c) 2026 Loïc Delmaire
+Licensed under the MIT License (see LICENSE).
+
+This project uses Heeler (https://github.com/ZingerLittleBee/Heeler),
+licensed under the Apache License, Version 2.0. Heeler is included as a
+git submodule in Vendor/Heeler, unmodified in the repository; the
+changes in Vendor/patches/ are applied to it at build time by
+bin/generate-ios and are distributed under the same Apache License 2.0.
+The pairing test vectors (pairing-code-v1.json) also come from Heeler.
+A copy of the Apache License 2.0 is available at
+http://www.apache.org/licenses/LICENSE-2.0 and in Vendor/Heeler/LICENSE.
