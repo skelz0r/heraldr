@@ -80,10 +80,10 @@ la cible, en bas une goutte voix d'environ 92 pt entre deux ronds
 
 ### 4.1 Cible
 
-« CIBLE », puis `<label> — main` (même taille pour tous les
-workspaces, la partie après le label en secondaire), ou
-`<label> — <tab>` quand un tab est ciblé (§4.2), puis l'état de son
-agent `<slug>-main` et ce que fera le prochain envoi :
+« CIBLE », puis le label (même taille pour tous les workspaces), en
+dessous en plus petit et en secondaire `main`, ou le nom du tab quand
+un tab est ciblé (§4.2), puis l'état de son agent `<slug>-main` et ce
+que fera le prochain envoi :
 
 | État | Titre | Prochain envoi |
 | --- | --- | --- |
