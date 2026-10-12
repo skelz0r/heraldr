@@ -41,7 +41,16 @@ struct DictationLexicon: Codable, Equatable, Sendable {
         terms.prefix(Self.vocabularySize).map(\.text)
     }
 
+    struct Replacement: Codable, Equatable, Sendable {
+        let heard: String
+        let term: String
+    }
+
     func replacingKnownVariants(in text: String) -> String {
+        replacements(in: text).text
+    }
+
+    func replacements(in text: String) -> (text: String, applied: [Replacement]) {
         let tokens = Self.tokens(in: text)
         var consumed = Array(repeating: false, count: tokens.count)
         var replacements: [(range: Range<String.Index>, term: String)] = []
@@ -61,12 +70,22 @@ struct DictationLexicon: Codable, Equatable, Sendable {
             }
         }
         var replaced = ""
+        var applied: [Replacement] = []
         var cursor = text.startIndex
         for replacement in replacements.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
             replaced += text[cursor..<replacement.range.lowerBound] + replacement.term
             cursor = replacement.range.upperBound
+            let heard = String(text[replacement.range])
+            if heard != replacement.term { applied.append(Replacement(heard: heard, term: replacement.term)) }
         }
-        return replaced + text[cursor...]
+        return (replaced + text[cursor...], applied)
+    }
+
+    static func contains(_ phrase: String, in text: String) -> Bool {
+        let wanted = words(phrase).map(key)
+        let present = tokens(in: text).map(\.key)
+        guard !wanted.isEmpty, wanted.count <= present.count else { return false }
+        return (0...present.count - wanted.count).contains { Array(present[$0..<$0 + wanted.count]) == wanted }
     }
 
     func hints(for text: String) -> [(heard: String, term: String)] {

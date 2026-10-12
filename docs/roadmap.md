@@ -47,3 +47,8 @@ renvoyer vers Claude mobile.
 - multi-machines (plusieurs QR)
 - widget et action du bouton Action pour lancer directement la voix
 - raccourci Siri « dispatch dans acme »
+- script d'analyse du journal des dictées (`mac/dictation-report.mjs`) :
+  part de mots retouchés par semaine, remplacements défaits par paire
+  entendu → terme, indices suivis, selon la recette de
+  `docs/architecture.md` ; à écrire après quelques semaines de dictées
+  réelles dans `~/.config/heraldr/journal-dictees.jsonl`

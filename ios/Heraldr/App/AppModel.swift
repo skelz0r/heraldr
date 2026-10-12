@@ -99,6 +99,7 @@ final class AppModel {
     private var pollTask: Task<Void, Never>?
     private let lexiconKeeper = LexiconKeeper()
     private var lexiconBackupTask: Task<Void, Never>?
+    private let dictationJournal = DictationJournal()
     private var refreshing = false
     private var refreshRequestedWhileRefreshing = false
 
@@ -229,6 +230,7 @@ final class AppModel {
         }
         Task { await requestNotificationsOnce() }
         Task { await syncLexicon() }
+        Task { await uploadDictationJournal() }
         await registerPushDeviceIfNeeded()
         schedulePolling()
     }
@@ -314,6 +316,16 @@ final class AppModel {
         notice = Notice(
             kind: .sent, title: "Lexique restauré depuis le Mac",
             detail: restored > 1 ? "\(restored) termes repris de la sauvegarde." : "1 terme repris de la sauvegarde.")
+    }
+
+    func recordDictation(sent text: String, origin: ComposeView.Origin) {
+        dictationJournal.record(sent: text, origin: origin)
+        Task { await uploadDictationJournal() }
+    }
+
+    private func uploadDictationJournal() async {
+        guard let link else { return }
+        await dictationJournal.upload(with: Dispatcher(link: link).journalMirror)
     }
 
     func send(

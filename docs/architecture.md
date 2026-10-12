@@ -178,6 +178,50 @@ lecture ratée ne laisse jamais une écriture écraser la sauvegarde.
 `LexiconMirror` (deux closures) est la couture des tests, qui simulent
 le Mac sans SSH.
 
+## Journal des dictées
+
+```text
+ComposeView.send ──record──> dictation-journal.jsonl (en attente, iPhone)
+                                 │ exec dispatch.sh journal-append
+                                 v
+                  ~/.config/heraldr/journal-dictees.jsonl (Mac, ajout seul)
+```
+
+`TranscriptCleaner.clean` rend, avec la salve, une `CleaningTrace` :
+texte après le premier remplacement, remplacements faits par
+`DictationLexicon.replacements(in:)` avant et après le modèle, indices
+donnés et suivis ou non, jugé sur la réponse du modèle avant le second
+remplacement (seul moment où elle existe). `DictatedText` garde les
+salves et leurs révisions ; à l'envoi réussi, `AppModel.recordDictation`
+en fait une `DictationJournalEntry` (rien pour Écrire ou Coller) que
+`DictationJournal` ajoute à son fichier d'attente, puis l'envoie.
+`upload` pousse toutes les lignes en attente en un seul
+`journal-append` et ne retire que celles parties, une ligne ajoutée
+pendant l'envoi restant pour le suivant ; il est rappelé à chaque
+rafraîchissement réussi. `DictationJournalMirror` (une closure) est la
+couture des tests. Une coupure après l'écriture sur le Mac fait
+renvoyer l'entrée : `dispatch.sh` l'ignore grâce à son `id`.
+
+Lire les chiffres : le journal est fait pour être analysé par un
+Claude sur le Mac, une ligne par envoi, en ignorant les versions
+supérieures à 1 et en dédoublonnant par `id` par prudence. Pour chaque
+salve, la comparaison qui compte est `previewed` → `edited`, mot à
+mot comme l'apprentissage (casse, accents et ponctuation en bord de
+mot ignorés) :
+
+- part des mots retouchés : mots changés de `previewed` sur ses mots,
+  par semaine ; doit baisser si le lexique aide
+- remplacement défait : un terme de `replacements` présent moins de
+  fois dans `edited` que dans `previewed`, ou remplacé par l'entendu ;
+  à rapporter par paire entendu → terme pour repérer les faux
+  positifs, notamment les variantes de deux mots apprises avec un mot
+  voisin
+- indice suivi : `applied` des `hints` ; un indice suivi puis défait
+  dans `edited` est un faux positif du modèle
+- la sortie du modèle avant le second remplacement n'est pas gardée :
+  `proposed` comparé à `replaced` montre le nettoyage et le second
+  remplacement ensemble
+
 ## Notifications
 
 ```text

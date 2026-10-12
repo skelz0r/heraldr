@@ -34,6 +34,9 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
 - [ ] Dicter « on push la branche », corriger en « git push » dans
   l'aperçu et envoyer, puis redicter la même phrase : l'aperçu propose
   « git push », même Apple Intelligence désactivé.
+- [ ] Après ces deux envois, `tail -2 ~/.config/heraldr/journal-dictees.jsonl`
+  sur le Mac : une ligne par envoi dicté, la seconde avec le
+  remplacement « on push » → « git push » ; rien pour un envoi écrit.
 - [ ] Réglages > Lexique : le terme « git push » et sa variante
   « on push » apparaissent ; le pied dit « Sauvegardé sur le Mac » et
   `~/.config/heraldr/lexique.json` les contient sur le Mac.

@@ -491,10 +491,13 @@ struct ComposeView: View {
         sending = true
         sendError = nil
         defer { sending = false }
-        model.lexicon.learn(sent: text, origin: origin)
+        let sent = text
+        let sentOrigin = origin
+        model.lexicon.learn(sent: sent, origin: sentOrigin)
         do {
             try await model.send(
-                text, images: slots.compactMap(\.attachment?.jpeg), to: target, clearingContext: target.tab != nil && clearsContext)
+                sent, images: slots.compactMap(\.attachment?.jpeg), to: target, clearingContext: target.tab != nil && clearsContext)
+            model.recordDictation(sent: sent, origin: sentOrigin)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             dismiss()
         } catch {
@@ -597,9 +600,7 @@ private extension CleanedTranscript {
 
 private extension [CleanedTranscript] {
     var lastRawReason: String? {
-        reversed().lazy.compactMap { salve -> String? in
-            if case .raw(_, _, let reason) = salve { reason } else { nil }
-        }.first
+        reversed().lazy.compactMap(\.reason).first
     }
 }
 

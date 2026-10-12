@@ -118,6 +118,14 @@ struct Dispatcher: Sendable {
         return answer
     }
 
+    var journalMirror: DictationJournalMirror {
+        DictationJournalMirror { entries in
+            try await installScript()
+            let result = try await link.run("/bin/sh \(Self.script) journal-append", input: entries)
+            guard result.exitStatus == 0 else { throw failure(result) }
+        }
+    }
+
     func installScript() async throws {
         let incoming = "\(Self.stateDirectory)/incoming-$$.sh"
         let command = "mkdir -p \(Self.stateDirectory) && cat > \(incoming) && /bin/sh \(incoming) install < \(incoming); rc=$?; rm -f \(incoming); exit $rc"
