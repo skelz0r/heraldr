@@ -143,6 +143,17 @@ slug et la consigne standard existent donc en double, dans
 garder alignés. Le script est toujours installé sur le Mac au moment du
 relais, puisque l'envoi vers Home vient de l'installer.
 
+`attach <jpg|png>` reçoit une capture jointe à une demande : l'image
+arrive brute sur stdin, est écrite dans
+`~/.local/state/heraldr/attachments/<horodatage>-<id>.<ext>` (via un
+`.tmp` renommé) et le script répond son chemin absolu. L'app fait un
+`attach` par image avant l'`enqueue`, puis cite les chemins dans la
+demande : Claude Code lit une image par son chemin avec Read, il n'y a
+ni SFTP ni pièce jointe côté herdr. Les images ne sont pas rattachées
+au job : `prune_jobs` (appelé par `run` et `status`) efface celles de
+plus d'une semaine, assez pour un envoi resté en file ou une session
+lancée plus tard par /start.
+
 ## Notifications
 
 ```text
@@ -203,8 +214,9 @@ l'ouverture échoue ou que l'URL manque.
   - `Pairing` : scan QR (VisionKit DataScanner), parsing `HERDR-PAIR:1`,
     enrôlement, Keychain
   - `HerdrClient` : requêtes JSON sur streamlocal, modèles Codable
-  - `Dispatch` : enveloppe du prompt, slug, exec du script, historique
-    des 20 derniers envois (UserDefaults)
+  - `Dispatch` : enveloppe du prompt, slug, exec du script, captures
+    jointes (réduites et converties en JPEG sur l'iPhone, posées par
+    `attach`), historique des 20 derniers envois (UserDefaults)
   - `Voice` : SpeechAnalyzer + nettoyage Foundation Models, lexique
     des corrections de dictée (UserDefaults) ; le vocabulaire passe
     par `AnalysisContext.contextualStrings`, que seul

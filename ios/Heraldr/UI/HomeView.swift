@@ -1,11 +1,12 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct ComposeRequest: Identifiable {
     enum Source {
         case voice
         case write
-        case paste(String)
+        case paste(String, images: [NSItemProvider])
     }
 
     let id = UUID()
@@ -280,11 +281,15 @@ struct HomeView: View {
     }
 
     private func paste() {
-        guard let text = UIPasteboard.general.string, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            model.notice = AppModel.Notice(kind: .failed, title: "Presse-papier vide", detail: "Copie d'abord le texte à envoyer.")
+        let pasteboard = UIPasteboard.general
+        let text = pasteboard.hasStrings ? pasteboard.string ?? "" : ""
+        let images = pasteboard.hasImages ? pasteboard.itemProviders.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) } : []
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !images.isEmpty else {
+            model.notice = AppModel.Notice(
+                kind: .failed, title: "Presse-papier vide", detail: "Copie d'abord le texte ou la capture à envoyer.")
             return
         }
-        open(.paste(text))
+        open(.paste(text, images: images))
     }
 }
 

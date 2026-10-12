@@ -49,6 +49,11 @@ struct HistoryView: View {
             Text(entry.text)
                 .font(.body)
                 .lineLimit(4)
+            if let attachments = entry.attachments {
+                Text(attachments.count == 1 ? "1 capture jointe" : "\(attachments.count) captures jointes")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             if entry.status == .failed, let error = entry.error {
                 Text(error)
                     .font(.footnote)

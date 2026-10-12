@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ComposeView: View {
@@ -24,6 +25,9 @@ struct ComposeView: View {
     @State private var workspaceId: String = ""
     @State private var tabId: String?
     @State private var clearsContext = false
+    @State private var slots: [AttachmentSlot] = []
+    @State private var pickedPhotos: [PhotosPickerItem] = []
+    @State private var importFailed = false
     @State private var dictation = Dictation()
     @State private var lexicon = DictationLexiconStore.load()
     @State private var dictationError: String?
@@ -90,10 +94,11 @@ struct ComposeView: View {
             origin = .written
             stage = .preview
             editorFocused = true
-        case .paste(let pasted):
+        case .paste(let pasted, let images):
             origin = .pasted
             text = pasted
             stage = .preview
+            enqueueImports(images.map { provider in { await provider.loadImageData() } })
         }
     }
 
@@ -224,25 +229,48 @@ struct ComposeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            TextEditor(text: $text)
-                .font(.system(size: 19, weight: .medium))
-                .scrollContentBackground(.hidden)
-                .focused($editorFocused)
-                .overlay(alignment: .topLeading) {
-                    if text.isEmpty {
-                        Text("Que doit faire l'agent ?")
-                            .font(.system(size: 19, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                            .padding(.top, 8)
-                            .padding(.leading, 5)
-                            .allowsHitTesting(false)
+            VStack(alignment: .leading, spacing: 10) {
+                TextEditor(text: $text)
+                    .font(.system(size: 19, weight: .medium))
+                    .scrollContentBackground(.hidden)
+                    .focused($editorFocused)
+                    .overlay(alignment: .topLeading) {
+                        if text.isEmpty {
+                            Text("Que doit faire l'agent ?")
+                                .font(.system(size: 19, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                                .padding(.top, 8)
+                                .padding(.leading, 5)
+                                .allowsHitTesting(false)
+                        }
                     }
+                if !slots.isEmpty {
+                    attachmentStrip
                 }
-                .padding(12)
-                .glassEffect(.regular, in: .rect(cornerRadius: 22, style: .continuous))
+            }
+            .padding(12)
+            .glassEffect(.regular, in: .rect(cornerRadius: 22, style: .continuous))
 
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 originLine
+                PhotosPicker(
+                    selection: $pickedPhotos, maxSelectionCount: max(remainingSlots, 1),
+                    selectionBehavior: .ordered, matching: .images
+                ) {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.footnote.weight(.bold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .disabled(sending || remainingSlots == 0)
+                .accessibilityLabel("Joindre des captures")
+                .onChange(of: pickedPhotos) { _, picked in
+                    guard !picked.isEmpty else { return }
+                    pickedPhotos = []
+                    enqueueImports(picked.map { item in { try? await item.loadTransferable(type: Data.self) } })
+                }
                 Button { dictateFollowUp() } label: {
                     Label(text.isEmpty ? "Dicter" : "Dicter la suite", systemImage: "mic.fill")
                         .font(.footnote.weight(.bold))
@@ -270,6 +298,11 @@ struct ComposeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            if importFailed {
+                Text("Une image n'a pas pu être lue.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             if let sendError {
                 Text(sendError).font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -289,11 +322,62 @@ struct ComposeView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .capsule)
-            .disabled(sending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil)
+            .disabled(
+                sending || importing || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil)
             .opacity(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+    }
+
+    private static let thumbnailHeight: CGFloat = 84
+
+    private func thumbnailWidth(_ image: UIImage) -> CGFloat {
+        let ratio = image.size.width / max(image.size.height, 1)
+        return Self.thumbnailHeight * min(max(ratio, 0.6), 1.4)
+    }
+
+    private var attachmentStrip: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(slots.enumerated()), id: \.element.id) { index, slot in
+                Group {
+                    if let attachment = slot.attachment {
+                        Image(uiImage: attachment.thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: thumbnailWidth(attachment.thumbnail), height: Self.thumbnailHeight)
+                            .clipShape(.rect(cornerRadius: 14, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(.primary.opacity(0.2), lineWidth: 0.5)
+                            }
+                            .accessibilityLabel("Capture \(index + 1)")
+                    } else {
+                        ProgressView()
+                            .frame(width: Self.thumbnailHeight * 0.6, height: Self.thumbnailHeight)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 14, style: .continuous))
+                            .accessibilityLabel("Capture \(index + 1) en préparation")
+                    }
+                }
+                .overlay(alignment: .topTrailing) {
+                    Button { remove(slot) } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .heavy))
+                            .frame(width: 20, height: 20)
+                            .glassEffect(.regular, in: .circle)
+                            .padding(4)
+                            .frame(width: 40, height: 40, alignment: .topTrailing)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(sending)
+                    .accessibilityLabel("Retirer la capture \(index + 1)")
+                }
+                .accessibilityElement(children: .contain)
+                .transition(.scale(scale: 0.8).combined(with: .opacity))
+            }
+        }
+        .animation(.smooth, value: slots.map(\.id))
     }
 
     @ViewBuilder
@@ -319,6 +403,39 @@ struct ComposeView: View {
         }
         .font(.footnote.weight(.semibold))
         .foregroundStyle(.secondary)
+    }
+
+    private var remainingSlots: Int {
+        max(ImageAttachment.limit - slots.count, 0)
+    }
+
+    private var importing: Bool {
+        slots.contains { $0.attachment == nil }
+    }
+
+    private func enqueueImports(_ loaders: [() async -> Data?]) {
+        let loaders = loaders.prefix(remainingSlots)
+        guard !loaders.isEmpty else { return }
+        importFailed = false
+        for load in loaders {
+            let slot = AttachmentSlot()
+            slots.append(slot)
+            Task {
+                let data = await load()
+                let attachment = await Task.detached { data.flatMap(ImageAttachment.init(imageData:)) }.value
+                guard let index = slots.firstIndex(where: { $0.id == slot.id }) else { return }
+                if let attachment {
+                    slots[index].attachment = attachment
+                } else {
+                    slots.remove(at: index)
+                    importFailed = true
+                }
+            }
+        }
+    }
+
+    private func remove(_ slot: AttachmentSlot) {
+        slots.removeAll { $0.id == slot.id }
     }
 
     private func startDictation() async {
@@ -378,7 +495,8 @@ struct ComposeView: View {
         lexicon.learn(sent: text, origin: origin)
         DictationLexiconStore.save(lexicon)
         do {
-            try await model.send(text, to: target, clearingContext: target.tab != nil && clearsContext)
+            try await model.send(
+                text, images: slots.compactMap(\.attachment?.jpeg), to: target, clearingContext: target.tab != nil && clearsContext)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             dismiss()
         } catch {
@@ -485,4 +603,9 @@ private extension [CleanedTranscript] {
             if case .raw(_, let reason) = salve { reason } else { nil }
         }.first
     }
+}
+
+struct AttachmentSlot: Identifiable {
+    let id = UUID()
+    var attachment: ImageAttachment?
 }
