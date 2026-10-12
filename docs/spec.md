@@ -90,7 +90,7 @@ que fera le prochain envoi :
 | aucun agent `<slug>-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1, nommé `<slug>-main`. |
 | envoi en file ou en cours vers cet agent | Envoi en cours… | Un nouvel envoi partira juste après. |
 | `idle` ou `done` | Prêt | Un envoi vide son contexte puis transmet la demande. |
-| `working`, envoi de l'app depuis moins d'une heure | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
+| `working`, envoi de l'app vers cette cible accepté par le Mac depuis moins d'une heure (historique, gardé à la relance) | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
 | `working` | Travaille | Un nouvel envoi attendra la fin de son travail. |
 | `blocked` | Te pose une question : réponds dans Claude mobile | Un nouvel envoi attendra que tu lui aies répondu. |
 | état inconnu de herdr | État inconnu | Un nouvel envoi attendra qu'il soit prêt. |

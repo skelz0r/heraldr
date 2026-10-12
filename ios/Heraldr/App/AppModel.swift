@@ -82,7 +82,6 @@ final class AppModel {
     private(set) var history: SendHistory {
         didSet { SendHistoryStore.save(history, to: environment.defaults) }
     }
-    private var lastSentAt: [String: Date] = [:]
     var selectedWorkspaceId: String?
     private(set) var selectedTabId: String?
     var notice: Notice?
@@ -159,7 +158,8 @@ final class AppModel {
 
     func targetState(for target: Target) -> TargetState {
         .resolve(
-            for: target.workspace, tab: target.tab, agents: agents, jobs: jobs, lastSentAt: lastSentAt[target.id], now: .now)
+            for: target.workspace, tab: target.tab, agents: agents, jobs: jobs,
+            lastSentAt: history.lastAccepted(to: target)?.createdAt, now: .now)
     }
 
     func pair(code: String) async throws {
@@ -356,7 +356,6 @@ final class AppModel {
             history.fail(entryId, error: error.localizedDescription)
             throw error
         }
-        lastSentAt[target.id] = .now
         notice = Self.notice(afterSendingTo: target, state: state, clearingContext: clearingContext)
         await refresh()
     }

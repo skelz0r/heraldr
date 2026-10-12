@@ -283,6 +283,18 @@ struct RefreshTests {
 @MainActor
 @Suite("Cible qui travaille sur la demande de l'app")
 struct WorkingOnOurRequestTests {
+    @Test("après un envoi, la cible travaille sur ta demande, même après une relance de l'app")
+    func survivesRelaunch() async throws {
+        let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
+        try await session.model.send("Corrige le bug", to: Target(session.workspace("wS")))
+        #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.working, workingOnOurRequest: true))
+
+        let relaunched = await session.relaunched()
+        let acme = try #require(relaunched.workspaces.first { $0.id == "wS" })
+
+        #expect(relaunched.targetState(for: acme) == .agent(.working, workingOnOurRequest: true))
+    }
+
     @Test("un envoi en échec ne compte pas comme une demande en cours")
     func failedSendDoesNotCount() async throws {
         let session = await Session(world(
