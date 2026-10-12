@@ -3,7 +3,6 @@ import UIKit
 
 struct AnswerSheet: View {
     let presented: AppModel.PresentedAnswer
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -13,11 +12,8 @@ struct AnswerSheet: View {
             .navigationTitle(presented.targetLabel)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .primaryAction) {
                     CopyAnswerButton(answer: presented.answer)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer", systemImage: "xmark") { dismiss() }
                 }
             }
         }

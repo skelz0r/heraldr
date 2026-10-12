@@ -33,11 +33,6 @@ struct HistoryView: View {
             }
             .navigationTitle("Historique")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer", systemImage: "xmark") { dismiss() }
-                }
-            }
             .navigationDestination(for: SentRequest.ID.self) { id in
                 if let entry = model.history.entries.first(where: { $0.id == id }), let answer = entry.answer {
                     AnswerContent(question: entry.text, answer: answer)

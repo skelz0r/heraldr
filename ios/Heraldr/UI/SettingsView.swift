@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(AppModel.self) private var model
     private let build = BuildInfo.current
 
@@ -31,11 +30,6 @@ struct SettingsView: View {
             .textSelection(.enabled)
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer", systemImage: "xmark") { dismiss() }
-                }
-            }
         }
     }
 }

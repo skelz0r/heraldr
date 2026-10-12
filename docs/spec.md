@@ -149,8 +149,9 @@ d'échec « Presse-papier vide », « Copie d'abord le texte ou la capture
 ### 4.4 Historique
 
 Bouton rond à droite de la pilule du Mac, « Historique des envois »
-pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») à deux
-segments en tête, « Tâches » (ouvert par défaut) et « Questions ».
+pour VoiceOver. Il ouvre une feuille « Historique », sans bouton
+Fermer (on la glisse vers le bas), à deux segments en tête, « Tâches »
+(ouvert par défaut) et « Questions ».
 
 « Tâches » liste les envois gardés (§6) sans réponse, du plus récent
 au plus ancien. Une question reste là tant que sa réponse n'est pas
@@ -203,8 +204,8 @@ au plus ancien :
 ### 4.5 Réglages
 
 Bouton rond engrenage à droite du bouton Historique, « Réglages » pour
-VoiceOver. Il ouvre une feuille « Réglages » (« Fermer »), à mi-hauteur
-et extensible, en deux sections.
+VoiceOver. Il ouvre une feuille « Réglages », sans bouton Fermer (on
+la glisse vers le bas), à mi-hauteur et extensible, en deux sections.
 
 « Dictée » : « Lexique », avec le nombre de termes, ouvre la liste du
 lexique de dictée (§5.2), « Lexique de dictée » :
@@ -612,14 +613,15 @@ demande est une simple question : l'app ne propose aucun choix.
 5. un envoi vers un tab (§6.3) n'a pas de consigne, donc pas de réponse
    de ce type
 
-Feuille de réponse, ouverte du bas, fermable (« Fermer »), moitié puis
-plein écran : titre = label de l'envoi, la question en secondaire, le
-résumé en titre, puis la réponse complète (markdown : titres, listes,
-blocs de code, gras, italique, code et liens en ligne), sélectionnable.
-« Copier » copie la réponse complète. Pendant qu'elle arrive du Mac, le
-résumé de la notif s'affiche seul avec un indicateur ; Mac injoignable :
-« Réponse complète indisponible : <raison> » sous le résumé. La feuille
-ferme l'historique et les réglages s'ils sont ouverts.
+Feuille de réponse, ouverte du bas, sans bouton Fermer (on la glisse
+vers le bas), moitié puis plein écran : titre = label de l'envoi, la
+question en secondaire, le résumé en titre, puis la réponse complète
+(markdown : titres, listes, blocs de code, gras, italique, code et liens
+en ligne), sélectionnable. « Copier » copie la réponse complète. Pendant
+qu'elle arrive du Mac, le résumé de la notif s'affiche seul avec un
+indicateur ; Mac injoignable : « Réponse complète indisponible :
+<raison> » sous le résumé. La feuille ferme l'historique et les réglages
+s'ils sont ouverts.
 
 ## 7. Notifications
 
