@@ -2,8 +2,8 @@
 
 Ce que fait Heraldr, écran par écran, et ce qu'il attend du Mac. Elle
 est normative : un écart entre la spec et le code se résout en faveur
-de la spec, ou se note dans *Écarts connus* tant qu'il n'est pas
-corrigé. Le comment (SSH, runner, hook) est dans
+de la spec, dans la branche qui le trouve ; un bug qu'on ne peut pas
+corriger tout de suite est décrit tel qu'il se comporte. Le comment (SSH, runner, hook) est dans
 [architecture](architecture.md), le pourquoi dans
 [décisions](decisions.md).
 
@@ -795,10 +795,7 @@ Réponse : `aps.alert`, `kind` = `answer`, `job_id`, `workspace_id`,
 `agent`. Sans `kind` = `answer` ou `job_id`, la notif se lit comme une
 question.
 
-## 9. Écarts connus
-
-
-## 10. Hors périmètre
+## 9. Hors périmètre
 
 - réponse aux questions de l'agent depuis l'app
 - notif de fin de tâche

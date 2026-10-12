@@ -152,9 +152,11 @@ Tout changement de comportement de l'app (`ios/Heraldr`) ou des
 scripts Mac (`mac/dispatch.sh`, `mac/notify-hook.mjs`) DOIT mettre à
 jour la spec dans le même commit ou la même PR : écran, état, règle,
 texte affiché, commande ou sortie de `dispatch.sh`, payload, tolérance
-à un champ inconnu. Un bug découvert sans correction immédiate va dans
-*Écarts connus* sous un nouvel identifiant `E<n>` ; sa correction l'en
-retire.
+à un champ inconnu. Aucun écart entre la spec et le code : un bug
+découvert se corrige dans la branche, avec son test ; s'il ne peut
+vraiment pas l'être tout de suite, la spec décrit le comportement réel.
+`bin/lint` échoue si une section « Écarts connus » réapparaît avec du
+contenu.
 
 `bin/local-ci` avertit (sans bloquer) quand ces chemins ont changé
 depuis `origin/main` sans la spec. Un refactoring sans effet visible
