@@ -455,9 +455,16 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
   indisponibles »
 - une notif part quand un agent `-main` passe `blocked` et le reste
   3 s, une fois par question ; jamais pour les Claude des worktrees.
-  Titre : label du workspace, sous-titre : agent, corps : texte de
-  l'AskUserQuestion, « Demande d'autorisation : <outil> », ou « Attend
-  une réponse »
+  Titre : label du workspace, sous-titre : agent, corps : ce que
+  montre l'écran de l'agent, tronqué à 178 caractères (« … ») :
+  - question d'une AskUserQuestion
+  - permission Bash : « Veut lancer : <description> », ou « Veut
+    lancer une commande » sans description, jamais la commande brute
+  - permission sur un fichier : « Veut modifier : <fichier> »
+    (édition, écrasement) ou « Veut créer : <fichier> »
+  - autre permission : « Demande d'autorisation : <titre de la
+    demande> »
+  - rien de reconnu : « Attend une réponse »
 - notif reçue app ouverte : bannière, liste et son
 - tap : le workspace de l'agent devient la cible, puis la session
   s'ouvre dans l'app Claude. Si le lien manque ou que l'app Claude ne

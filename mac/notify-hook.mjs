@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createPrivateKey, createSign } from "node:crypto";
-import { mkdirSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { connect } from "node:http2";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +12,7 @@ const stateDir = process.env.HERALDR_STATE_DIR ?? join(home, ".local/state/heral
 const configDir = process.env.HERALDR_CONFIG_DIR ?? join(home, ".config/heraldr");
 const claudeDir = join(home, ".claude");
 const debounceMs = Number(process.env.HERALDR_NOTIFY_DEBOUNCE_MS ?? 3000);
-const transcriptTailBytes = 512 * 1024;
+const notificationBodyLength = 178;
 
 const apnsHosts = {
   sandbox: "https://api.sandbox.push.apple.com",
@@ -76,49 +76,39 @@ function remoteControlUrl(sessionId) {
   return null;
 }
 
-function transcriptTail(sessionId) {
-  const projectsDir = join(claudeDir, "projects");
-  let projects;
-  try {
-    projects = readdirSync(projectsDir);
-  } catch {
-    return [];
-  }
-  for (const project of projects) {
-    const path = join(projectsDir, project, `${sessionId}.jsonl`);
-    let size;
-    try {
-      size = statSync(path).size;
-    } catch {
-      continue;
-    }
-    const length = Math.min(size, transcriptTailBytes);
-    const buffer = Buffer.alloc(length);
-    readSync(openSync(path, "r"), buffer, 0, length, size - length);
-    return buffer.toString("utf8").split("\n");
-  }
-  return [];
+function paneScreen(paneId) {
+  const result = spawnSync(herdr, ["pane", "read", paneId, "--source", "recent-unwrapped", "--lines", "60"], { encoding: "utf8" });
+  return result.status === 0 ? result.stdout.split("\n").map((line) => line.trim()) : [];
 }
 
-function pendingRequest(sessionId) {
-  const lines = transcriptTail(sessionId);
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    let entry;
-    try {
-      entry = JSON.parse(lines[index]);
-    } catch {
-      continue;
-    }
-    if (entry.type !== "assistant") continue;
-    const toolUse = [...(entry.message?.content ?? [])].reverse().find((block) => block.type === "tool_use");
-    if (!toolUse) continue;
-    if (toolUse.name === "AskUserQuestion") {
-      const question = toolUse.input?.questions?.[0]?.question;
-      if (typeof question === "string") return question;
-    }
-    return `Demande d'autorisation : ${toolUse.name}`;
+function dialogLines(screen) {
+  const selected = screen.findLastIndex((line) => /^❯ \d+\./.test(line));
+  if (selected < 0) return [];
+  const top = screen.findLastIndex((line, index) => index < selected && /^─{10,}$/.test(line));
+  return top < 0 ? [] : screen.slice(top + 1, selected);
+}
+
+function shorten(text) {
+  return text.length > notificationBodyLength ? `${text.slice(0, notificationBodyLength - 1).trimEnd()}…` : text;
+}
+
+function pendingRequest(paneId) {
+  const dialog = dialogLines(paneScreen(paneId));
+  const question = dialog.filter((line) => line.startsWith("│")).map((line) => line.slice(1).trim());
+  if (question.length > 0) return shorten(question.join(" "));
+  const [title, ...rest] = dialog.filter((line) => line !== "");
+  if (title === "Bash command") {
+    const separator = rest.findIndex((line) => /^╌+$/.test(line));
+    const description = rest.slice(0, separator < 0 ? 0 : separator).filter((line) => !line.startsWith("Tip:"));
+    return description.length > 0 ? shorten(`Veut lancer : ${description.join(" ")}`) : "Veut lancer une commande";
   }
-  return null;
+  const asking = rest.findLast((line) => line.startsWith("Do you want to "));
+  if (!asking) return null;
+  const edited = asking.match(/^Do you want to (?:make this edit to|overwrite) (.+)\?$/);
+  if (edited) return shorten(`Veut modifier : ${edited[1]}`);
+  const created = asking.match(/^Do you want to create (.+)\?$/);
+  if (created) return shorten(`Veut créer : ${created[1]}`);
+  return shorten(`Demande d'autorisation : ${title}`);
 }
 
 function apnsKey() {
@@ -194,7 +184,7 @@ async function main() {
   const label = herdrJson("workspace", "get", agent.workspace_id)?.result?.workspace?.label ?? agent.workspace_id;
   const sessionId = agent.agent_session?.value;
   const url = sessionId ? remoteControlUrl(sessionId) : null;
-  const question = sessionId ? pendingRequest(sessionId) : null;
+  const question = pendingRequest(paneId);
   const body = {
     aps: {
       alert: { title: label, subtitle: agent.name, body: question ?? "Attend une réponse" },

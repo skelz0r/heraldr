@@ -173,9 +173,15 @@ Le hook, un process court par changement d'état lancé par herdr :
 3. ignore tout agent dont le nom ne finit pas par `-main`
 4. URL de session : `~/.claude/sessions/*.json` dont le `sessionId` est
    `agent_session.value`, `https://claude.ai/code/<bridgeSessionId>`
-5. question : dernier `tool_use` du transcript
-   `~/.claude/projects/*/<sessionId>.jsonl` (512 Ko de fin), texte de
-   l'`AskUserQuestion` ou nom de l'outil qui demande une permission
+5. question : lue à l'écran (`herdr pane read <pane> --source
+   recent-unwrapped`), dans la boîte entre le dernier filet `─` et
+   l'option sélectionnée `❯ 1.`. Lignes `│` : texte de
+   l'AskUserQuestion. Sinon titre de la demande de permission
+   (`Bash command` : description avant le premier filet `╌`) ou ligne
+   `Do you want to …` (fichier édité, écrasé ou créé). Pas le
+   transcript : Claude Code n'y écrit le `tool_use` en attente qu'une
+   fois la réponse donnée, le dernier `tool_use` lisible est celui de
+   l'outil déjà lancé avant
 6. JWT ES256 signé avec la `.p8`, POST
    `/3/device/<token>` sur `api.sandbox.push.apple.com` ou
    `api.push.apple.com`, `apns-collapse-id` = nom de l'agent
