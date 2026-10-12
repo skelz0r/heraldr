@@ -48,6 +48,10 @@ enqueue() {
   printf '%s' "$4" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue "$1" "$2" "$(printf '%s' "$3" | base64)" > /dev/null
 }
 
+enqueue_pane() {
+  printf '%s' "$4" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane "$1" "$2" "$3" > /dev/null
+}
+
 job_states() {
   /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4 | tr '\n' ' '
 }
@@ -133,6 +137,80 @@ enqueue w1 home-main '~' "Mauvaise cible"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "l'envoi échoue sans rien envoyer" "$(job_states)|$(prompts_of home-main)" "failed |"
 check "l'app lit le workspace, l'agent, l'état et la raison de l'échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-)" "w1	home-main	failed	l'agent home-main appartient au workspace w9"
+teardown_world
+
+echo "un envoi vers le Claude d'un tab part tel quel, sans /clear ni consigne"
+setup_world
+add_agent wB:pG wB idle
+enqueue_pane wB wB:pG keep "Le bouton est trop petit"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "le Claude du tab reçoit le texte brut, contexte gardé" "$(prompts_of wB:pG)" "idle|Le bouton est trop petit"
+check "l'app retrouve l'envoi par son workspace et son pane" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-4)" "wB	wB:pG	sent"
+check "aucun Claude n'est lancé" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
+teardown_world
+
+echo "un envoi vers un tab ne vide le contexte que si on le demande"
+setup_world
+add_agent wB:pG wB done
+enqueue_pane wB wB:pG clear "Repars de zéro"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "/clear puis le texte brut" "$(prompts_of wB:pG)" "done|/clear
+done|Repars de zéro"
+teardown_world
+
+echo "les envois vers un tab occupé ou bloqué attendent, dans l'ordre"
+setup_world
+add_agent wB:pG wB blocked
+enqueue_pane wB wB:pG keep "Premier retour"
+sleep 1.1
+enqueue_pane wB wB:pG keep "Second retour"
+sleep 2
+check "rien n'est envoyé pendant qu'il attend une réponse" "$(prompts_of wB:pG)|$(job_states)" "|queued queued "
+set_status wB:pG working
+sleep 2
+check "rien n'est envoyé pendant qu'il travaille" "$(prompts_of wB:pG)" ""
+set_status wB:pG idle
+wait_until 15 '[ "$(job_states)" = "sent sent " ]'
+check "ordre d'arrivée conservé, jamais en working" "$(prompts_of wB:pG)" "idle|Premier retour
+idle|Second retour"
+teardown_world
+
+echo "un pane d'un autre workspace ou sans Claude n'est jamais visé"
+setup_world
+add_agent w9:p3 w9 idle
+add_agent wB:p7 wB idle
+echo codex > "$FAKE_HERDR_WORLD/agents/wB:p7/kind"
+enqueue_pane wB w9:p3 keep "Mauvais workspace"
+enqueue_pane wB wB:pZ keep "Pane fermé"
+enqueue_pane wB wB:p7 keep "Pas un Claude"
+wait_until 10 '[ "$(job_states)" = "failed failed failed " ]'
+check "rien n'est envoyé ni lancé" "$(prompts_of w9:p3)$(prompts_of wB:p7)$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
+check "la raison de chaque échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3,5 | sort)" "w9:p3	le pane w9:p3 appartient au workspace w9
+wB:p7	plus de Claude dans le pane wB:p7
+wB:pZ	plus de Claude dans le pane wB:pZ"
+check "un pane mal formé ou une option inconnue sont refusés" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB 'wB:p1;rm' keep 2>&1; echo $?)|$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB wB:p1 maybe >/dev/null 2>&1; echo $?)" "invalid pane: wB:p1;rm
+2|2"
+teardown_world
+
+echo "un pane dont le Claude est remplacé pendant l'attente ne reçoit rien"
+setup_world
+add_agent wB:pG wB working
+enqueue_pane wB wB:pG keep "Pour l'ancien Claude"
+sleep 2
+echo codex > "$FAKE_HERDR_WORLD/agents/wB:pG/kind"
+set_status wB:pG idle
+wait_until 10 '[ "$(job_states)" = "failed " ]'
+check "l'envoi échoue sans rien envoyer au nouvel agent" "$(job_states)|$(prompts_of wB:pG)" "failed |"
+teardown_world
+
+echo "le pane d'un agent nommé n'est jamais visé comme un tab"
+setup_world
+add_agent wB:pG wB idle
+echo acme-main > "$FAKE_HERDR_WORLD/agents/wB:pG/name"
+enqueue_pane wB wB:pG keep "Contourne la file du main"
+wait_until 10 '[ "$(job_states)" = "failed " ]'
+check "l'envoi échoue sans rien envoyer, la file du main reste seule" "$(job_states)|$(prompts_of wB:pG)" "failed |"
+check "la raison nomme l'agent" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "le pane wB:pG est l'agent acme-main : vise-le par son nom"
 teardown_world
 
 echo "l'iPhone enregistre son token et installe le hook de notification"

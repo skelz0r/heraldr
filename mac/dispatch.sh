@@ -20,7 +20,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | relay <workspace_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
   exit 2
 }
 
@@ -32,6 +32,18 @@ install_script() {
 
 valid_agent_name() {
   printf '%s' "$1" | grep -Eq '^[a-z][a-z0-9_-]{0,31}$'
+}
+
+valid_pane_id() {
+  printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]+:[A-Za-z0-9]+$'
+}
+
+valid_queue_target() {
+  valid_agent_name "$1" || valid_pane_id "$1"
+}
+
+lock_name() {
+  printf '%s' "$1" | tr ':' '@'
 }
 
 agent_name_for_label() {
@@ -57,8 +69,15 @@ EOF
 }
 
 enqueue_job() {
+  valid_agent_name "$2" || { echo "invalid agent name: $2" >&2; exit 2; }
   label="$(printf '%s' "$3" | base64 -d 2>/dev/null)" || label=""
-  create_job "$1" "$2" "$label"
+  create_job "$1" "$2" "$label" clear
+}
+
+enqueue_pane_job() {
+  valid_pane_id "$2" || { echo "invalid pane: $2" >&2; exit 2; }
+  case "$3" in clear|keep) ;; *) fail_usage ;; esac
+  create_job "$1" "$2" "$2" "$3"
 }
 
 relay_job() {
@@ -68,14 +87,15 @@ relay_job() {
   [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "relais vers Home impossible" >&2; exit 2; }
   request="$(cat)"
   [ -n "$request" ] || { echo "empty prompt" >&2; exit 2; }
-  standard_envelope "$request" | create_job "$workspace_id" "$(agent_name_for_label "$label")" "$label"
+  standard_envelope "$request" | create_job "$workspace_id" "$(agent_name_for_label "$label")" "$label" clear
 }
 
 create_job() {
   workspace_id="$1"
   agent="$2"
   label="$3"
-  valid_agent_name "$agent" || { echo "invalid agent name: $agent" >&2; exit 2; }
+  clear="$4"
+  valid_queue_target "$agent" || { echo "invalid agent name: $agent" >&2; exit 2; }
   [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
 
   job_id="$(date -u +%Y%m%d%H%M%S)-$$-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
@@ -90,6 +110,7 @@ create_job() {
   printf '%s' "$workspace_id" > "$job_dir.tmp/workspace_id"
   printf '%s' "$agent" > "$job_dir.tmp/agent"
   printf '%s' "$label" > "$job_dir.tmp/label"
+  printf '%s' "$clear" > "$job_dir.tmp/clear"
   printf 'queued' > "$job_dir.tmp/state"
   mv "$job_dir.tmp" "$job_dir"
 
@@ -205,14 +226,26 @@ wait_for_clear() {
   [ -z "$previous_session" ]
 }
 
+check_pane_target() {
+  pane="$(herdr agent get "$2" 2>/dev/null)"
+  [ "$(printf '%s' "$pane" | json_value result.agent.agent)" = "claude" ] || { fail_job "$1" "plus de Claude dans le pane $2"; return 1; }
+  pane_workspace="$(printf '%s' "$pane" | json_value result.agent.workspace_id)"
+  [ "$pane_workspace" = "$3" ] || { fail_job "$1" "le pane $2 appartient au workspace $pane_workspace"; return 1; }
+  pane_name="$(printf '%s' "$pane" | json_value result.agent.name)"
+  [ -z "$pane_name" ] || { fail_job "$1" "le pane $2 est l'agent $pane_name : vise-le par son nom"; return 1; }
+}
+
 process_job() {
   job_dir="$1"
   agent="$(cat "$job_dir/agent")"
   workspace_id="$(cat "$job_dir/workspace_id")"
   label="$(cat "$job_dir/label")"
+  clear="$(cat "$job_dir/clear" 2>/dev/null || echo clear)"
 
   agent_workspace="$(agent_field "$agent" workspace_id)"
-  if [ -z "$agent_workspace" ]; then
+  if valid_pane_id "$agent"; then
+    check_pane_target "$job_dir" "$agent" "$workspace_id" || return 1
+  elif [ -z "$agent_workspace" ]; then
     start_agent "$job_dir" "$workspace_id" "$agent" "$label" || return 1
   elif [ "$agent_workspace" != "$workspace_id" ]; then
     fail_job "$job_dir" "l'agent $agent appartient au workspace $agent_workspace"
@@ -221,11 +254,17 @@ process_job() {
 
   waited="$(herdr agent wait "$agent" --until idle --until done 2>&1)" || { fail_job "$job_dir" "agent wait: $waited"; return 1; }
 
+  if valid_pane_id "$agent"; then
+    check_pane_target "$job_dir" "$agent" "$workspace_id" || return 1
+  fi
+
   set_state "$job_dir" sending
-  session_before="$(agent_field "$agent" agent_session.value)"
-  cleared="$(herdr agent prompt "$agent" "/clear" 2>&1)" || { fail_job "$job_dir" "/clear: $cleared"; return 1; }
-  wait_for_clear "$agent" "$session_before" || { fail_job "$job_dir" "/clear sans nouvelle session après ${CLEAR_TIMEOUT_SECONDS}s"; return 1; }
-  sleep 1
+  if [ "$clear" = "clear" ]; then
+    session_before="$(agent_field "$agent" agent_session.value)"
+    cleared="$(herdr agent prompt "$agent" "/clear" 2>&1)" || { fail_job "$job_dir" "/clear: $cleared"; return 1; }
+    wait_for_clear "$agent" "$session_before" || { fail_job "$job_dir" "/clear sans nouvelle session après ${CLEAR_TIMEOUT_SECONDS}s"; return 1; }
+    sleep 1
+  fi
 
   prompted="$(herdr agent prompt "$agent" "$(cat "$job_dir/prompt")" 2>&1)" || { fail_job "$job_dir" "prompt: $prompted"; return 1; }
   date -u +%Y-%m-%dT%H:%M:%SZ > "$job_dir/sent_at"
@@ -244,12 +283,13 @@ prune_jobs() {
 
 run_agent_queue() {
   agent="$1"
-  valid_agent_name "$agent" || exit 2
-  while acquire_lock "$agent"; do
+  valid_queue_target "$agent" || exit 2
+  queue_lock="$(lock_name "$agent")"
+  while acquire_lock "$queue_lock"; do
     while job_dir="$(next_job_for "$agent")"; do
       process_job "$job_dir"
     done
-    release_lock "$agent"
+    release_lock "$queue_lock"
     next_job_for "$agent" >/dev/null || break
   done
   prune_jobs
@@ -308,6 +348,7 @@ shift
 case "$command" in
   install) install_script ;;
   enqueue) [ $# -eq 3 ] || fail_usage; enqueue_job "$@" ;;
+  enqueue-pane) [ $# -eq 3 ] || fail_usage; enqueue_pane_job "$@" ;;
   relay) [ $# -eq 1 ] || fail_usage; relay_job "$1" ;;
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
