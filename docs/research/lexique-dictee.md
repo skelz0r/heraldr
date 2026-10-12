@@ -18,15 +18,21 @@ Le stockage n'est pas en cause. Le problème vient de trois points :
 - la liste de paires donnée au petit modèle va à l'encontre des consignes d'Apple ;
 - l'apprentissage silencieux n'est pas filtré.
 
-Une base SQLite sur le Mac ne corrigerait rien de cela et ajouterait une
-dépendance réseau à la dictée : à ne pas faire maintenant.
+Une base SQLite sur le Mac ne corrigerait rien de cela, et la lire à
+chaque dictée ajouterait une dépendance réseau : à écarter. Le Mac a en
+revanche sa place comme miroir, pour ne rien perdre à une
+réinstallation et pour éditer la liste au clavier.
 
-Reco : garder l'iPhone comme source de vérité et séparer deux sortes
-d'entrées. Les termes (orthographe voulue) servent à biaiser la
-reconnaissance. Les corrections (entendu → voulu) sont appliquées par le
-code, pas par le modèle. Remplacer l'apprentissage silencieux par des
-suggestions à valider. Et sortir la liste des Réglages vers une page
-dédiée.
+Reco :
+
+- organiser le lexique en termes (« Acme ») portant leurs
+  variantes entendues (« ack me ») ;
+- utiliser les termes pour biaiser la reconnaissance, et faire
+  remplacer les variantes connues par le code, pas par le modèle ;
+- remplacer l'apprentissage silencieux par des suggestions à valider ;
+- garder la copie de l'iPhone pour dicter, avec un miroir JSON sur le
+  Mac synchronisé par SSH à chaque connexion ;
+- sortir la liste des Réglages vers une page dédiée.
 
 ## Ce qui cloche chez nous
 
@@ -298,24 +304,98 @@ dictée iOS n'a pas de dictionnaire utilisateur.
 | --- | --- | --- |
 | iPhone seul (aujourd'hui, UserDefaults) | dictée hors ligne, avant même la connexion SSH ; pas de latence ; rien à installer sur le Mac | pas de sauvegarde hors iPhone ; pas éditable ailleurs |
 | Mac source de vérité (SQLite ou fichier), lu par SSH à chaque dictée | éditable au clavier, par Claude, versionnable, partageable avec d'autres outils du Mac | la dictée dépend du Mac joignable (LAN/Tailscale) ; latence d'une commande SSH au démarrage ; nouvelle commande `dispatch.sh`, donc nouveau contrat à tester des deux côtés ; `sqlite3` en shell pour quelques centaines de lignes |
+| iPhone pour dicter, miroir JSON sur le Mac synchronisé à chaque connexion SSH | dictée locale ; survit à une réinstallation ; liste éditable au clavier ou par Claude | deux commandes `dispatch.sh` de plus ; fusion à écrire (dates et pierres tombales) |
 | iCloud (KVS ou CloudKit) | sauvegarde et synchro Apple sans le Mac | aucun second appareil Apple ne s'en sert aujourd'hui ; CloudKit demande une configuration de conteneur |
 | iPhone source de vérité, plus export/import | sauvegarde et édition au besoin, sans dépendance à la dictée | geste manuel |
 
 Le volume se compte en centaines d'entrées : une base est
-surdimensionnée. Une base ne règle aucun des quatre problèmes
-ci-dessus. Les produits qui synchronisent (Wispr, Willow, Monologue,
-VoiceInk via CloudKit) ont un compte cloud ou plusieurs appareils à
-servir. Chez nous, un seul appareil dicte.
+surdimensionnée, et elle ne règle aucun des quatre problèmes ci-dessus.
+Le vrai besoin est ailleurs : ne rien perdre à une désinstallation. Le
+lexique est dans UserDefaults, effacé avec l'app, comme `PairedMac` :
+une réinstallation impose déjà de réappairer le Mac.
 
-Reco : garder l'iPhone comme source de vérité. Quitter UserDefaults
-pour un fichier JSON versionné dans Application Support dès que le
-modèle s'enrichit (source, compteurs, refus). Ajouter un export/import
-de ce JSON, comme le format `voiceink.dictionary` de VoiceInk
-([DictionaryArchive.swift](https://github.com/Beingpax/VoiceInk/blob/main/VoiceInk/Features/Dictionary/Workflows/DictionaryArchive.swift#L3-L43)),
-par la feuille de partage. Une copie sur le Mac par SSH ne vaut que si
-un besoin réel apparaît, par exemple faire relire le lexique par
-Claude. Dans ce cas, une commande `dispatch.sh` qui écrit un fichier,
-jamais lue au moment de dicter.
+Reco : un miroir sur le Mac, pas une source de vérité.
+
+- **Local d'abord** : l'iPhone garde sa copie, et la dictée ne lit
+  jamais le Mac. Elle marche hors ligne et sans latence.
+- **Un fichier, pas une base** : `~/.config/heraldr/lexique.json` sur le
+  Mac, à côté de la clé APNs. C'est du JSON versionné, au format du
+  fichier local de l'app, qui quitte UserDefaults pour Application
+  Support. VoiceInk fait pareil avec son format `voiceink.dictionary`
+  ([DictionaryArchive.swift](https://github.com/Beingpax/VoiceInk/blob/main/VoiceInk/Features/Dictionary/Workflows/DictionaryArchive.swift#L3-L43)).
+- **Deux commandes `dispatch.sh`** : `lexicon-get` (le fichier sur la
+  sortie standard, vide s'il n'existe pas) et `lexicon-put` (lu sur
+  l'entrée standard, écrit par fichier temporaire puis `mv`). Ni
+  daemon, ni port. Ce sont deux sous-commandes de plus au contrat
+  testé dans `mac/test/dispatch_test.sh`.
+- **Quand synchroniser** : à chaque connexion SSH que l'app ouvre déjà
+  (statut, envoi), en tâche de fond. Si le lexique local a changé
+  depuis la dernière synchro, l'app lit, fusionne et réécrit. Juste
+  après un appairage, la première synchro ramène tout : c'est le cas de
+  la réinstallation.
+- **Fusion par entrée** : chaque entrée porte `updatedAt` ; une
+  suppression laisse une pierre tombale, dont l'étape d'apprentissage a
+  besoin de toute façon pour ne pas réapprendre ce qu'on a supprimé.
+  La plus récente gagne. On peut alors éditer le fichier sur le Mac, à
+  la main ou par Claude (ajouter vingt termes métier d'un coup), et
+  l'iPhone le reprend à la connexion suivante.
+
+L'alternative iCloud (`NSUbiquitousKeyValueStore`, 1 Mo) survit aussi à
+une réinstallation et ne demande aucun code côté Mac. Il faut en
+revanche ajouter l'entitlement iCloud, absent aujourd'hui, et on ne peut
+pas éditer la liste au clavier du Mac. Le miroir sur le Mac l'emporte
+parce qu'il sert aussi à alimenter les termes métier.
+
+## Termes métier
+
+Exemple réel : « Acme » transcrit « ack me ». Il s'agit d'un
+terme, une orthographe voulue, auquel s'attachent des variantes
+entendues. Les produits mûrs le modélisent ainsi : une cible et
+plusieurs déclencheurs (`triggers[]` chez FluidVoice, variantes séparées
+par des virgules chez VoiceInk). Superwhisper et Aqua conseillent
+d'ajouter chaque variante mal entendue. Proposition de modèle : une
+entrée = un voulu (« Acme ») + ses entendus connus
+(« ack me », « ak me ») + son origine (saisi, appris, importé,
+workspace). Les corrections actuelles deviennent des entendus attachés
+à leur voulu.
+
+Trois leviers, du plus sûr au plus incertain :
+
+1. **Remplacement d'un entendu connu par le code** : « ack me »
+   fait trois mots et n'apparaît jamais par hasard dans une demande, ce
+   qui en fait un remplacement sûr (étape 2). Il ne couvre que les
+   variantes déjà vues.
+2. **Biais de la reconnaissance** : le terme dans `contextualStrings`,
+   et si `fr_FR` le permet, un modèle de langue personnalisé avec sa
+   prononciation en X-SAMPA. Seul `DictationTranscriber` en profite :
+   c'est l'objet du spike (étape 1). C'est le seul levier qui évite
+   l'erreur au lieu de la réparer.
+3. **Rapprochement phonétique d'une variante jamais vue** : comparer
+   les groupes de 1 à 3 mots de la transcription, accolés
+   (« ack me »), aux termes. Handy procède ainsi
+   ([text.rs](https://github.com/cjpais/Handy/blob/main/src-tauri/src/audio_toolkit/text.rs#L79-L235)).
+   La distance d'édition brute ne suffit pas sur l'exemple :
+   « ack me » contre « acme » donne 3 sur 10, au-dessus du
+   seuil de 0,18 de Handy, et leurs Soundex diffèrent (A251, A250).
+   Il faut une clé phonétique française (« ak mee » contre
+   « ack mee » : une consonne d'écart), réglée sur le corpus. Un
+   rapprochement ne doit pas remplacer directement : il propose le
+   terme au modèle comme seul candidat, ou dans l'aperçu.
+
+D'où viennent les termes :
+
+- saisie et import en lot : le fichier sur le Mac (section précédente)
+  s'y prête ;
+- ce que l'app connaît déjà sans rien demander : libellés des
+  workspaces et des tabs herdr, noms d'agents. Wispr lit de même les
+  noms de fichiers et de variables dans les éditeurs
+  (<https://docs.wisprflow.ai/articles/4678293671-feature-context-awareness>) ;
+- l'apprentissage, quand le voulu d'une correction ressemble à un nom
+  propre ou à un terme technique.
+
+Les termes saisis ou importés comptent en priorité dans les 100 places
+du biais de reconnaissance. Les autres prennent ce qui reste, par
+usage.
 
 ## UI : une page dédiée
 
@@ -332,16 +412,15 @@ Ce qui revient chez les autres :
 | statistiques | « Insights » de Wispr |
 
 Pour Heraldr, une page « Lexique », ouverte depuis l'accueil ou depuis
-l'aperçu d'une dictée plutôt que du fond des Réglages, avec trois
+l'aperçu d'une dictée plutôt que du fond des Réglages, avec deux
 sections :
 
 - **À valider** : suggestions apprises, chacune avec la phrase d'où
   elle vient ; « Retenir » ou « Ignorer » ; un refus n'est plus jamais
   reproposé ;
-- **Corrections** : entendu → voulu, nombre d'applications, date de
-  dernière application ;
-- **Termes** : l'orthographe à reconnaître ; une étoile envoie le terme
-  au biais de reconnaissance.
+- **Termes** : l'orthographe voulue et ses variantes entendues, nombre
+  d'applications, origine ; une étoile envoie le terme en priorité au
+  biais de reconnaissance.
 
 Plus une recherche, et dans l'aperçu, le geste « appuyer sur un mot →
 Corriger » qui crée une correction explicite. C'est un apprentissage
@@ -354,9 +433,9 @@ n'a pas ce coût.
 
 ## Plan d'itération
 
-Chaque étape est livrable seule et mesurable. Les étapes 1 et 2 visent
-directement « pas précis », la 3 évite que ça se redégrade, la 4 est le
-confort.
+Chaque étape est livrable seule et mesurable. Les étapes 1, 2 et 4
+visent directement « pas précis », la 3 protège contre la perte, la 5
+évite que ça se redégrade, la 6 est le confort.
 
 **0. Mesurer avant de changer**
 
@@ -387,16 +466,19 @@ confort.
 - Décision à prendre : quel transcripteur. Si `SpeechTranscriber`
   l'emporte, cesser d'y passer un vocabulaire qu'il ignore.
 
-**2. Corrections appliquées par le code, consigne allégée**
+**2. Termes et variantes, remplacés par le code**
 
-- Appliquer les corrections entendu → voulu par du code, après le
-  nettoyage : mots entiers, insensible à la casse et aux accents, plus
-  long d'abord, casse du voulu gardée.
+- Nouveau modèle : un voulu, ses entendus, son origine, `updatedAt`,
+  des pierres tombales. Stocké en JSON versionné dans Application
+  Support. Les corrections actuelles sont migrées en entendus.
+- Remplacer les entendus connus par du code, après le nettoyage : mots
+  entiers, insensible à la casse et aux accents, plus long d'abord,
+  casse du voulu gardée.
 - Pour limiter les faux positifs qui avaient fait écarter cette option,
-  n'appliquer automatiquement qu'une correction sûre :
-  - entendu de deux mots ou plus,
-  - ou entendu d'un mot qui n'est pas un mot français courant,
-  - ou correction validée explicitement.
+  n'appliquer automatiquement qu'un entendu sûr :
+  - de deux mots ou plus (« ack me ») ;
+  - ou d'un mot qui n'est pas un mot français courant ;
+  - ou validé explicitement.
 - Pour les autres, ne donner au modèle que les 0 à 3 paires dont
   l'entendu apparaît dans la transcription, formulées sur la dictée
   (« ici, X veut probablement dire Y »), au lieu des 20 plus récentes.
@@ -407,7 +489,24 @@ confort.
   écarté (faux positifs) » : à consigner dans `docs/decisions.md` et la
   spec §5.1 si retenu.
 
-**3. Apprentissage en suggestions**
+**3. Miroir sur le Mac**
+
+- `dispatch.sh lexicon-get` / `lexicon-put`, fichier
+  `~/.config/heraldr/lexique.json`, tests de contrat des deux côtés.
+- Synchro en tâche de fond à chaque connexion SSH, fusion par entrée.
+  Juste après un appairage, la première synchro restaure tout.
+- Peut passer avant l'étape 2 si la perte du lexique presse : le JSON
+  versionné absorbe le changement de modèle.
+
+**4. Termes métier**
+
+- Termes tirés des workspaces, des tabs et des agents herdr ; import en
+  lot par le fichier du Mac.
+- Rapprochement phonétique des variantes jamais vues (clé phonétique
+  française plus distance d'édition, seuil réglé sur le corpus),
+  proposé au modèle comme seul candidat, jamais remplacé d'office.
+
+**5. Apprentissage en suggestions**
 
 - Une substitution détectée à l'envoi devient une candidate, pas une
   entrée.
@@ -420,24 +519,21 @@ confort.
 - Une candidate vue deux fois passe dans « À valider ». Une correction
   explicite (geste « Corriger » dans l'aperçu ou saisie) entre
   directement.
-- Garder les refus et suppressions pour ne jamais les réapprendre.
+- Les pierres tombales empêchent de réapprendre ce qui a été supprimé
+  ou refusé.
 - Classer par usage (`count`, dernière application) plutôt que par
   récence. Relever le plafond, puisque seul le canal de reconnaissance
   est limité (≤ 100).
 
-**4. Page « Lexique »**
+**6. Page « Lexique »**
 
-- Sections À valider / Corrections / Termes, recherche, compteurs,
-  étoile.
+- Sections À valider / Termes, chaque terme avec ses variantes,
+  recherche, compteurs, étoile.
 - Accès depuis l'accueil et l'aperçu, geste « Corriger » sur un mot.
-- Stockage JSON versionné et export/import par la feuille de partage.
 
-**5. Plus tard, si le besoin apparaît**
+**7. Plus tard, si le besoin apparaît**
 
-- Copie du lexique sur le Mac par `dispatch.sh` pour la relire avec
-  Claude.
-- Synchro iCloud si un second appareil dicte.
-- Ni l'une ni l'autre n'améliore la précision.
+- Synchro iCloud si un second appareil Apple dicte.
 
 ## Points ouverts
 
