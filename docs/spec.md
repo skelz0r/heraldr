@@ -599,6 +599,8 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
 | `status` | rien | une ligne par job : `id`, `workspace_id`, `agent`, `state`, `error`, séparés par des tabulations |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
+| `lexicon-get` | rien | la sauvegarde du lexique telle qu'écrite, rien sans sauvegarde (code 0) |
+| `lexicon-put` | le lexique (JSON de §5.2) | rien ; code 2 pour une entrée sans `version` entière lisible, sauvegarde précédente intacte |
 
 - `agent` : nom de l'agent, ou `pane_id` pour un envoi vers un tab
   (une app plus ancienne le compte dans le workspace)
@@ -615,6 +617,9 @@ de l'app : sa sortie reste lisible par l'app plus récente.
   à une autre session qui les lira plus tard
 - `register-push` refuse un token hors `[0-9a-f]{64,200}`, une équipe
   hors `[A-Z0-9]{10}`
+- le lexique est sauvegardé dans `~/.config/heraldr/lexique.json`,
+  écrit dans un fichier temporaire puis renommé ; le script n'en lit
+  que `version` et le rend octet pour octet
 
 ### 8.3 Payload des notifications
 

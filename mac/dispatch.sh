@@ -11,6 +11,7 @@ ATTACHMENTS_DIR="$STATE_DIR/attachments"
 SCRIPT_PATH="$STATE_DIR/dispatch.sh"
 PLUGIN_DIR="$STATE_DIR/plugin"
 PUSH_DEVICE_PATH="$STATE_DIR/push-device.json"
+LEXICON_PATH="${HERALDR_CONFIG_DIR:-$HOME/.config/heraldr}/lexique.json"
 SENT_RETENTION_MINUTES=60
 FAILED_RETENTION_MINUTES=1440
 ATTACHMENT_RETENTION_MINUTES=10080
@@ -23,7 +24,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id>" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put" >&2
   exit 2
 }
 
@@ -361,6 +362,22 @@ register_push_device() {
   mv "$PUSH_DEVICE_PATH.tmp" "$PUSH_DEVICE_PATH"
 }
 
+print_lexicon() {
+  [ ! -f "$LEXICON_PATH" ] || cat "$LEXICON_PATH"
+}
+
+store_lexicon() {
+  mkdir -p "$(dirname "$LEXICON_PATH")"
+  temporary="$LEXICON_PATH.$$"
+  cat > "$temporary"
+  if ! plutil -type version -expect integer "$temporary" > /dev/null 2>&1; then
+    rm -f "$temporary"
+    echo "lexique illisible" >&2
+    exit 2
+  fi
+  mv "$temporary" "$LEXICON_PATH" || { rm -f "$temporary"; exit 1; }
+}
+
 [ $# -ge 1 ] || fail_usage
 command="$1"
 shift
@@ -373,5 +390,7 @@ case "$command" in
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;
+  lexicon-get) [ $# -eq 0 ] || fail_usage; print_lexicon ;;
+  lexicon-put) [ $# -eq 0 ] || fail_usage; store_lexicon ;;
   *) fail_usage ;;
 esac
