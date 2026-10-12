@@ -31,7 +31,8 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
   reste allumé ; après l'arrêt, il se verrouille au délai habituel.
 - [ ] Avec Spotify en lecture, dicter puis arrêter : la musique se
   coupe pendant l'écoute et reprend seule à l'arrêt, sans erreur dans
-  Spotify ; idem avec « Annuler ».
+  Spotify ; idem avec « Annuler » et en verrouillant l'iPhone pendant
+  la dictée (au retour, l'aperçu montre ce qui a été dicté).
 - [ ] Dicter une demande avec des hésitations : « Dictée nettoyée »,
   « Voir l'original » montre la transcription brute.
 - [ ] Dicter « on push la branche », corriger en « git push » dans
