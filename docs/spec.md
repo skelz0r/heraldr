@@ -189,31 +189,44 @@ Bouton rond engrenage à droite du bouton Historique, « Réglages » pour
 VoiceOver. Il ouvre une feuille « Réglages » (« Fermer »), à mi-hauteur
 et extensible, en deux sections.
 
-« Dictée » : « Corrections », avec leur nombre, ouvre la liste du
-lexique de dictée (§5.2), « Corrections de dictée » :
+« Dictée » : « Lexique », avec le nombre de termes, ouvre la liste du
+lexique de dictée (§5.2), « Lexique de dictée » :
 
-- une ligne par correction, « entendu → voulu », dans l'ordre du
-  lexique, les plus récentes d'abord ; en pied, « <n> sur 50, les plus
-  récentes d'abord. Les 20 premières guident le nettoyage. »
-- balayer une ligne la supprime (« Supprimer ») ; pas de « Tout
-  vider »
-- taper une ligne ouvre « Modifier la correction », le bouton « + »
-  (« Ajouter une correction ») ouvre « Nouvelle correction » : champs
-  « Entendu » et « Voulu », sans correction automatique ni majuscule
-  imposée, « Annuler » et « Enregistrer »
-- « Enregistrer » reste désactivé tant que chaque côté ne compte pas
-  de 1 à 3 mots, ou que voulu et entendu sont égaux sans tenir compte
-  de la casse, des accents ni de la ponctuation en bord de mot ; les
-  espaces et la ponctuation en bord de mot sont retirés à
-  l'enregistrement
-- une correction enregistrée remonte en tête, comme une correction
-  apprise ; un entendu déjà dans le lexique est remplacé ; modifier
-  l'entendu retire l'ancien
+- une ligne par terme, dans l'ordre du lexique, les plus récents
+  d'abord : le terme, et dessous ses variantes entendues séparées par
+  des virgules ; en pied, « Les plus récents d'abord. Une variante
+  saisie ici, ou de plusieurs mots, est remplacée par son terme dans
+  chaque dictée ; une variante apprise d'un seul mot est seulement
+  signalée au nettoyage. », puis l'état de la sauvegarde sur le Mac
+  (§5.2) : « Sauvegardé sur le Mac <il y a …>. », « Pas encore
+  sauvegardé sur le Mac : ce sera fait à la prochaine connexion. » ou,
+  restauration en attente, « Le lexique sauvegardé sur le Mac sera
+  repris à la prochaine connexion. »
+- balayer une ligne supprime le terme et ses variantes
+  (« Supprimer ») ; pas de « Tout vider »
+- taper une ligne ouvre « Modifier le terme », le bouton « + »
+  (« Ajouter un terme ») ouvre « Nouveau terme » : section « Terme »
+  (un champ), section « Variantes entendues » (un champ « Entendu » par
+  variante, plus un vide, balayer pour retirer, « Ajouter une
+  variante »), sans correction automatique ni majuscule imposée,
+  « Annuler » et « Enregistrer »
+- « Enregistrer » reste désactivé tant que le terme et chaque variante
+  remplie ne comptent pas de 1 à 3 mots, ou que deux d'entre eux sont
+  égaux sans tenir compte de la casse, des accents ni de la
+  ponctuation en bord de mot ; les champs vides sont ignorés, les
+  espaces et la ponctuation en bord de mot retirés à l'enregistrement
+- un terme enregistré remonte en tête ; une variante qui appartenait à
+  un autre terme passe à celui-ci ; un terme renommé comme un autre
+  terme existant fusionne avec lui. Une variante ajoutée ou modifiée
+  ici, même seulement en casse ou en accents, est « saisie », une
+  variante gardée telle quelle garde son origine ; un terme nouveau,
+  renommé ou enregistré sans variante est « saisi », sinon il garde la
+  sienne
 - les changements sont gardés aussitôt et servent dès la dictée
   suivante
-- sans correction : « Aucune correction », « Corrige un mot mal
-  entendu dans l'aperçu d'une dictée : la correction s'ajoutera ici à
-  l'envoi. » et « Ajouter une correction »
+- sans terme : « Aucun terme », « Corrige un mot mal entendu dans
+  l'aperçu d'une dictée : le terme s'ajoutera ici à l'envoi, avec ce
+  qui avait été entendu. » et « Ajouter un terme »
 
 « Build installé » dit quel build tourne :
 
@@ -254,11 +267,27 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   Apple Intelligence »), que la dictée est trop longue, ou que le
   résultat fait 40 % ou moins, ou 130 % ou plus, de la longueur brute
   (« nettoyage écarté : il s'éloignait trop de la dictée »)
-- les corrections apprises (§5.2) servent à la dictée suivante : le
-  texte corrigé est fourni à la transcription comme vocabulaire
-  contextuel, et les 20 paires « entendu → voulu » les plus récentes
-  sont ajoutées à la consigne du nettoyage, à appliquer quand le
-  contexte s'y prête ; aucun remplacement automatique dans le texte
+- le lexique (§5.2) sert à la dictée suivante :
+  - les 100 termes les plus récents sont fournis à la transcription
+    comme vocabulaire contextuel
+  - remplacement par le code, avant le nettoyage puis sur son résultat,
+    et aussi quand la transcription brute est gardée : chaque variante
+    saisie, chaque variante de deux mots ou plus, et le terme lui-même
+    s'il est saisi ou fait deux mots ou plus, devient le terme, écrit
+    avec sa casse. Mots entiers seulement (séparés par des espaces, la
+    ponctuation en bord de mot ne compte pas), sans tenir compte de la
+    casse ni des accents ; les mots d'une variante ne sont séparés que
+    par des espaces ; la variante la plus longue passe d'abord et un
+    mot déjà remplacé ne l'est pas deux fois
+  - une variante apprise d'un seul mot n'est jamais remplacée : quand
+    elle apparaît dans la transcription, elle est signalée à la
+    consigne du nettoyage (« « <entendu> » veut peut-être dire
+    « <terme> » », à remplacer seulement si la phrase n'a pas de sens
+    autrement), 3 au plus, les plus souvent corrigées puis les plus
+    récentes ; sans variante présente, la consigne est inchangée
+  - « Voir l'original » montre la transcription avant tout remplacement,
+    et apparaît aussi pour une transcription brute que le remplacement
+    a modifiée
 - le nettoyage ne porte que sur la salve qui vient d'être dictée,
   jamais sur le texte déjà dans l'aperçu
 
@@ -322,10 +351,60 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   « on → git ». Rien n'est retenu quand plus de la moitié des mots
   proposés ont changé (réécriture), ni pour un ajout ou une
   suppression seuls, ni pour un envoi écrit ou collé
-- le lexique est gardé sur l'iPhone : une erreur déjà connue prend la
-  nouvelle correction et remonte en tête ; au-delà de 50 corrections,
-  les plus anciennes sont oubliées. Il se consulte et se corrige dans
-  les Réglages (§4.5)
+- chaque remplacement retenu range l'entendu comme variante
+  « apprise » du terme voulu, créé s'il manque (identifié sans tenir
+  compte de la casse ni des accents, il garde son orthographe d'origine) ;
+  un entendu n'appartient qu'à un terme : déjà connu, il passe au
+  dernier terme voulu et remonte en tête, avec son compteur augmenté
+  s'il garde le même terme. Remettre dans l'aperçu une variante à la
+  place de son terme (« Acme » → « ack me ») retire cette
+  variante du terme au lieu d'apprendre l'inverse, y compris quand le
+  mot voisin a été retenu (« GitHub demain » → « guithub demain »). Un terme appris qui
+  n'a plus de variante
+  disparaît ; au-delà de 200 termes, les moins récents sont oubliés.
+  Le lexique se consulte et se corrige dans les Réglages (§4.5)
+- le lexique est gardé sur l'iPhone, dans un fichier JSON versionné
+  (`dictation-lexicon.json`, Application Support) :
+
+  ```json
+  {
+    "terms" : [
+      {
+        "source" : "typed",
+        "text" : "Acme",
+        "updatedAt" : "2026-10-12T09:00:00Z",
+        "variants" : [
+          { "count" : 2, "heard" : "ack me", "source" : "learned", "updatedAt" : "2026-10-12T09:00:00Z" }
+        ]
+      }
+    ],
+    "version" : 1
+  }
+  ```
+
+  `source` vaut `typed` (saisi) ou `learned` (appris), une valeur
+  inconnue est lue comme `learned` ; tout autre champ est ignoré ; un
+  fichier d'une version supérieure n'est pas lu. Les corrections de
+  l'ancien lexique (UserDefaults) sont reprises une fois : chaque voulu
+  devient un terme appris, chaque entendu une de ses variantes apprises
+- sauvegarde sur le Mac (`lexicon-put`, §8.2), sans jamais que la
+  dictée ne lise le Mac : après chaque changement (2 s après le
+  dernier) et à chaque rafraîchissement réussi (§3), tant que le
+  dernier changement n'est pas sauvegardé, le lexique entier est
+  écrit, en tâche de fond. Un échec ne s'affiche pas : il est retenté
+  au rafraîchissement suivant, et la liste (§4.5) dit que la
+  sauvegarde attend. La sauvegarde du Mac est écrasée, jamais
+  fusionnée : une modification faite sur le Mac est perdue
+- restauration, seulement juste après un appairage (§2) avec un
+  lexique vide sur l'iPhone, typiquement après une réinstallation :
+  l'app lit la sauvegarde (`lexicon-get`) avant toute écriture, la
+  reprend telle quelle (un terme appris entre-temps sur l'iPhone
+  l'emporte sur celui du Mac) et l'annonce : « Lexique restauré depuis
+  le Mac », « <n> termes repris de la sauvegarde. ». Tant que la
+  lecture échoue, rien n'est écrit sur le Mac et elle est retentée à
+  chaque rafraîchissement, même après une relance. Sauvegarde absente,
+  vide ou illisible : rien n'est repris. Appairage avec un lexique non
+  vide : la sauvegarde n'est pas lue, elle est écrasée
 
 ## 6. Ce que fait un envoi
 
@@ -513,7 +592,8 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 
 L'app ne parle au Mac que par SSH, et ce contrat change en même temps
 des deux côtés : le script est réinstallé par l'app avant chaque
-`enqueue` et `register-push`, le hook avec `register-push`. `status`
+`enqueue`, `register-push`, `lexicon-get` et `lexicon-put`, le hook
+avec `register-push`. `status`
 lit le script déjà installé, qui peut venir d'une version précédente
 de l'app : sa sortie reste lisible par l'app plus récente.
 
@@ -542,6 +622,8 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
 | `status` | rien | une ligne par job : `id`, `workspace_id`, `agent`, `state`, `error`, séparés par des tabulations |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
+| `lexicon-get` | rien | la sauvegarde du lexique telle qu'écrite, rien sans sauvegarde (code 0) |
+| `lexicon-put` | le lexique (JSON de §5.2) | rien ; code 2 pour une entrée sans `version` entière lisible, sauvegarde précédente intacte |
 
 - `agent` : nom de l'agent, ou `pane_id` pour un envoi vers un tab
   (une app plus ancienne le compte dans le workspace)
@@ -558,6 +640,9 @@ de l'app : sa sortie reste lisible par l'app plus récente.
   à une autre session qui les lira plus tard
 - `register-push` refuse un token hors `[0-9a-f]{64,200}`, une équipe
   hors `[A-Z0-9]{10}`
+- le lexique est sauvegardé dans `~/.config/heraldr/lexique.json`,
+  écrit dans un fichier temporaire puis renommé ; le script n'en lit
+  que `version` et le rend octet pour octet
 
 ### 8.3 Payload des notifications
 

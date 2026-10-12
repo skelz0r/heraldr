@@ -91,6 +91,21 @@ struct Dispatcher: Sendable {
         return DispatchJob.parse(statusOutput: String(decoding: result.stdout, as: UTF8.self))
     }
 
+    var lexiconMirror: LexiconMirror {
+        LexiconMirror(
+            fetch: {
+                try await installScript()
+                let result = try await link.run("/bin/sh \(Self.script) lexicon-get")
+                guard result.exitStatus == 0 else { throw failure(result) }
+                return result.stdout
+            },
+            store: { lexicon in
+                try await installScript()
+                let result = try await link.run("/bin/sh \(Self.script) lexicon-put", input: lexicon)
+                guard result.exitStatus == 0 else { throw failure(result) }
+            })
+    }
+
     func installScript() async throws {
         let incoming = "\(Self.stateDirectory)/incoming-$$.sh"
         let command = "mkdir -p \(Self.stateDirectory) && cat > \(incoming) && /bin/sh \(incoming) install < \(incoming); rc=$?; rm -f \(incoming); exit $rc"

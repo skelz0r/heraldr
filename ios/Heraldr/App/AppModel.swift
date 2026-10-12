@@ -87,6 +87,8 @@ final class AppModel {
     private var link: MacLink?
     private var deviceKey: DeviceKey?
     private var pollTask: Task<Void, Never>?
+    private let lexiconKeeper = LexiconKeeper()
+    private var lexiconBackupTask: Task<Void, Never>?
     private var refreshing = false
     private var refreshRequestedWhileRefreshing = false
 
@@ -94,6 +96,18 @@ final class AppModel {
         if let mac = PairedMacStore.load(), let key = try? DeviceKeyStore.load() {
             attach(mac, deviceKey: key)
         }
+    }
+
+    var lexicon: DictationLexicon {
+        get { lexiconKeeper.lexicon }
+        set {
+            lexiconKeeper.update(newValue)
+            scheduleLexiconBackup()
+        }
+    }
+
+    var lexiconBackup: LexiconKeeper.BackupState {
+        lexiconKeeper.backupState
     }
 
     var selectedWorkspace: Workspace? {
@@ -141,6 +155,7 @@ final class AppModel {
         let mac = try await PairingCeremony.pair(code: code, deviceKey: key)
         PairedMacStore.save(mac)
         attach(mac, deviceKey: key)
+        lexiconKeeper.paired()
         await refresh()
     }
 
@@ -202,6 +217,7 @@ final class AppModel {
             return
         }
         Task { await requestNotificationsOnce() }
+        Task { await syncLexicon() }
         await registerPushDeviceIfNeeded()
         schedulePolling()
     }
@@ -240,6 +256,22 @@ final class AppModel {
         } catch {
             notice = Notice(kind: .failed, title: "Notifications non installées sur le Mac", detail: error.localizedDescription)
         }
+    }
+
+    private func scheduleLexiconBackup() {
+        lexiconBackupTask?.cancel()
+        lexiconBackupTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            await self?.syncLexicon()
+        }
+    }
+
+    private func syncLexicon() async {
+        guard let link, let restored = await lexiconKeeper.sync(with: Dispatcher(link: link).lexiconMirror) else { return }
+        notice = Notice(
+            kind: .sent, title: "Lexique restauré depuis le Mac",
+            detail: restored > 1 ? "\(restored) termes repris de la sauvegarde." : "1 terme repris de la sauvegarde.")
     }
 
     func send(

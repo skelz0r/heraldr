@@ -3,19 +3,54 @@ import FoundationModels
 
 enum CleanedTranscript: Equatable, Sendable {
     case cleaned(String, raw: String)
-    case raw(String, reason: String)
+    case raw(String, original: String, reason: String)
 
     var text: String {
         switch self {
         case .cleaned(let text, _): text
-        case .raw(let text, _): text
+        case .raw(let text, _, _): text
         }
     }
 
     var raw: String {
         switch self {
         case .cleaned(_, let raw): raw
-        case .raw(let raw, _): raw
+        case .raw(_, let original, _): original
+        }
+    }
+}
+
+struct CleaningModel: Sendable {
+    enum Reply: Sendable {
+        case text(String)
+        case failed(reason: String)
+    }
+
+    let reply: @Sendable (_ instructions: String, _ prompt: String) async -> Reply
+
+    static let onDevice = CleaningModel { instructions, prompt in
+        let model = SystemLanguageModel(guardrails: .permissiveContentTransformations)
+        switch model.availability {
+        case .available:
+            break
+        case .unavailable(.appleIntelligenceNotEnabled):
+            return .failed(reason: "Apple Intelligence est désactivé")
+        case .unavailable(.modelNotReady):
+            return .failed(reason: "le modèle Apple Intelligence n'est pas encore prêt")
+        case .unavailable(.deviceNotEligible):
+            return .failed(reason: "cet appareil ne gère pas Apple Intelligence")
+        case .unavailable:
+            return .failed(reason: "Apple Intelligence indisponible")
+        }
+
+        let session = LanguageModelSession(model: model, instructions: instructions)
+        do {
+            let response = try await session.respond(to: prompt, options: GenerationOptions(sampling: .greedy))
+            return .text(response.content)
+        } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
+            return .failed(reason: "dictée trop longue pour le nettoyage")
+        } catch {
+            return .failed(reason: "nettoyage impossible (\(error.localizedDescription))")
         }
     }
 }
@@ -36,49 +71,31 @@ enum TranscriptCleaner {
         Réponds uniquement avec le texte nettoyé, sans guillemets ni préambule.
         """
 
-    static func instructions(correcting lexicon: DictationLexicon) -> String {
-        let lines = lexicon.promptLines
-        guard !lines.isEmpty else { return instructions }
+    static func instructions(hinting hints: [(heard: String, term: String)]) -> String {
+        guard !hints.isEmpty else { return instructions }
         return instructions + """
 
-            La dictée mêle français et anglais technique. Erreurs de transcription \
-            déjà corrigées par l'utilisateur (entendu → voulu), à corriger de même \
-            quand le contexte s'y prête :
-            """ + lines.map { "\n- \($0)" }.joined()
+            La dictée mêle français et anglais technique. Dans cette transcription, \
+            ces mots sont peut-être mal entendus ; remplace-les seulement si la \
+            phrase n'a pas de sens autrement :
+            """ + hints.map { "\n- « \($0.heard) » veut peut-être dire « \($0.term) »" }.joined()
     }
 
-    static func clean(_ raw: String, lexicon: DictationLexicon = DictationLexicon()) async -> CleanedTranscript {
+    static func clean(_ raw: String, lexicon: DictationLexicon = DictationLexicon(), model: CleaningModel = .onDevice) async -> CleanedTranscript {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return .raw(trimmed, reason: "dictée vide") }
+        guard !trimmed.isEmpty else { return .raw(trimmed, original: trimmed, reason: "dictée vide") }
 
-        let model = SystemLanguageModel(guardrails: .permissiveContentTransformations)
-        switch model.availability {
-        case .available:
-            break
-        case .unavailable(.appleIntelligenceNotEnabled):
-            return .raw(trimmed, reason: "Apple Intelligence est désactivé")
-        case .unavailable(.modelNotReady):
-            return .raw(trimmed, reason: "le modèle Apple Intelligence n'est pas encore prêt")
-        case .unavailable(.deviceNotEligible):
-            return .raw(trimmed, reason: "cet appareil ne gère pas Apple Intelligence")
-        case .unavailable:
-            return .raw(trimmed, reason: "Apple Intelligence indisponible")
-        }
-
-        let session = LanguageModelSession(model: model, instructions: instructions(correcting: lexicon))
-        do {
-            let response = try await session.respond(
-                to: "Transcription brute :\n\(trimmed)",
-                options: GenerationOptions(sampling: .greedy))
-            let cleaned = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard isPlausibleCleanup(cleaned, of: trimmed) else {
-                return .raw(trimmed, reason: "nettoyage écarté : il s'éloignait trop de la dictée")
+        let corrected = lexicon.replacingKnownVariants(in: trimmed)
+        let instructions = instructions(hinting: lexicon.hints(for: corrected))
+        switch await model.reply(instructions, "Transcription brute :\n\(corrected)") {
+        case .failed(let reason):
+            return .raw(corrected, original: trimmed, reason: reason)
+        case .text(let reply):
+            let cleaned = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard isPlausibleCleanup(cleaned, of: corrected) else {
+                return .raw(corrected, original: trimmed, reason: "nettoyage écarté : il s'éloignait trop de la dictée")
             }
-            return .cleaned(cleaned, raw: trimmed)
-        } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
-            return .raw(trimmed, reason: "dictée trop longue pour le nettoyage")
-        } catch {
-            return .raw(trimmed, reason: "nettoyage impossible (\(error.localizedDescription))")
+            return .cleaned(lexicon.replacingKnownVariants(in: cleaned), raw: trimmed)
         }
     }
 

@@ -9,6 +9,7 @@ setup_world() {
   sandbox="$(mktemp -d)"
   export FAKE_HERDR_WORLD="$sandbox/world"
   export HERALDR_STATE_DIR="$sandbox/state"
+  export HERALDR_CONFIG_DIR="$sandbox/config"
   mkdir -p "$sandbox/bin" "$FAKE_HERDR_WORLD/agents"
   ln -s "$here/fake-herdr" "$sandbox/bin/herdr"
   export PATH="$sandbox/bin:$ORIGINAL_PATH"
@@ -293,6 +294,43 @@ touch -t "$(date -v-6d +%Y%m%d%H%M)" "$recent"
 touch -t "$(date -v-8d +%Y%m%d%H%M)" "$old"
 /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status > /dev/null
 check "la capture de six jours est gardée, celle de huit jours supprimée" "$([ -f "$recent" ] && echo garde)|$([ -f "$old" ] && echo garde)" "garde|"
+teardown_world
+
+echo "le lexique de l'iPhone se sauvegarde sur le Mac et se relit tel quel"
+setup_world
+lexicon() {
+  /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" "lexicon-$1"
+}
+check "sans sauvegarde, rien n'est lu et ce n'est pas une erreur" "$(lexicon get; echo "code $?")" "code 0"
+cat > "$sandbox/lexique.json" <<'JSON'
+{
+  "terms" : [
+    {
+      "source" : "typed",
+      "text" : "Acme",
+      "updatedAt" : "2026-10-12T09:00:00Z",
+      "variants" : [
+        { "count" : 2, "heard" : "ack me", "source" : "learned", "updatedAt" : "2026-10-12T09:00:00Z" }
+      ]
+    }
+  ],
+  "version" : 1
+}
+JSON
+lexicon put < "$sandbox/lexique.json"
+check "l'écriture réussit" "$?" "0"
+lexicon get > "$sandbox/relu.json"
+check "relu octet pour octet" "$(cmp -s "$sandbox/lexique.json" "$sandbox/relu.json" && echo identique)" "identique"
+check "rangé dans ~/.config/heraldr" "$(cmp -s "$sandbox/lexique.json" "$HERALDR_CONFIG_DIR/lexique.json" && echo identique)" "identique"
+printf '{"version":1,"terms":[]}' | lexicon put
+check "une nouvelle sauvegarde écrase la précédente" "$(lexicon get)" '{"version":1,"terms":[]}'
+check "un envoi tronqué est refusé" "$(printf '{"version":1,"ter' | lexicon put 2>&1; echo "code $?")" "lexique illisible
+code 2"
+check "une version qui n'est pas un entier est refusée" "$(printf '{"version":"1","terms":[]}' | lexicon put 2>&1; echo "code $?")" "lexique illisible
+code 2"
+check "un envoi vide est refusé" "$(lexicon put < /dev/null 2>&1; echo "code $?")" "lexique illisible
+code 2"
+check "la sauvegarde précédente reste intacte, sans fichier temporaire" "$(lexicon get; ls "$HERALDR_CONFIG_DIR")" '{"version":1,"terms":[]}lexique.json'
 teardown_world
 
 if [ $failures -gt 0 ]; then
