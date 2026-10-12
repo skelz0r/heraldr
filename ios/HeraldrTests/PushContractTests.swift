@@ -35,4 +35,30 @@ struct PushContractTests {
         #expect(question.workspaceId == "wE")
         #expect(question.sessionURL == nil)
     }
+
+    @Test("le tap sur une réponse envoyée par dispatch.sh answer ouvre la réponse de l'envoi, pas la session Claude")
+    func answer() throws {
+        let tap = try #require(NotificationTap(userInfo: [
+            "aps": ["alert": ["title": "acme_app", "subtitle": "Réponse", "body": "Le cache est vidé à chaque déploiement."]],
+            "kind": "answer",
+            "job_id": "20261012090000-41-ab12cd34",
+            "workspace_id": "w1",
+            "agent": "acme_app-main",
+        ]))
+
+        guard case .answer(let answer) = tap else {
+            Issue.record("réponse lue comme une question : \(tap)")
+            return
+        }
+        #expect(answer.jobId == "20261012090000-41-ab12cd34")
+        #expect(answer.workspaceId == "w1")
+        #expect(answer.summary == "Le cache est vidé à chaque déploiement.")
+    }
+
+    @Test("une notif de question reste une question")
+    func questionTap() throws {
+        let tap = try #require(NotificationTap(userInfo: ["workspace_id": "wE", "agent": "video-studio-main"]))
+
+        #expect(tap == .question(try #require(QuestionNotification(userInfo: ["workspace_id": "wE", "agent": "video-studio-main"]))))
+    }
 }

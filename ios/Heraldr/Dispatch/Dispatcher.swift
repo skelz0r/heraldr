@@ -14,6 +14,7 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
     let agent: String
     let state: State
     let error: String?
+    var answered = false
 
     var isPending: Bool { state == .queued || state == .sending }
 
@@ -22,7 +23,9 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
             let fields = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
             guard fields.count >= 4, let state = State(rawValue: fields[3]) else { return nil }
             let error = fields.count > 4 && !fields[4].isEmpty ? fields[4] : nil
-            return DispatchJob(id: fields[0], workspaceId: fields[1], agent: fields[2], state: state, error: error)
+            return DispatchJob(
+                id: fields[0], workspaceId: fields[1], agent: fields[2], state: state, error: error,
+                answered: fields.count > 5 && fields[5] == "answered")
         }
     }
 }
@@ -104,6 +107,15 @@ struct Dispatcher: Sendable {
                 let result = try await link.run("/bin/sh \(Self.script) lexicon-put", input: lexicon)
                 guard result.exitStatus == 0 else { throw failure(result) }
             })
+    }
+
+    func answer(toJob jobId: String) async throws -> Answer {
+        let result = try await link.run("/bin/sh \(Self.script) read-answer \(quoted(jobId))")
+        guard result.exitStatus == 0 else { throw failure(result) }
+        guard let answer = Answer(scriptOutput: String(decoding: result.stdout, as: UTF8.self)) else {
+            throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "réponse illisible")
+        }
+        return answer
     }
 
     func installScript() async throws {

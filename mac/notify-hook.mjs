@@ -195,18 +195,55 @@ async function main() {
     agent: agent.name,
     ...(url ? { session_url: url } : {}),
   };
-  const response = await postToApns(device, providerToken(key, device.team), { "apns-collapse-id": agent.name }, body);
-  if (response.status === 200) {
-    rememberNotified(paneId);
-  } else if (response.status === 410 || /BadDeviceToken|Unregistered/.test(response.answer)) {
+  await deliver(device, key, { "apns-collapse-id": agent.name }, body);
+  rememberNotified(paneId);
+}
+
+async function deliver(device, key, headers, body) {
+  const response = await postToApns(device, providerToken(key, device.team), headers, body);
+  if (response.status === 200) return;
+  if (response.status === 410 || /BadDeviceToken|Unregistered/.test(response.answer)) {
     rmSync(join(stateDir, "push-device.json"), { force: true });
     throw new Error(`APNs a rejeté le token (${response.status} ${response.answer}), appareil oublié`);
-  } else {
-    throw new Error(`APNs ${response.status} ${response.answer}`);
+  }
+  throw new Error(`APNs ${response.status} ${response.answer}`);
+}
+
+function readJobFile(jobId, name) {
+  try {
+    return readFileSync(join(stateDir, "jobs", jobId, name), "utf8");
+  } catch {
+    return null;
   }
 }
 
-main().catch((error) => {
+async function pushAnswer(jobId) {
+  if (!/^[0-9]{14}-[0-9]+-[0-9a-f]{8}$/.test(jobId ?? "")) throw new Error(`job invalide : ${jobId}`);
+  const answer = readJobFile(jobId, "answer");
+  if (answer === null) throw new Error(`pas de réponse pour ${jobId}`);
+  const device = readJson(join(stateDir, "push-device.json"));
+  const key = apnsKey();
+  if (!device || !key) throw new Error("aucun iPhone ou aucune clé APNs");
+
+  const agent = readJobFile(jobId, "agent");
+  const workspaceId = readJobFile(jobId, "workspace_id");
+  const summary = answer.split("\n")[0].trim();
+  const body = {
+    aps: {
+      alert: { title: readJobFile(jobId, "label") ?? workspaceId, subtitle: "Réponse", body: shorten(summary) },
+      sound: "default",
+      "thread-id": agent,
+    },
+    kind: "answer",
+    job_id: jobId,
+    workspace_id: workspaceId,
+    agent,
+  };
+  await deliver(device, key, { "apns-collapse-id": jobId }, body);
+}
+
+const run = process.argv[2] === "answer" ? pushAnswer(process.argv[3]) : main();
+run.catch((error) => {
   console.error(`heraldr notify: ${error.message}`);
   process.exit(1);
 });

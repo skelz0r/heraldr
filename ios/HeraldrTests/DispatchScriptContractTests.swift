@@ -19,6 +19,22 @@ struct DispatchScriptContractTests {
         #expect(jobs.map(\.isPending) == [true, false])
     }
 
+    @Test("un envoi auquel le -main a répondu est signalé par status, un script plus ancien sans cette colonne reste lisible")
+    func answeredColumn() {
+        let jobs = DispatchJob.parse(statusOutput: "a\tw1\thome-main\tsent\t\tanswered\nb\tw1\thome-main\tsent\t\t\nc\tw1\thome-main\tsent\t\n")
+
+        #expect(jobs.map(\.answered) == [true, false, false])
+    }
+
+    @Test("la sortie de read-answer donne le résumé, puis la réponse complète en markdown")
+    func readAnswer() throws {
+        let answer = try #require(Answer(scriptOutput: "Le cache est vidé à chaque déploiement.\n\n## Détail\n\nLe job `purge` tourne après `deploy`.\n"))
+
+        #expect(answer.summary == "Le cache est vidé à chaque déploiement.")
+        #expect(answer.body == "## Détail\n\nLe job `purge` tourne après `deploy`.")
+        #expect(Answer(scriptOutput: "\nsans résumé") == nil)
+    }
+
     @Test("un état inconnu d'un script plus récent est ignoré sans masquer les autres envois")
     func unknownState() {
         let jobs = DispatchJob.parse(statusOutput: "a\tw1\thome-main\tcancelled\t\nb\tw1\thome-main\tsending\t\n")
@@ -37,7 +53,19 @@ struct DispatchScriptContractTests {
         let heredoc = try #require(script.firstMatch(of: #/standard_envelope\(\) \{\n  cat <<EOF\n(?<body>.*?)\nEOF\n/#.dotMatchesNewlines()))
         let project = Workspace(id: "w5", number: 5, label: "Video studio")
 
-        #expect(PromptEnvelope.wrap("Ajoute un sous-titre", for: project) == heredoc.body.replacingOccurrences(of: "$1", with: "Ajoute un sous-titre"))
+        let shellBody = heredoc.body.replacingOccurrences(of: "\\`", with: "`").replacingOccurrences(of: "\\$", with: "$")
+        #expect(PromptEnvelope.wrap("Ajoute un sous-titre", for: project) == shellBody.replacingOccurrences(of: "$1", with: "Ajoute un sous-titre"))
+    }
+
+    @Test("Home comme un projet savent remettre la réponse à une simple question à l'envoi qui l'a posée")
+    func answerCommand() {
+        let home = Workspace(id: "wA", number: 1, label: "Home")
+        let project = Workspace(id: "w5", number: 5, label: "Video studio")
+
+        for workspace in [home, project] {
+            #expect(PromptEnvelope.wrap("x", for: workspace).contains("dispatch.sh\" answer \(PromptEnvelope.jobIdPlaceholder)"))
+        }
+        #expect(!PromptEnvelope.forTab("x").contains("answer"))
     }
 
     @Test("Home, quel que soit son label, reçoit la consigne qui relaie au projet ; un projet ne la reçoit jamais")

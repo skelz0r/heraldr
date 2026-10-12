@@ -142,3 +142,6 @@ affiché dans l'app.
 - le bouton voix domine, Écrire et Coller restent secondaires
 - les écrans annexes (choix de cible, transcription originale) peuvent
   rester des feuilles système
+- une feuille se ferme en la glissant vers le bas, sans bouton Fermer :
+  la croix pleine d'accent du système pesait plus lourd que le contenu ;
+  seul l'écran plein de saisie, qui ne se glisse pas, garde le sien

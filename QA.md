@@ -62,6 +62,11 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
 - [ ] Faire poser une question AskUserQuestion à un `-main` : la notif
   arrive avec label, agent et question ; le tap ouvre la session dans
   l'app Claude, app en arrière-plan comme app tuée.
+- [ ] Envoyer à un projet une simple question (« comment marche X
+  dans Y ») : pas de /start, la notif « Réponse » porte le résumé ; le
+  tap ouvre la feuille avec la question et la réponse complète, app en
+  arrière-plan comme app tuée. L'historique la range dans « Questions ».
+  Même question envoyée à Home : Home répond lui-même, sans relais.
 - [ ] Couper le Wi-Fi avec Tailscale actif : l'app joint le Mac par
   Tailscale. Couper aussi Tailscale : la pastille du Mac passe en
   orange, la liste reste ; « Rafraîchir » une fois le réseau revenu la

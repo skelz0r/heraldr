@@ -66,6 +66,15 @@ final class AppModel {
         }
     }
 
+    struct PresentedAnswer: Identifiable, Equatable {
+        let id: String
+        let question: String?
+        let targetLabel: String
+        var answer: Answer
+        var loading: Bool
+        var failure: String?
+    }
+
     private(set) var mac: PairedMac?
     private(set) var connection: Connection = .unpaired
     private(set) var workspaces: [Workspace] = []
@@ -80,6 +89,7 @@ final class AppModel {
     private(set) var selectedTabId: String?
     var notice: Notice?
     var unopenedQuestion: QuestionNotification?
+    var presentedAnswer: PresentedAnswer?
     private var pushDevice: PushDevice?
     private var pushDeviceRegistered = false
     private var notificationsRequested = false
@@ -200,6 +210,7 @@ final class AppModel {
             let newJobs = try await dispatcher.jobs()
             announceFailures(previous: jobs, current: newJobs, workspaces: newWorkspaces)
             history.follow(newJobs)
+            await fetchAnswers(history.jobsAwaitingAnswer(in: newJobs), with: dispatcher)
             workspaces = newWorkspaces
             agents = newAgents
             tabs = newTabs
@@ -237,6 +248,37 @@ final class AppModel {
             return
         }
         unopenedQuestion = question
+    }
+
+    func open(_ notification: AnswerNotification) async {
+        let entry = history.entry(forJob: notification.jobId)
+        let label = entry?.targetLabel
+            ?? workspaces.first { $0.id == notification.workspaceId }?.label
+            ?? notification.workspaceId
+        presentedAnswer = PresentedAnswer(
+            id: notification.jobId, question: entry?.text, targetLabel: label,
+            answer: entry?.answer ?? Answer(summary: notification.summary, body: ""),
+            loading: entry?.answer == nil)
+        guard entry?.answer == nil else { return }
+        do {
+            guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+            let answer = try await Dispatcher(link: link).answer(toJob: notification.jobId)
+            history.receive(answer, forJob: notification.jobId)
+            guard presentedAnswer?.id == notification.jobId else { return }
+            presentedAnswer?.answer = answer
+            presentedAnswer?.loading = false
+        } catch {
+            guard presentedAnswer?.id == notification.jobId else { return }
+            presentedAnswer?.loading = false
+            presentedAnswer?.failure = "Réponse complète indisponible : \(error.localizedDescription)"
+        }
+    }
+
+    private func fetchAnswers(_ jobIds: [String], with dispatcher: Dispatcher) async {
+        for jobId in jobIds {
+            guard let answer = try? await dispatcher.answer(toJob: jobId) else { continue }
+            history.receive(answer, forJob: jobId)
+        }
     }
 
     private func requestNotificationsOnce() async {

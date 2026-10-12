@@ -230,6 +230,24 @@ l'app cible le workspace, ouvre `session_url` en
 `universalLinksOnly`, et affiche une carte « Ouvrir dans Claude » si
 l'ouverture échoue ou que l'URL manque.
 
+### Réponses
+
+```text
+Claude -main ──dispatch.sh answer <job_id>──> jobs/<job_id>/answer
+                └─ node plugin/notify-hook.mjs answer <job_id> → APNs → iPhone
+iPhone ──SSH read-answer <job_id>──> réponse complète (tap ou rafraîchissement)
+```
+
+`create_job` remplace `{{job_id}}` dans le prompt par l'id du job : la
+consigne donne ainsi à Claude la commande exacte pour répondre. Le hook,
+lancé en mode `answer`, lit `agent`, `workspace_id`, `label` et la
+première ligne de `answer` dans le dossier du job, et poste avec
+`apns-collapse-id` = id du job ; même gestion du token mort. `status`
+ajoute la colonne `answered` : l'app récupère par `read-answer` toute
+réponse d'un envoi qu'elle suit et n'a pas encore, notif ratée ou non.
+Un job `sent` répondu échappe à la purge d'une heure et part sept jours
+après sa réponse.
+
 ## App iOS
 
 - Swift 6, SwiftUI, iOS 26 minimum (Liquid Glass, SpeechAnalyzer,

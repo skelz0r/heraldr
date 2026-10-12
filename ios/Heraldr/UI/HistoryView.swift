@@ -7,32 +7,103 @@ struct HistoryView: View {
     @State private var copiedId: SentRequest.ID?
     @State private var copiedReset: Task<Void, Never>?
 
+    enum Section: String, CaseIterable {
+        case tasks = "Tâches"
+        case questions = "Questions"
+    }
+
+    @State private var section: Section = .tasks
+
     var body: some View {
         NavigationStack {
             Group {
-                if model.history.entries.isEmpty {
-                    ContentUnavailableView(
-                        "Aucun envoi", systemImage: "clock.arrow.circlepath",
-                        description: Text("Les \(SendHistory.capacity) derniers envois s'afficheront ici."))
-                } else {
-                    List(model.history.entries) { entry in
-                        row(for: entry)
-                            .swipeActions {
-                                Button("Supprimer", systemImage: "trash", role: .destructive) {
-                                    model.removeFromHistory(entry.id)
-                                }
-                            }
-                    }
+                switch section {
+                case .tasks: tasks
+                case .questions: questions
                 }
+            }
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .safeAreaBar(edge: .top) {
+                Picker("Historique", selection: $section) {
+                    ForEach(Section.allCases, id: \.self) { Text($0.rawValue) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
             }
             .navigationTitle("Historique")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fermer", systemImage: "xmark") { dismiss() }
+            .navigationDestination(for: SentRequest.ID.self) { id in
+                if let entry = model.history.entries.first(where: { $0.id == id }), let answer = entry.answer {
+                    AnswerContent(question: entry.text, answer: answer)
+                        .navigationTitle(entry.targetLabel)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                CopyAnswerButton(answer: answer)
+                            }
+                        }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var tasks: some View {
+        if model.history.tasks.isEmpty {
+            ContentUnavailableView(
+                "Aucun envoi", systemImage: "clock.arrow.circlepath",
+                description: Text("Les \(SendHistory.capacity) derniers envois s'afficheront ici."))
+        } else {
+            List(model.history.tasks) { entry in
+                row(for: entry)
+                    .swipeActions { deleteButton(for: entry) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var questions: some View {
+        if model.history.questions.isEmpty {
+            ContentUnavailableView(
+                "Aucune question", systemImage: "text.bubble",
+                description: Text("Les réponses aux \(SendHistory.capacity) dernières questions s'afficheront ici."))
+        } else {
+            List(model.history.questions) { entry in
+                NavigationLink(value: entry.id) {
+                    questionRow(for: entry)
+                }
+                .swipeActions { deleteButton(for: entry) }
+            }
+        }
+    }
+
+    private func deleteButton(for entry: SentRequest) -> some View {
+        Button("Supprimer", systemImage: "trash", role: .destructive) {
+            model.removeFromHistory(entry.id)
+        }
+    }
+
+    private func questionRow(for entry: SentRequest) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(entry.targetLabel).font(.subheadline.weight(.bold))
+                if let answer = entry.answer {
+                    Text(answer.receivedAt, format: .relative(presentation: .named))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(entry.text)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+            if let answer = entry.answer {
+                Text(answer.summary)
+                    .font(.body)
+                    .lineLimit(3)
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     private func row(for entry: SentRequest) -> some View {

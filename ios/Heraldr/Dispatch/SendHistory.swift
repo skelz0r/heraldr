@@ -1,5 +1,25 @@
 import Foundation
 
+struct Answer: Codable, Equatable, Sendable {
+    let summary: String
+    let body: String
+    let receivedAt: Date
+
+    init(summary: String, body: String, receivedAt: Date = .now) {
+        self.summary = summary
+        self.body = body
+        self.receivedAt = receivedAt
+    }
+
+    init?(scriptOutput: String, receivedAt: Date = .now) {
+        let parts = scriptOutput.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        let summary = parts.first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+        guard !summary.isEmpty else { return nil }
+        let body = parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespacesAndNewlines) : ""
+        self.init(summary: summary, body: body.isEmpty ? summary : body, receivedAt: receivedAt)
+    }
+}
+
 struct SentRequest: Codable, Identifiable, Equatable, Sendable {
     enum Status: String, Codable, Sendable {
         case sending
@@ -20,6 +40,7 @@ struct SentRequest: Codable, Identifiable, Equatable, Sendable {
     var status: Status
     var jobId: String?
     var error: String?
+    var answer: Answer?
 
     var targetLabel: String {
         tabLabel.map { "\(workspaceLabel) — \($0)" } ?? workspaceLabel
@@ -32,6 +53,9 @@ struct SendHistory: Codable, Equatable, Sendable {
 
     private(set) var entries: [SentRequest] = []
 
+    var tasks: [SentRequest] { entries.filter { $0.answer == nil } }
+    var questions: [SentRequest] { entries.filter { $0.answer != nil } }
+
     mutating func record(
         _ text: String, to workspace: Workspace, tab: Tab? = nil, clearingContext: Bool = false, at date: Date = .now
     ) -> SentRequest.ID {
@@ -39,7 +63,8 @@ struct SendHistory: Codable, Equatable, Sendable {
             id: UUID(), text: text, workspaceId: workspace.id, workspaceLabel: workspace.label,
             tabId: tab?.id, tabLabel: tab?.displayName, clearsContext: tab.map { _ in clearingContext },
             createdAt: date, status: .sending)
-        entries = Array(([entry] + entries).prefix(Self.capacity))
+        entries.insert(entry, at: 0)
+        keepLatest()
         return entry.id
     }
 
@@ -78,10 +103,39 @@ struct SendHistory: Codable, Equatable, Sendable {
         }
     }
 
+    func jobsAwaitingAnswer(in jobs: [DispatchJob]) -> [String] {
+        jobs.filter(\.answered).map(\.id).filter { jobId in
+            entries.contains { $0.jobId == jobId && $0.answer == nil }
+        }
+    }
+
+    func entry(forJob jobId: String) -> SentRequest? {
+        entries.first { $0.jobId == jobId }
+    }
+
+    mutating func receive(_ answer: Answer, forJob jobId: String) {
+        guard let index = entries.firstIndex(where: { $0.jobId == jobId }) else { return }
+        entries[index].answer = answer
+        keepLatest()
+    }
+
     mutating func interruptPendingSends() {
         for index in entries.indices where entries[index].status == .sending {
             entries[index].status = .failed
             entries[index].error = Self.interruptedError
+        }
+    }
+
+    private mutating func keepLatest() {
+        var keptTasks = 0
+        var keptQuestions = 0
+        entries = entries.filter { entry in
+            if entry.answer == nil {
+                keptTasks += 1
+                return keptTasks <= Self.capacity
+            }
+            keptQuestions += 1
+            return keptQuestions <= Self.capacity
         }
     }
 
