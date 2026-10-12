@@ -7,6 +7,11 @@ corrigé. Le comment (SSH, runner, hook) est dans
 [architecture](architecture.md), le pourquoi dans
 [décisions](decisions.md).
 
+L'app est en français, quelle que soit la langue de l'iPhone : ses
+textes, et ce que le système formate pour elle (dates relatives,
+libellés VoiceOver des symboles), l'app n'étant localisée qu'en
+français.
+
 ## 1. Conventions herdr supposées
 
 Chaque workspace herdr suit la même organisation :

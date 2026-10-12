@@ -2,6 +2,7 @@ name: Heraldr
 
 options:
   bundleIdPrefix: com.skelz0r
+  developmentLanguage: fr
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -54,6 +55,7 @@ targets:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations: [fr]
         HeraldrTeamID: $(DEVELOPMENT_TEAM)
         HeraldrBuildCommit: ""
         HeraldrBuildDate: ""
