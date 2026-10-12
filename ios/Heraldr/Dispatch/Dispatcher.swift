@@ -16,6 +16,7 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
     var answered = false
 
     var isPending: Bool { state == .queued || state == .sending }
+    var targetsPane: Bool { agent.contains(":") }
 
     static func parse(statusOutput: String) -> [DispatchJob] {
         statusOutput.split(separator: "\n").compactMap { line in
@@ -65,10 +66,9 @@ struct Dispatcher: Sendable {
     }
 
     func send(_ text: String, attachments: [String] = [], to workspace: Workspace) async throws -> String {
-        let agent = AgentName.forWorkspace(label: workspace.label)
         let label = Data(workspace.label.utf8).base64EncodedString()
         return try await enqueue(
-            "enqueue \(quoted(workspace.id)) \(quoted(agent)) \(quoted(label))",
+            "enqueue \(quoted(workspace.id)) \(quoted(label))",
             prompt: PromptEnvelope.wrap(text, attachments: attachments, for: workspace))
     }
 

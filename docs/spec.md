@@ -87,12 +87,13 @@ la cible, en bas une goutte voix d'environ 92 pt entre deux ronds
 
 « CIBLE », puis le label (même taille pour tous les workspaces), en
 dessous en plus petit et en secondaire `main`, ou le nom du tab quand
-un tab est ciblé (§4.2), puis l'état de son agent `<slug>-main` et ce
-que fera le prochain envoi :
+un tab est ciblé (§4.2), puis l'état de son `-main` (§6.4) et ce que
+fera le prochain envoi :
 
 | État | Titre | Prochain envoi |
 | --- | --- | --- |
-| aucun agent `<slug>-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1, nommé `<slug>-main`. |
+| aucun agent `-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1, nommé `<slug>-main`. |
+| plusieurs agents `-main`, aucun nommé `<slug>-main`, même avec un envoi en file | Plusieurs Claude -main | Un envoi échouera : garde un seul de <noms>, ou nomme-le `<slug>-main`. |
 | envoi en file ou en cours vers cet agent | Envoi en cours… | Un nouvel envoi partira juste après. |
 | `idle` ou `done` | Prêt | Un envoi vide son contexte puis transmet la demande. |
 | `working`, envoi de l'app vers cette cible accepté par le Mac depuis moins d'une heure (historique, gardé à la relance) | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
@@ -100,8 +101,8 @@ que fera le prochain envoi :
 | `blocked` | Te pose une question : réponds dans Claude mobile | Un nouvel envoi attendra que tu lui aies répondu. |
 | état inconnu de herdr | État inconnu | Un nouvel envoi attendra qu'il soit prêt. |
 
-Un agent du même nom dans un autre workspace ne compte pas. Un envoi
-vers un tab du workspace n'occupe pas son `<slug>-main`.
+Un `-main` d'un autre workspace ne compte pas, même nommé `<slug>-main`.
+Un envoi vers un tab du workspace n'occupe pas son `-main`.
 
 Cible tab : l'état est celui du premier Claude du tab (ordre de
 `agent.list`), mêmes lignes sauf :
@@ -112,17 +113,18 @@ Cible tab : l'état est celui du premier Claude du tab (ordre de
 | `idle` ou `done` | Prêt | Un envoi transmet la demande telle quelle, sans vider son contexte. (avec « Envoyer /clear avant » coché dans l'aperçu : Un envoi vide son contexte puis transmet la demande.) |
 
 Le nom `<slug>-main` n'est affiché que tant que l'agent n'existe
-pas : ailleurs, l'app dit « Claude ». Même règle pour la ligne
+pas, et les noms des `-main` que quand il y en a plusieurs : ailleurs,
+l'app dit « Claude ». Même règle pour la ligne
 d'état de l'aperçu (§5) et les notices après envoi (§6).
 
 ### 4.2 Grille
 
 - Home en premier sur toute la largeur, puis les autres sur deux
   colonnes dans l'ordre herdr (`number`)
-- par workspace : label, dot de l'état de son agent `<slug>-main`, la
+- par workspace : label, dot de l'état de son `-main`, la
   même source que la cible (§4.1) ; les autres tabs du workspace n'y
   comptent pas :
-  - anneau gris : état inconnu ou aucun agent `<slug>-main`
+  - anneau gris : état inconnu, aucun ou plusieurs `-main`
   - pastille verte : idle ou done
   - bleu animé : working, ou envoi en file ou en cours
   - ambre avec halo : blocked
@@ -137,7 +139,7 @@ d'état de l'aperçu (§5) et les notices après envoi (§6).
   dans l'ordre herdr (`number`), nommés par leur label herdr (« tab
   <n> » sans label) ; sans tel tab : « Aucun Claude dans les autres
   tabs ». Choisir un tab en fait la cible ; la tuile cible affiche son
-  nom sous le label, sa pastille reste celle du `<slug>-main`
+  nom sous le label, sa pastille reste celle du `-main`
 - le tab ciblé n'est pas gardé : il le reste jusqu'au prochain tap,
   au relancement (retour sur Home) ou à la disparition du tab dans
   herdr (retour sur le `main` du workspace)
@@ -473,12 +475,12 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 
 ## 6. Ce que fait un envoi
 
-Cible : l'agent herdr `<slug>-main` dans le tab 1 du workspace. Un
-envoi vers un tab suit §6.3.
+Cible : le `-main` du workspace (§6.4), résolu par le Mac au moment de
+l'envoi. Un envoi vers un tab suit §6.3.
 
 1. agent absent : split d'un pane du tab 1 (cwd de ce pane) et
-   lancement de Claude en yolo mode, nom Remote Control `<label>—main`
-   (`~` devient `home`)
+   lancement de Claude en yolo mode, nommé `<slug>-main`, nom Remote
+   Control `<label>—main` (`~` devient `home`)
 2. agent `idle` ou `done` : `/clear`, puis le prompt enveloppé
 3. agent `working` ou `blocked` : l'envoi attend sur le Mac et part dès
    qu'il redevient `idle` ou `done`
@@ -487,6 +489,8 @@ envoi vers un tab suit §6.3.
    puis fini le précédent
 5. un agent du même nom dans un autre workspace n'est jamais visé :
    l'envoi échoue
+6. plusieurs `-main` sans aucun nommé `<slug>-main` : l'envoi est
+   refusé, rien n'est mis en file ni lancé
 
 Notice après l'envoi (5 s, fermée au tap ; une notice qui en remplace une autre reste à son tour 5 s) :
 
@@ -568,8 +572,8 @@ quand `dispatch.sh` le crée (§8.2).
 ### 6.2 Envoi vers Home
 
 Home est la cible par défaut, donc beaucoup de demandes y arrivent alors
-qu'elles visent un projet. Son agent `<slug>-main` (`home-main` pour
-le label `~`) reçoit une consigne à part :
+qu'elles visent un projet. Son `-main` (`home-main` quand il le crée)
+reçoit une consigne à part :
 
 ```text
 Demande envoyée depuis l'iPhone vers Home, la cible par défaut de l'app
@@ -604,7 +608,7 @@ Consignes :
 ```
 
 Le relais suit le même chemin qu'un envoi de l'app vers ce workspace
-(même nom d'agent, création, file, `/clear`, consigne standard) et
+(même `-main`, création, file, `/clear`, consigne standard) et
 s'affiche sur la ligne du projet. Un relais vers Home ou vers un
 workspace inconnu est refusé.
 
@@ -635,18 +639,20 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 
 ### 6.4 Nommage
 
-- agent herdr : `slug(label)-main`
-  - slug : un label `~` donne `home`, quel que soit le workspace ;
-    sinon `A-Z` passent en minuscules, tout point de code Unicode hors
-    `[a-z0-9_-]` devient `-` (un emoji composé, drapeau ou teinte de
-    peau, ou une lettre suivie d'un accent combinant en donnent
-    plusieurs), `w-` devant s'il ne commence pas par une lettre,
-    tronqué à 27 caractères
-  - exemples : `home-main`, `acme_app-main`,
-    `herdr-ios-companion-main`, `w-2025-notes-main`,
-    `w--quipe----main` pour `Équipe 🇫🇷` ; vecteurs
-    partagés par l'app et `dispatch.sh` dans
-    `mac/test/agent-names.tsv`
+- `-main` d'un workspace : l'agent herdr de ce workspace dont le nom
+  finit par `-main`, quel que soit le reste du nom (un workspace
+  renommé garde le sien) ; s'il y en a plusieurs, celui nommé
+  `<slug>-main`, sinon aucun (§4.1, §6)
+- nom donné au `-main` que le Mac crée : `<slug>-main`
+  - slug : accents retirés (décomposition canonique), puis tout
+    caractère hors `[a-z0-9_- ]` après mise en minuscules retiré
+    (emojis compris), espaces en bord supprimées et les autres
+    changées en `-`, `w-` devant s'il ne commence pas par une lettre,
+    tronqué à 27 caractères, `~` devient `home`
+  - exemples : `home-main` (`~`, `🏠 Home`), `heraldr-main`
+    (`📯 Heraldr`), `video-studio-main` (`Vidéo studio`),
+    `acme_app-main`, `w-2025-notes-main` ; vecteurs partagés par
+    l'app et `dispatch.sh` dans `mac/test/agent-names.tsv`
   - contrainte herdr : `[a-z][a-z0-9_-]{0,31}`, unique parmi les agents
     vivants
 - session Claude (Remote Control, visible dans Claude mobile) :
@@ -743,9 +749,9 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | Commande | Entrée standard | Sortie |
 | --- | --- | --- |
 | `install` | le script | rien |
-| `enqueue <workspace_id> <agent> <label_base64>` | prompt enveloppé | id du job |
+| `enqueue <workspace_id> <label_base64>` | prompt enveloppé | id du job ; code 2 avec plusieurs `-main` dont aucun `<slug>-main` (raison et noms sur stderr) |
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | texte brut | id du job ; code 2 pour un `pane_id` hors `[A-Za-z0-9]+:[A-Za-z0-9]+` ou une option inconnue |
-| `relay <workspace_id>` | demande brute, sans ses blancs autour comme dans l'app | id du job ; code 2 vers Home, un workspace inconnu ou une demande vide |
+| `relay <workspace_id>` | demande brute, sans ses blancs autour comme dans l'app | id du job ; code 2 vers Home, un workspace inconnu, une demande vide ou plusieurs `-main` dont aucun `<slug>-main` |
 | `attach <jpg\|png>` | une image | chemin absolu du fichier gardé sur le Mac ; code 2 pour une image vide, de plus de 20 Mo, ou une autre extension ; code 1 sans chemin quand le Mac ne peut pas l'écrire |
 | `answer <job_id>` | résumé sur la première ligne, ligne vide, réponse complète | rien ; code 2 pour un job inconnu ou une première ligne vide ; notif refusée : réponse gardée, raison sur stderr, code 0 |
 | `read-answer <job_id>` | rien | la réponse telle que remise ; code 2 sans réponse |
@@ -755,8 +761,12 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `lexicon-put` | le lexique (JSON de §5.2) | rien ; code 2 pour une entrée sans `version` entière lisible, sauvegarde précédente intacte |
 | `journal-append` | entrées du journal des dictées (§5.2), une ligne JSON chacune | rien ; code 2 pour une entrée vide, qui n'est pas un objet JSON, sans `version` entière ou sans `id` en `[A-Za-z0-9-]{1,64}`, journal intact et rien ajouté de l'envoi ; code 1 quand le journal ne peut pas être écrit ou reste pris par un autre ajout plus de 10 s |
 
-- `agent` : nom de l'agent, ou `pane_id` pour un envoi vers un tab
-  (une app plus ancienne le compte dans le workspace)
+- `enqueue` et `relay` résolvent le `-main` du workspace (§6.4) par
+  `herdr agent list` ; sans `-main`, le job vise `<slug>-main`, créé
+  au traitement
+- `agent` : nom du `-main` résolu, ou `pane_id` pour un envoi vers un
+  tab (une app plus ancienne le compte dans le workspace) ; l'app
+  compte pour le `-main` tout job dont `agent` n'a pas de `:`
 - `state` : `queued`, `sending`, `sent`, `failed` ; l'app ignore une
   ligne d'état inconnu
 - `error` : sur une ligne, tabulations et retours remplacés par des

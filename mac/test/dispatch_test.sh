@@ -47,7 +47,7 @@ prompts_of() {
 }
 
 enqueue() {
-  printf '%s' "$4" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue "$1" "$2" "$(printf '%s' "$3" | base64)" > /dev/null
+  printf '%s' "$3" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue "$1" "$(printf '%s' "$2" | base64)" > /dev/null
 }
 
 enqueue_pane() {
@@ -84,7 +84,7 @@ ORIGINAL_PATH="$PATH"
 echo "un envoi vers un agent occupé attend qu'il redevienne idle"
 setup_world
 add_agent home-main w1 working
-enqueue w1 home-main '~' "Ma demande"
+enqueue w1 '~' "Ma demande"
 sleep 3
 check "rien n'est envoyé pendant que l'agent travaille" "$(prompts_of home-main)" ""
 check "l'envoi est en attente" "$(job_states)" "queued "
@@ -97,7 +97,7 @@ teardown_world
 echo "un envoi vers un agent bloqué attend qu'il ait fini"
 setup_world
 add_agent acme_app-main w2 blocked
-enqueue w2 acme_app-main 'acme_app' "Corrige le bug"
+enqueue w2 'acme_app' "Corrige le bug"
 sleep 3
 check "rien n'est envoyé pendant que l'agent attend une réponse" "$(prompts_of acme_app-main)" ""
 set_status acme_app-main "done"
@@ -109,9 +109,9 @@ teardown_world
 echo "deux envois vers un agent occupé partent dans l'ordre, chacun après un /clear"
 setup_world
 add_agent home-main w1 working
-enqueue w1 home-main '~' "Première"
+enqueue w1 '~' "Première"
 sleep 1.1
-enqueue w1 home-main '~' "Seconde"
+enqueue w1 '~' "Seconde"
 sleep 2
 check "les deux sont en attente" "$(job_states)" "queued queued "
 set_status home-main idle
@@ -124,7 +124,7 @@ teardown_world
 
 echo "un agent manquant est créé dans le tab 1 du workspace"
 setup_world
-enqueue w1 home-main '~' "Demande à froid"
+enqueue w1 '~' "Demande à froid"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "split du premier pane du tab 1, dans son cwd" "$(cat "$FAKE_HERDR_WORLD/splits")" "pane split w1:p1 --direction down --cwd /work/project --no-focus"
 check "Claude en yolo avec le nom Remote Control home—main" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w1:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control home—main"
@@ -135,10 +135,62 @@ teardown_world
 echo "un agent du même nom dans un autre workspace n'est jamais visé"
 setup_world
 add_agent home-main w9 idle
-enqueue w1 home-main '~' "Mauvaise cible"
+enqueue w1 '~' "Mauvaise cible"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "l'envoi échoue sans rien envoyer" "$(job_states)|$(prompts_of home-main)" "failed |"
 check "l'app lit le workspace, l'agent, l'état et la raison de l'échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-5)" "w1	home-main	failed	l'agent home-main appartient au workspace w9"
+teardown_world
+
+echo "un workspace renommé garde son -main, quel que soit son nom"
+setup_world
+add_agent herdr-ios-companion-main wH working
+add_agent wH:pG wH idle
+enqueue wH '📯 Heraldr' "Après le renommage"
+add_workspace wH 6 '📯 Heraldr'
+relay wH "Relayée"
+sleep 2
+set_status herdr-ios-companion-main idle
+wait_until 25 '[ "$(job_states)" = "sent sent " ]'
+check "l'envoi de l'app et le relais de Home vont à l'agent existant" "$(prompts_of herdr-ios-companion-main | grep -c '^idle|/clear$')" "2"
+check "aucun second Claude n'est lancé" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
+check "le Claude sans nom du workspace ne reçoit rien" "$(prompts_of wH:pG)" ""
+teardown_world
+
+echo "un -main renommé pendant qu'un envoi l'attend n'est jamais doublé"
+setup_world
+add_agent herdr-ios-companion-main wH working
+mkdir -p "$HERALDR_STATE_DIR/locks/herdr-ios-companion-main"
+echo $$ > "$HERALDR_STATE_DIR/locks/herdr-ios-companion-main/pid"
+enqueue wH '📯 Heraldr' "Avant le renommage"
+sleep 1
+mv "$FAKE_HERDR_WORLD/agents/herdr-ios-companion-main" "$FAKE_HERDR_WORLD/agents/heraldr-main"
+rm -rf "$HERALDR_STATE_DIR/locks/herdr-ios-companion-main"
+/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" run herdr-ios-companion-main
+check "l'envoi échoue sans lancer de second Claude" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)|$(prompts_of heraldr-main)" "failed ||"
+check "la raison nomme le -main actuel" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "herdr-ios-companion-main a disparu, le -main de wH est maintenant heraldr-main : renvoie la demande"
+teardown_world
+
+echo "le -main d'un autre workspace n'est jamais visé"
+setup_world
+add_agent apistration-main w9 idle
+enqueue wH '📯 Heraldr' "Pour Heraldr"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "un -main est créé dans le workspace visé" "$(cat "$FAKE_HERDR_WORLD/starts" | cut -d' ' -f4)|$(prompts_of heraldr-main)" "wH:p2|idle|/clear
+idle|Pour Heraldr"
+check "celui de l'autre workspace ne reçoit rien" "$(prompts_of apistration-main)" ""
+teardown_world
+
+echo "avec plusieurs -main dans un workspace, seul celui nommé d'après le label est visé"
+setup_world
+add_agent local_events-main w8 idle
+add_agent morris-main w8 idle
+enqueue w8 '🟡 Morris' "Pour Morris"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "morris-main reçoit la demande, pas local_events-main" "$(prompts_of morris-main)|$(prompts_of local_events-main)" "idle|/clear
+idle|Pour Morris|"
+check "sans -main nommé d'après le label, l'envoi est refusé avec les candidats" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w8 "$(printf 'Archives' | base64)" 2>&1; echo "code $?")" "plusieurs agents -main dans w8 : local_events-main morris-main
+code 2"
+check "rien n'est mis en file ni lancé" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" "sent |"
 teardown_world
 
 echo "un envoi vers le Claude d'un tab part tel quel, sans /clear ni consigne"
@@ -235,7 +287,7 @@ relay w5 "
 "
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "l'agent du projet est créé dans son workspace, nommé comme le fait l'app" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Vidéo studio—main"
-check "il reçoit /clear puis la demande sans ses blancs autour, comme dans l'app, enveloppée et finie par /start" "$(prompts_of vid-o-studio-main)" "idle|/clear
+check "il reçoit /clear puis la demande sans ses blancs autour, comme dans l'app, enveloppée et finie par /start" "$(prompts_of video-studio-main)" "idle|/clear
 idle|Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
 
 Ajoute un sous-titre
@@ -245,14 +297,14 @@ Consignes :
 - si la demande est ambiguë, pose tes questions avec AskUserQuestion
 - si c'est une simple question, sans travail à faire : réponds sans /start avec \`/bin/sh \"\$HOME/.local/state/heraldr/dispatch.sh\" answer $(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1)\`, sur l'entrée standard un résumé d'une phrase, une ligne vide puis la réponse complète en markdown
 - sinon, termine obligatoirement en dispatchant le travail avec /start"
-check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	vid-o-studio-main"
+check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	video-studio-main"
 teardown_world
 
 echo "une réponse reste lisible une semaine, au-delà de l'heure des autres envois"
 setup_world
 add_agent home-main w1 idle
-enqueue w1 home-main '~' "Comment marche le cache ?"
-enqueue w1 home-main '~' "Corrige le cache"
+enqueue w1 '~' "Comment marche le cache ?"
+enqueue w1 '~' "Corrige le cache"
 wait_until 25 '[ "$(job_states)" = "sent sent " ]'
 question="$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | head -1 | cut -f1)"
 printf 'Vidé au déploiement.\n\nDétail.\n' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" answer "$question" 2>/dev/null
@@ -266,8 +318,8 @@ echo "un envoi ne part qu'une fois que Claude a commencé le précédent, jamais
 setup_world
 add_agent home-main w1 idle
 echo 3 > "$FAKE_HERDR_WORLD/agents/home-main/turn_seconds"
-enqueue w1 home-main '~' "Première"
-enqueue w1 home-main '~' "Seconde"
+enqueue w1 '~' "Première"
+enqueue w1 '~' "Seconde"
 wait_until 40 '[ "$(job_states)" = "sent sent " ]'
 check "le /clear de la seconde attend la fin du travail sur la première" "$(prompts_of home-main)" "idle|/clear
 idle|Première
@@ -280,8 +332,8 @@ setup_world
 export FAKE_HERDR_DETECTION_DELAY=7
 add_agent home-main w1 idle
 echo 2 > "$FAKE_HERDR_WORLD/agents/home-main/turn_seconds"
-enqueue w1 home-main '~' "Lente"
-enqueue w1 home-main '~' "Suivante"
+enqueue w1 '~' "Lente"
+enqueue w1 '~' "Suivante"
 wait_until 60 '[ "$(job_states)" = "sent sent " ]'
 check "le /clear de la suivante attend la fin de la lente" "$(prompts_of home-main)" "idle|/clear
 idle|Lente
@@ -314,11 +366,12 @@ wait_until 10 '[ -n "$(job_states)" ]'
 check "l'envoi est créé dès que le compteur est rendu" "$(job_states | wc -w | tr -d ' ')" "1"
 teardown_world
 
-echo "un nom d'agent invalide ou une demande vide ne créent aucun envoi"
+echo "un label illisible, l'ancien contrat ou une demande vide ne créent aucun envoi"
 setup_world
-check "nom d'agent hors convention herdr refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 'Home-Main' "$(printf '~' | base64)" 2>&1; echo $?)" "invalid agent name: Home-Main
+check "label vide refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 '' 2>&1; echo $?)" "invalid label
 2"
-check "demande vide refusée" "$(printf '' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 home-main "$(printf '~' | base64)" 2>&1; echo $?)" "empty prompt
+check "nom d'agent passé par une app plus ancienne refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 home-main "$(printf '~' | base64)" >/dev/null 2>&1; echo $?)" "2"
+check "demande vide refusée" "$(printf '' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 "$(printf '~' | base64)" 2>&1; echo $?)" "empty prompt
 2"
 check "aucun envoi créé" "$(job_states)" ""
 teardown_world
@@ -326,7 +379,7 @@ teardown_world
 echo "un Claude qui ne démarre pas fait échouer l'envoi avec la raison de herdr"
 setup_world
 echo pane_not_ready > "$FAKE_HERDR_WORLD/start_error"
-enqueue w1 home-main '~' "Demande à froid"
+enqueue w1 '~' "Demande à froid"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "échec annoncé avec la raison de herdr" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4)|$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "failed|agent start: {\"error\":{\"code\":\"pane_not_ready"
 teardown_world
@@ -336,7 +389,7 @@ setup_world
 export HERALDR_CLEAR_TIMEOUT_SECONDS=2
 add_agent home-main w1 idle
 touch "$FAKE_HERDR_WORLD/agents/home-main/ignores_clear"
-enqueue w1 home-main '~' "Contexte propre exigé"
+enqueue w1 '~' "Contexte propre exigé"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "seul le /clear est parti" "$(prompts_of home-main)" "idle|/clear"
 check "la raison dit que le contexte n'a pas été vidé" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "/clear sans nouvelle session après 2s"
@@ -349,7 +402,7 @@ add_agent home-main w1 idle
 dead_pid="$(sh -c 'echo $$')"
 mkdir -p "$HERALDR_STATE_DIR/locks/home-main"
 echo "$dead_pid" > "$HERALDR_STATE_DIR/locks/home-main/pid"
-enqueue w1 home-main '~' "Après le crash"
+enqueue w1 '~' "Après le crash"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "la demande part" "$(prompts_of home-main | tail -n 1)" "idle|Après le crash"
 teardown_world
