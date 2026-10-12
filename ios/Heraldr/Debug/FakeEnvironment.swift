@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import UserNotifications
 
 extension AppEnvironment {
     static let fakeDefaultsSuite = "com.skelz0r.heraldr.fake-mac"
@@ -48,8 +49,21 @@ extension AppEnvironment {
                 guard bootstrap.expiresAt > .now else { throw PairingError.expired }
                 return FakeMac.pairedMac
             },
-            requestNotifications: {},
+            requestNotifications: { await scheduleNotification(of: scenario) },
             openURL: { _ in false })
+    }
+
+    private static func scheduleNotification(of scenario: FakeMacScenario) async {
+        guard var payload = scenario.notification else { return }
+        let center = UNUserNotificationCenter.current()
+        guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
+        let content = UNMutableNotificationContent()
+        content.title = payload.removeValue(forKey: "title") ?? ""
+        content.subtitle = payload.removeValue(forKey: "subtitle") ?? ""
+        content.body = payload.removeValue(forKey: "body") ?? ""
+        content.userInfo = payload
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: scenario.notificationDelay ?? 5, repeats: false)
+        try? await center.add(UNNotificationRequest(identifier: "fake-mac-question", content: content, trigger: trigger))
     }
 
     static var launch: AppEnvironment {

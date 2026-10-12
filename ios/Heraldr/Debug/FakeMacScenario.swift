@@ -44,6 +44,8 @@ struct FakeMacScenario: Codable, Sendable {
     var lexicon: DictationLexicon?
     var failures: [String: String]?
     var stalled: [String]?
+    var notification: [String: String]?
+    var notificationDelay: Double?
 
     static let launchArgument = "-HeraldrFakeMac"
     static let environmentKey = "HERALDR_FAKE_MAC"
@@ -78,7 +80,18 @@ extension FakeMacScenario {
         "empty": FakeMacScenario(workspaces: [Workspace(id: "wA", number: 1, label: "~")]),
         "connecting": FakeMacScenario(stalled: ["workspace.list"]),
         "history": withHistory,
+        "question": withQuestion,
     ]
+
+    static var withQuestion: FakeMacScenario {
+        var scenario = demo
+        scenario.notification = [
+            "title": "Acme", "subtitle": "acme-main", "body": "Quelle base pour l'export ?",
+            "workspace_id": "wS", "agent": "acme-main", "session_url": "https://claude.ai/code/session_01fake",
+        ]
+        scenario.notificationDelay = 12
+        return scenario
+    }
 
     static var withHistory: FakeMacScenario {
         var scenario = demo
