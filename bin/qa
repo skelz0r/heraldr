@@ -111,6 +111,8 @@ printf 'QA on %s (%s): %s\n' "${SIMULATOR}" "${UDID}" "${FLOWS[*]}"
 rm -rf "${RESULT_BUNDLE}"
 status=0
 xcodebuild test \
+    -parallel-testing-enabled YES \
+    -parallel-testing-worker-count "${QA_WORKERS:-3}" \
     -project "${PROJECT_DIR}/ios/Heraldr.xcodeproj" \
     -scheme Heraldr \
     -destination "platform=iOS Simulator,id=${UDID}" \

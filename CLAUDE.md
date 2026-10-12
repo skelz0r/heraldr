@@ -180,7 +180,7 @@ La QA est faite par l'agent, en deux temps :
 
 1. Fin d'itération, au simulateur : `$PWD/bin/qa` joue les classes de
    tests UI touchées par le diff (quelques minutes, `--all` pour tout,
-   6 min) et exporte les captures dans
+   3 à 4 min, sur 3 clones du simulateur) et exporte les captures dans
    `~/share/screenshots/<worktree>/`. Les regarder, en clair et en
    sombre (`docs/design.md`), avant de dire que l'UI est faite ; un
    défaut vu se corrige avec son test.
