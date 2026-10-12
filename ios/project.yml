@@ -98,12 +98,27 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Heraldr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Heraldr
         BUNDLE_LOADER: $(TEST_HOST)
 
+  HeraldrUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: HeraldrUITests
+    dependencies:
+      - target: Heraldr
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.heraldr.dev.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Heraldr
+
 schemes:
   Heraldr:
     build:
       targets:
         Heraldr: all
         HeraldrTests: [test]
+        HeraldrUITests: [test]
     test:
       targets:
         - HeraldrTests
+        - HeraldrUITests

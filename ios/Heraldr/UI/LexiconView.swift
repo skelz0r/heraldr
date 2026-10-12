@@ -38,6 +38,7 @@ struct LexiconView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Ajouter un terme", systemImage: "plus") { editing = TermDraft() }
+                    .accessibilityIdentifier("lexicon.add")
             }
         }
         .sheet(item: $editing) { draft in

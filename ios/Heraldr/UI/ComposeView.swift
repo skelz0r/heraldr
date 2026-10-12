@@ -208,6 +208,7 @@ struct ComposeView: View {
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel("Fermer")
+                .accessibilityIdentifier("compose.close")
                 Spacer()
                 Text("Aperçu").font(.headline)
                 Spacer()
@@ -229,6 +230,7 @@ struct ComposeView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22, style: .continuous))
+            .accessibilityIdentifier("compose.target")
 
             if let target {
                 let state = model.targetState(for: target)
@@ -236,6 +238,7 @@ struct ComposeView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("compose.state")
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -243,6 +246,7 @@ struct ComposeView: View {
                     .font(.system(size: 19, weight: .medium))
                     .scrollContentBackground(.hidden)
                     .focused($editorFocused)
+                    .accessibilityIdentifier("compose.text")
                     .overlay(alignment: .topLeading) {
                         if text.isEmpty {
                             Text("Que doit faire l'agent ?")
@@ -275,6 +279,7 @@ struct ComposeView: View {
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .disabled(sending || remainingSlots == 0)
                 .accessibilityLabel("Joindre des captures")
+                .accessibilityIdentifier("compose.attach")
                 .onChange(of: pickedPhotos) { _, picked in
                     guard !picked.isEmpty else { return }
                     pickedPhotos = []
@@ -289,6 +294,7 @@ struct ComposeView: View {
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .disabled(sending)
+                .accessibilityIdentifier("compose.dictate")
             }
 
             if target?.tab != nil {
@@ -300,11 +306,13 @@ struct ComposeView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(clearsContext ? .isSelected : [])
+                .accessibilityIdentifier("compose.clear")
             }
 
             if targetVanished {
                 Text("Ce tab n'existe plus : choisis une autre cible.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("compose.vanished")
             }
 
             if importFailed {
@@ -315,6 +323,7 @@ struct ComposeView: View {
             if let sendError {
                 Text(sendError).font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("compose.error")
             }
 
             Button {
@@ -331,6 +340,7 @@ struct ComposeView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .capsule)
+            .accessibilityIdentifier("compose.send")
             .disabled(
                 sending || importing || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || target == nil)
             .opacity(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
@@ -579,6 +589,7 @@ struct TargetPicker: View {
         }
         .tint(.primary)
         .accessibilityLabel(target.label)
+        .accessibilityIdentifier("picker.\(target.id)")
     }
 }
 

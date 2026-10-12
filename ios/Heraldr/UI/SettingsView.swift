@@ -14,6 +14,7 @@ struct SettingsView: View {
                     } label: {
                         LabeledContent("Lexique", value: "\(model.lexicon.terms.count)")
                     }
+                    .accessibilityIdentifier("settings.lexicon")
                 }
                 Section("Build installé") {
                     LabeledContent("Version", value: build.version)

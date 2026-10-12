@@ -67,6 +67,7 @@ struct PairingView: View {
                 }
                 .buttonStyle(.glass)
                 .disabled(pairing)
+                .accessibilityIdentifier("pairing.paste")
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)

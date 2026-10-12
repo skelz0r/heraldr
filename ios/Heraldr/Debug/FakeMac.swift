@@ -15,6 +15,7 @@ actor FakeMac: MacTransport {
 
     init(_ scenario: FakeMacScenario) {
         self.scenario = scenario
+        holds = Set(scenario.stalled ?? [])
     }
 
     func update(_ change: @Sendable (inout FakeMacScenario) -> Void) {

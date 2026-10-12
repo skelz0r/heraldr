@@ -43,6 +43,7 @@ struct FakeMacScenario: Codable, Sendable {
     var history: [SentRequest]?
     var lexicon: DictationLexicon?
     var failures: [String: String]?
+    var stalled: [String]?
 
     static let launchArgument = "-HeraldrFakeMac"
     static let environmentKey = "HERALDR_FAKE_MAC"
@@ -75,7 +76,55 @@ extension FakeMacScenario {
         "unreachable": FakeMacScenario(unreachable: "192.168.1.20: connexion refusée ; 100.64.0.2: délai dépassé"),
         "demo": demo,
         "empty": FakeMacScenario(workspaces: [Workspace(id: "wA", number: 1, label: "~")]),
+        "connecting": FakeMacScenario(stalled: ["workspace.list"]),
+        "history": withHistory,
     ]
+
+    static var withHistory: FakeMacScenario {
+        var scenario = demo
+        let now = Date.now
+        func entry(
+            _ text: String, _ workspace: Workspace, tab: Tab? = nil, minutes: Double, status: SentRequest.Status,
+            job: String? = nil, error: String? = nil, attachments: [String]? = nil, answer: Answer? = nil
+        ) -> SentRequest {
+            SentRequest(
+                id: UUID(), text: text, workspaceId: workspace.id, workspaceLabel: workspace.label, tabId: tab?.id,
+                tabLabel: tab.map { $0.label ?? "tab \($0.number)" }, clearsContext: tab.map { _ in false },
+                attachments: attachments, createdAt: now.addingTimeInterval(-minutes * 60), status: status, jobId: job,
+                error: error, answer: answer)
+        }
+        let heraldr = Workspace(id: "wH", number: 2, label: "Heraldr")
+        let acme = Workspace(id: "wS", number: 3, label: "Acme")
+        let media = Workspace(id: "wM", number: 4, label: "Vidéo studio")
+        let home = Workspace(id: "wA", number: 1, label: "~")
+        scenario.history = [
+            entry(
+                "Ajoute un mode sombre à l'écran de réglages et vérifie le contraste des pastilles", heraldr,
+                minutes: 2, status: .sent, job: "20261012115800-000000000004-aa"),
+            entry(
+                "Le bouton Envoyer déborde sur les petits écrans", heraldr,
+                tab: Tab(id: "wH:t2", workspaceId: "wH", number: 2, label: "harness-qa"), minutes: 6, status: .queued,
+                job: "20261012115400-000000000003-aa", attachments: ["/Users/moi/a.jpg", "/Users/moi/b.jpg"]),
+            entry(
+                "Corrige l'export CSV des factures", acme, minutes: 40, status: .failed,
+                job: "20261012112000-000000000002-aa", error: "l'agent acme-main appartient au workspace wM"),
+            entry(
+                "Relance les sous-titres", media, minutes: 300, status: .failed, error: SendHistory.interruptedError,
+                attachments: ["/Users/moi/c.jpg"]),
+            entry(
+                "Comment marche le cache des vignettes ?", home, minutes: 90, status: .sent,
+                job: "20261012102000-000000000001-aa",
+                answer: Answer(
+                    summary: "Le cache est vidé à chaque déploiement.",
+                    body: "Le cache des vignettes vit dans `tmp/thumbnails`.\n\n- vidé à chaque déploiement\n- reconstruit à la demande",
+                    receivedAt: now.addingTimeInterval(-80 * 60))),
+        ]
+        var lexicon = DictationLexicon()
+        _ = lexicon.define("Acme", heard: ["ack me", "ak me"], at: now.addingTimeInterval(-3600))
+        _ = lexicon.define("herdr", heard: ["herder"], at: now)
+        scenario.lexicon = lexicon
+        return scenario
+    }
 
     static var demo: FakeMacScenario {
         FakeMacScenario(
