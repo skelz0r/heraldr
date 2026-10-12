@@ -44,6 +44,16 @@ struct HerdrResponseTests {
         #expect(agents.map(\.name) == [nil, "home-main"])
     }
 
+    @Test("un agent sans tab_id ni workspace_id se lit, ses autres champs gardés")
+    func agentWithoutTab() throws {
+        let agents = try decode([Agent].self, """
+            [{"agent":"claude","agent_status":"idle","name":"orphelin-main","pane_id":"wA:p9"}]
+            """)
+
+        #expect(agents.first?.name == "orphelin-main")
+        #expect(agents.first?.tabId == nil)
+    }
+
     @Test("Home, le workspace numéro 1, passe en tête quel que soit son label, puis l'ordre herdr")
     func homeFirst() {
         let ordered = Workspace.ordered([

@@ -728,7 +728,10 @@ de l'app : sa sortie reste lisible par l'app plus récente.
   dernière liste reçue est gardée (aucun tab avant la première), le
   reste de l'écran est inchangé
 - tolérance : tout autre champ est ignoré, un `agent_status` inconnu
-  devient « État inconnu »
+  devient « État inconnu » ; un agent sans `tab_id` ou `workspace_id`
+  est lu (il ne compte pour aucun workspace ni tab), et un élément
+  illisible d'une liste (champ attendu absent ou d'un autre type) est
+  ignoré sans masquer les autres
 
 ### 8.2 `dispatch.sh`
 

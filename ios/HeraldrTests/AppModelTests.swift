@@ -263,6 +263,17 @@ struct RefreshTests {
         #expect(session.model.workspaces.map(\.id).contains("wN"))
     }
 
+    @Test("un agent sans tab_id ni workspace_id n'empêche pas de lire les autres")
+    func agentWithoutTab() async throws {
+        let session = await Session(world(agents: [
+            .init(name: "orphelin-main", kind: "claude", paneId: nil, workspaceId: nil, tabId: nil, status: "idle"),
+            main("acme-main", in: "wS", "blocked"),
+        ]))
+
+        #expect(session.model.connection == .online)
+        #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.blocked, workingOnOurRequest: false))
+    }
+
     @Test("le tab ciblé qui disparaît de herdr rend la cible au main de son workspace")
     func targetedTabDisappears() async throws {
         let session = await Session(world(agents: [tabClaude("idle")]))
