@@ -20,6 +20,7 @@ final class HomeScreenTests: XCTestCase {
             ("wM", "Prêt", "Un envoi vide son contexte puis transmet la demande."),
             ("wL", "État inconnu", "Un nouvel envoi attendra qu'il soit prêt."),
             ("wB", "Pas encore d'agent", "Un envoi lancera Claude dans le tab 1, nommé blog-main."),
+            ("wK", "Plusieurs Claude -main", "Un envoi échouera : garde un seul de w---morris-main, morris_api-main, ou nomme-le morris-main."),
         ]
         for (tile, state, next) in expected {
             element("tile.\(tile)", in: app).tap()

@@ -165,6 +165,7 @@
                     Workspace(id: "wM", number: 4, label: "Vidéo studio"),
                     Workspace(id: "wL", number: 5, label: "local_events"),
                     Workspace(id: "wB", number: 6, label: "Blog"),
+                    Workspace(id: "wK", number: 7, label: "🟡 Morris"),
                 ],
                 tabs: [
                     Tab(id: "wA:t1", workspaceId: "wA", number: 1, label: "claude"),
@@ -185,6 +186,8 @@
                     Agent(name: "acme-main", kind: "claude", paneId: "wS:p1", workspaceId: "wS", tabId: "wS:t1", status: "blocked"),
                     Agent(name: "vid-o-studio-main", kind: "claude", paneId: "wM:p1", workspaceId: "wM", tabId: "wM:t1", status: "done"),
                     Agent(name: "local_events-main", kind: "claude", paneId: "wL:p1", workspaceId: "wL", tabId: "wL:t1", status: "thinking"),
+                    Agent(name: "w---morris-main", kind: "claude", paneId: "wK:p1", workspaceId: "wK", tabId: "wK:t1", status: "idle"),
+                    Agent(name: "morris_api-main", kind: "claude", paneId: "wK:p2", workspaceId: "wK", tabId: "wK:t1", status: "idle"),
                 ],
                 jobs: [
                     Job(id: "20261012090000-000000000001-aa", workspaceId: "wS", agent: "acme-main", state: "queued")

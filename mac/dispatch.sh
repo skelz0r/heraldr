@@ -30,7 +30,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put | journal-append" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put | journal-append" >&2
   exit 2
 }
 
@@ -70,6 +70,35 @@ trimmed_input() {
   LC_ALL=en_US.UTF-8 awk 'BEGIN { RS = "\001" } { sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); printf "%s", $0 }'
 }
 
+main_agents_of() {
+  agents="$(herdr agent list)" || return 1
+  index=0
+  while agent_workspace="$(printf '%s' "$agents" | json_value "result.agents.$index.workspace_id")"; do
+    name="$(printf '%s' "$agents" | json_value "result.agents.$index.name")"
+    if [ "$agent_workspace" = "$1" ]; then
+      case "$name" in *-main) printf '%s\n' "$name" ;; esac
+    fi
+    index=$((index + 1))
+  done
+}
+
+main_agent_for() {
+  mains="$(main_agents_of "$1")" || { echo "agents herdr illisibles" >&2; return 1; }
+  named="$(agent_name_for_label "$2")"
+  case "$(printf '%s' "$mains" | grep -c .)" in
+    0) printf '%s' "$named" ;;
+    1) printf '%s' "$mains" ;;
+    *)
+      if printf '%s\n' "$mains" | grep -qx "$named"; then
+        printf '%s' "$named"
+      else
+        echo "plusieurs agents -main dans $1 : $(printf '%s' "$mains" | tr '\n' ' ')" >&2
+        return 1
+      fi
+      ;;
+  esac
+}
+
 standard_envelope() {
   cat <<EOF
 Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
@@ -85,9 +114,10 @@ EOF
 }
 
 enqueue_job() {
-  valid_agent_name "$2" || { echo "invalid agent name: $2" >&2; exit 2; }
-  label="$(printf '%s' "$3" | base64 -d 2>/dev/null)" || label=""
-  create_job "$1" "$2" "$label" clear
+  label="$(printf '%s' "$2" | base64 -d 2>/dev/null)" || label=""
+  [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
+  agent="$(main_agent_for "$1" "$label")" || exit 2
+  create_job "$1" "$agent" "$label" clear
 }
 
 enqueue_pane_job() {
@@ -103,7 +133,8 @@ relay_job() {
   [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "relais vers Home impossible" >&2; exit 2; }
   request="$(trimmed_input)"
   [ -n "$request" ] || { echo "empty prompt" >&2; exit 2; }
-  standard_envelope "$request" | create_job "$workspace_id" "$(agent_name_for_label "$label")" "$label" clear
+  agent="$(main_agent_for "$workspace_id" "$label")" || exit 2
+  standard_envelope "$request" | create_job "$workspace_id" "$agent" "$label" clear
 }
 
 create_job() {
@@ -288,6 +319,8 @@ process_job() {
   if valid_pane_id "$agent"; then
     check_pane_target "$job_dir" "$agent" "$workspace_id" || return 1
   elif [ -z "$agent_workspace" ]; then
+    mains="$(main_agents_of "$workspace_id")" || { fail_job "$job_dir" "agents herdr illisibles"; return 1; }
+    [ -z "$mains" ] || { fail_job "$job_dir" "$agent a disparu, le -main de $workspace_id est maintenant $(printf '%s' "$mains" | tr '\n' ' ') : renvoie la demande"; return 1; }
     start_agent "$job_dir" "$workspace_id" "$agent" "$label" || return 1
   elif [ "$agent_workspace" != "$workspace_id" ]; then
     fail_job "$job_dir" "l'agent $agent appartient au workspace $agent_workspace"
@@ -489,7 +522,7 @@ command="$1"
 shift
 case "$command" in
   install) install_script ;;
-  enqueue) [ $# -eq 3 ] || fail_usage; enqueue_job "$@" ;;
+  enqueue) [ $# -eq 2 ] || fail_usage; enqueue_job "$@" ;;
   enqueue-pane) [ $# -eq 3 ] || fail_usage; enqueue_pane_job "$@" ;;
   relay) [ $# -eq 1 ] || fail_usage; relay_job "$1" ;;
   attach) [ $# -eq 1 ] || fail_usage; store_attachment "$1" ;;

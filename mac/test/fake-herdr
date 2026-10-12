@@ -137,6 +137,18 @@ case "$command" in
     printf '{"id":"cli:workspace:get","result":{"type":"workspace_info","workspace":{"active_tab_id":"%s:t1","agent_status":"idle","focused":false,"label":"%s","number":%s,"pane_count":2,"tab_count":2,"workspace_id":"%s"}}}\n' \
       "$workspace_id" "$(cut -f2 "$world/workspaces/$workspace_id")" "$(cut -f1 "$world/workspaces/$workspace_id")" "$workspace_id"
     ;;
+  "agent list")
+    parse "" "" "$@"
+    require_positionals 0
+    separator=""
+    printf '{"id":"cli:agent:list","result":{"agents":['
+    for directory in "$world"/agents/*; do
+      [ -d "$directory" ] || continue
+      printf '%s%s' "$separator" "$(agent_object "$(basename "$directory")")"
+      separator=","
+    done
+    printf ']}}\n'
+    ;;
   "agent get")
     parse "" "" "$@"
     require_positionals 1

@@ -58,12 +58,17 @@
             switch subcommand {
             case "status":
                 return .success(statusOutput())
-            case "enqueue" where arguments.count == 4:
-                guard arguments[2].wholeMatch(of: #/[a-z][a-z0-9_-]{0,31}/#) != nil else {
-                    return Self.failure("2:invalid agent name: \(arguments[2])")
+            case "enqueue" where arguments.count == 3:
+                guard let label = Data(base64Encoded: arguments[2]).map({ String(decoding: $0, as: UTF8.self) }), !label.isEmpty
+                else { return Self.failure("2:invalid label") }
+                let mains = mainAgents(of: arguments[1])
+                let named = AgentName.forWorkspace(label: label)
+                guard mains.count <= 1 || mains.contains(named) else {
+                    return Self.failure("2:plusieurs agents -main dans \(arguments[1]) : \(mains.joined(separator: " "))")
                 }
+                let agent = mains.count == 1 ? mains[0] : named
                 guard !input.isEmpty else { return Self.failure("2:empty prompt") }
-                return .success(enqueue(workspaceId: arguments[1], agent: arguments[2], prompt: input))
+                return .success(enqueue(workspaceId: arguments[1], agent: agent, prompt: input))
             case "enqueue-pane" where arguments.count == 4:
                 guard arguments[2].wholeMatch(of: #/[A-Za-z0-9]+:[A-Za-z0-9]+/#) != nil else {
                     return Self.failure("2:invalid pane: \(arguments[2])")
@@ -119,6 +124,13 @@
             }
             if let unreachable = scenario.unreachable {
                 throw MacLinkError.unreachable(unreachable)
+            }
+        }
+
+        private func mainAgents(of workspaceId: String) -> [String] {
+            (scenario.agents ?? []).compactMap { agent in
+                guard agent.workspaceId == workspaceId, let name = agent.name, name.hasSuffix(AgentName.suffix) else { return nil }
+                return name
             }
         }
 

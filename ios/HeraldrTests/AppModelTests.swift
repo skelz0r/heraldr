@@ -80,6 +80,16 @@ struct SendNoticeTests {
         #expect(session.model.notice?.detail == "Le Mac lance Claude dans le tab 1, nommé video-studio-main, puis lui transmet la demande.")
     }
 
+    @Test("vers un workspace renommé : le -main existant reçoit la demande, aucun autre n'est lancé")
+    func renamedWorkspace() async throws {
+        let session = await Session(world(agents: [main("herdr-ios-companion-main", in: "wM", "idle")]))
+
+        try await session.model.send("Ajoute un sous-titre", to: Target(session.workspace("wM")))
+
+        #expect(session.model.notice?.detail == "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
+        #expect(await session.mac.scenario.jobs?.map(\.agent) == ["herdr-ios-companion-main"])
+    }
+
     @Test("vers un agent qui travaille, qui est bloqué ou qui a déjà un envoi en file : en file")
     func busyAgent() async throws {
         let session = await Session(
@@ -130,6 +140,21 @@ struct SendFailureTests {
         let entry = try #require(session.model.history.entries.first)
         #expect(entry.status == .failed)
         #expect(entry.error == "Commande refusée par le Mac (2) : invalid agent name: x")
+    }
+
+    @Test("plusieurs -main dont aucun nommé d'après le label : la cible le dit et le Mac refuse l'envoi")
+    func severalMains() async throws {
+        let session = await Session(
+            world(agents: [main("w---acme-main", in: "wS", "idle"), main("acme_api-main", in: "wS", "idle")]))
+        let target = Target(try session.workspace("wS"))
+
+        #expect(session.model.targetState(for: target) == .ambiguousMain(["w---acme-main", "acme_api-main"]))
+        await #expect(throws: MacLinkError.self) { try await session.model.send("Demande", to: target) }
+
+        #expect(
+            session.model.history.entries.first?.error
+                == "Commande refusée par le Mac (2) : plusieurs agents -main dans wS : w---acme-main acme_api-main")
+        #expect(await session.mac.scenario.jobs?.isEmpty ?? true)
     }
 
     @Test("un envoi qui échoue sur le Mac avant le rafraîchissement suivant est annoncé")
@@ -198,7 +223,7 @@ struct SendImagesTests {
         try await session.model.send("Le bouton déborde", images: [Data([1]), Data([2])], to: Target(session.workspace("wS")))
 
         let commands = await session.mac.commands.filter { $0.hasPrefix("attach") || $0.hasPrefix("enqueue") }
-        #expect(commands == ["attach jpg", "attach jpg", "enqueue wS acme-main U3VwZXJEb2N1"])
+        #expect(commands == ["attach jpg", "attach jpg", "enqueue wS U3VwZXJEb2N1"])
         let prompt = try #require(await session.mac.prompts.first)
         #expect(
             prompt.contains(

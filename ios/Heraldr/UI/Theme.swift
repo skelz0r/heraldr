@@ -79,6 +79,7 @@ extension AppModel.TargetState {
     var headline: String {
         switch self {
         case .missing: "Pas encore d'agent"
+        case .ambiguousMain: "Plusieurs Claude -main"
         case .tabWithoutClaude: "Plus de Claude dans ce tab"
         case .sending: "Envoi en cours…"
         case .agent(.idle, _), .agent(.done, _): "Prêt"
@@ -92,6 +93,8 @@ extension AppModel.TargetState {
     func nextSend(to target: Target, clearingContext: Bool = false) -> String {
         switch self {
         case .missing: "Un envoi lancera Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label))."
+        case .ambiguousMain(let names):
+            "Un envoi échouera : garde un seul de \(names.joined(separator: ", ")), ou nomme-le \(AgentName.forWorkspace(label: target.workspace.label))."
         case .tabWithoutClaude: "Un envoi échouera : relance Claude dans ce tab sur le Mac."
         case .sending: "Un nouvel envoi partira juste après."
         case .agent(.idle, _), .agent(.done, _):

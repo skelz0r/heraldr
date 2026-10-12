@@ -21,6 +21,7 @@ final class AppModel {
 
     enum TargetState: Equatable {
         case missing
+        case ambiguousMain([String])
         case tabWithoutClaude
         case sending
         case agent(AgentStatus, workingOnOurRequest: Bool)
@@ -28,7 +29,7 @@ final class AppModel {
         var acceptsImmediately: Bool {
             switch self {
             case .missing: true
-            case .tabWithoutClaude, .sending: false
+            case .ambiguousMain, .tabWithoutClaude, .sending: false
             case .agent(let status, _): status.isReady
             }
         }
@@ -44,12 +45,11 @@ final class AppModel {
                 }
                 agent = claude
             } else {
-                let name = AgentName.forWorkspace(label: workspace.label)
-                if jobs.contains(where: { $0.workspaceId == workspace.id && $0.agent == name && $0.isPending }) { return .sending }
-                guard let main = agents.first(where: { $0.name == name && $0.workspaceId == workspace.id }) else {
-                    return .missing
-                }
-                agent = main
+                let main = AgentName.main(of: workspace, in: agents)
+                if case .ambiguous(let names) = main { return .ambiguousMain(names) }
+                if jobs.contains(where: { $0.workspaceId == workspace.id && !$0.targetsPane && $0.isPending }) { return .sending }
+                guard case .found(let found) = main else { return .missing }
+                agent = found
             }
             let recentlySent = lastSentAt.map { now.timeIntervalSince($0) < 3600 } ?? false
             return .agent(agent.agentStatus, workingOnOurRequest: recentlySent)
@@ -57,7 +57,7 @@ final class AppModel {
 
         var dotStatus: AgentStatus {
             switch self {
-            case .missing, .tabWithoutClaude: .unknown
+            case .missing, .ambiguousMain, .tabWithoutClaude: .unknown
             case .sending: .working
             case .agent(let status, _): status
             }

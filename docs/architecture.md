@@ -92,11 +92,22 @@ envoi fait deux exec SSH :
 1. `install` : le script est écrit sur stdin dans
    `~/.local/state/heraldr/dispatch.sh` (toujours la version de
    l'app installée)
-2. `enqueue <workspace_id> <agent> <label_base64>` : le prompt enveloppé
-   arrive brut sur stdin et devient un job
+2. `enqueue <workspace_id> <label_base64>` : le script résout le
+   `-main` du workspace (ci-dessous), le prompt enveloppé arrive brut
+   sur stdin et devient un job
    `~/.local/state/heraldr/jobs/<horodatage>-<séquence>-<aléa>/`, puis le
    script lance son runner détaché :
    `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
+
+Le `-main` d'un workspace est l'agent de ce workspace dont le nom
+finit par `-main` (`herdr agent list`, filtré sur `workspace_id`) : un
+workspace renommé garde le sien, même si son nom ne correspond plus au
+label. Avec plusieurs `-main`, celui nommé `<slug>-main` l'emporte ;
+sans lui, `enqueue` et `relay` refusent (code 2) plutôt que de
+choisir. Sans `-main`, le job vise `<slug>-main`, que le runner crée.
+L'app applique la même règle à `agent.list` pour l'état de la cible,
+mais ne passe plus de nom : c'est le Mac qui décide, au moment de
+l'envoi.
 
 Un job est un dossier de fichiers texte : `workspace_id`, `agent`,
 `label`, `clear`, `prompt`, `state` (`queued`, `sending`, `sent`, `failed`) et
@@ -164,12 +175,16 @@ que pour `clear`.
 
 `relay <workspace_id>` sert à l'agent de Home pour transmettre une
 demande au projet qu'elle vise : la demande brute arrive sur stdin, le
-script lit le label avec `herdr workspace get`, en déduit
-`<slug>-main`, l'enveloppe dans la consigne standard et crée un job
-comme `enqueue`. Il refuse Home (workspace numéro 1) comme cible. Le
-slug et la consigne standard existent donc en double, dans
-`AgentName.swift` / `PromptEnvelope.swift` et dans `dispatch.sh`, à
-garder alignés. Le script est toujours installé sur le Mac au moment du
+script lit le label avec `herdr workspace get`, résout le `-main` comme
+`enqueue`, enveloppe la demande dans la consigne standard et crée un
+job comme `enqueue`. Il refuse Home (workspace numéro 1) comme cible.
+Le slug, la règle du `-main` et la consigne standard existent donc en
+double, dans `AgentName.swift` / `PromptEnvelope.swift` et dans
+`dispatch.sh`, à garder alignés. Côté shell, le slug passe par `perl`
+(décomposition canonique `Unicode::Normalize`, livré avec macOS) puis
+`tr` octet par octet, qui retire tout ce qui n'est pas ASCII : même
+résultat que le filtre sur les scalaires Unicode de Swift, un emoji à
+plusieurs points de code compris. Le script est toujours installé sur le Mac au moment du
 relais, puisque l'envoi vers Home vient de l'installer.
 
 `attach <jpg|png>` reçoit une capture jointe à une demande : l'image
@@ -332,7 +347,9 @@ de départ, échecs par commande (`enqueue`, `attach`, `tab.list`…) ou
 Mac injoignable. Il interprète les commandes que `Dispatcher` envoie à
 `dispatch.sh` (`status`, `enqueue`, `enqueue-pane`, `attach`,
 `read-answer`, `lexicon-get|put`) et répond aux requêtes herdr avec la
-forme du vrai, champs en plus compris. Un envoi part `sent` vers un
+forme du vrai, champs en plus compris. `enqueue` y résout le `-main`
+du workspace avec la même règle que le script, et refuse comme lui
+plusieurs `-main` dont aucun `<slug>-main`. Un envoi part `sent` vers un
 agent prêt (qui passe alors `working`), `queued` vers un agent occupé
 ou déjà en file, `failed` vers un agent d'un autre workspace ou un pane
 sans Claude, comme `dispatch.sh`.

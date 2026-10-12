@@ -137,7 +137,7 @@ async function sentQuestion(text) {
   copyFileSync(dispatch, join(stateDir(), "dispatch.sh"));
   copyFileSync(hook, join(stateDir(), "plugin", "notify-hook.mjs"));
   const label = Buffer.from("acme_app").toString("base64");
-  const { stdout } = await runDispatch(["enqueue", "w1", "acme_app-main", label], text);
+  const { stdout } = await runDispatch(["enqueue", "w1", label], text);
   return stdout.trim();
 }
 
@@ -168,6 +168,7 @@ beforeEach(() => {
     `#!/bin/sh
 case "$1 $2" in
   "agent get") cat "${join(world, "herdr", "agent.json")}" 2>/dev/null || exit 1 ;;
+  "agent list") echo '{"result":{"agents":[]}}' ;;
   "pane read") cat "${join(world, "herdr", "screen.txt")}" 2>/dev/null || exit 1 ;;
   "workspace get") echo '{"result":{"workspace":{"label":"acme_app"}}}' ;;
   *) exit 1 ;;
