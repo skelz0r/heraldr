@@ -27,7 +27,7 @@ extension XCTestCase {
     }
 
     func waitFor(_ element: XCUIElement, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(element.waitForExistence(timeout: timeout), "\(element) absent", file: file, line: line)
+        XCTAssertTrue(element.waitForExistence(timeout: timeout), "\(element) missing", file: file, line: line)
     }
 
     func label(of identifier: String, in app: XCUIApplication) -> String {

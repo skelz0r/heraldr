@@ -83,7 +83,7 @@ main_agents_of() {
 }
 
 main_agent_for() {
-  mains="$(main_agents_of "$1")" || { echo "agents herdr illisibles" >&2; return 1; }
+  mains="$(main_agents_of "$1")" || { echo "unreadable herdr agents" >&2; return 1; }
   named="$(agent_name_for_label "$2")"
   case "$(printf '%s' "$mains" | grep -c .)" in
     0) printf '%s' "$named" ;;
@@ -92,7 +92,7 @@ main_agent_for() {
       if printf '%s\n' "$mains" | grep -qx "$named"; then
         printf '%s' "$named"
       else
-        echo "plusieurs agents -main dans $1 : $(printf '%s' "$mains" | tr '\n' ' ')" >&2
+        echo "several -main agents in $1: $(printf '%s' "$mains" | tr '\n' ' ')" >&2
         return 1
       fi
       ;;
@@ -101,15 +101,15 @@ main_agent_for() {
 
 standard_envelope() {
   cat <<EOF
-Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+Request sent from the iPhone (may come from voice dictation: watch for transcription errors).
 
 $1
 
-Consignes :
-- explore le code pour comprendre la demande, ne modifie rien ici
-- si la demande est ambiguë, pose tes questions avec AskUserQuestion
-- si c'est une simple question, sans travail à faire : réponds sans /start avec \`/bin/sh "\$HOME/.local/state/heraldr/dispatch.sh" answer {{job_id}}\`, sur l'entrée standard un résumé d'une phrase, une ligne vide puis la réponse complète en markdown
-- sinon, termine obligatoirement en dispatchant le travail avec /start
+Instructions:
+- explore the code to understand the request, change nothing here
+- if the request is ambiguous, ask your questions with AskUserQuestion
+- if it is a simple question with no work to do: answer without /start using \`/bin/sh "\$HOME/.local/state/heraldr/dispatch.sh" answer {{job_id}}\`, with on standard input a one-sentence summary, a blank line, then the full answer in markdown
+- otherwise, you must finish by dispatching the work with /start
 EOF
 }
 
@@ -128,9 +128,9 @@ enqueue_pane_job() {
 
 relay_job() {
   workspace_id="$1"
-  workspace="$(herdr workspace get "$workspace_id" 2>&1)" || { echo "workspace introuvable: $workspace_id" >&2; exit 2; }
-  label="$(printf '%s' "$workspace" | json_value result.workspace.label)" || { echo "workspace sans label: $workspace_id" >&2; exit 2; }
-  [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "relais vers Home impossible" >&2; exit 2; }
+  workspace="$(herdr workspace get "$workspace_id" 2>&1)" || { echo "workspace not found: $workspace_id" >&2; exit 2; }
+  label="$(printf '%s' "$workspace" | json_value result.workspace.label)" || { echo "workspace without label: $workspace_id" >&2; exit 2; }
+  [ "$(printf '%s' "$workspace" | json_value result.workspace.number)" != "1" ] || { echo "cannot relay to Home" >&2; exit 2; }
   request="$(trimmed_input)"
   [ -n "$request" ] || { echo "empty prompt" >&2; exit 2; }
   agent="$(main_agent_for "$workspace_id" "$label")" || exit 2
@@ -269,11 +269,11 @@ start_agent() {
   agent="$3"
   label="$4"
 
-  tab_id="$(first_tab_id "$workspace_id")" || { fail_job "$job_dir" "tab 1 introuvable dans $workspace_id"; return 1; }
-  anchor_pane="$(first_pane_of_tab "$workspace_id" "$tab_id" pane_id)" || { fail_job "$job_dir" "aucun pane dans $tab_id"; return 1; }
+  tab_id="$(first_tab_id "$workspace_id")" || { fail_job "$job_dir" "tab 1 not found in $workspace_id"; return 1; }
+  anchor_pane="$(first_pane_of_tab "$workspace_id" "$tab_id" pane_id)" || { fail_job "$job_dir" "no pane in $tab_id"; return 1; }
   cwd="$(first_pane_of_tab "$workspace_id" "$tab_id" cwd)" || cwd="$HOME"
   split="$(herdr pane split "$anchor_pane" --direction down --cwd "$cwd" --no-focus 2>&1)" || { fail_job "$job_dir" "pane split: $split"; return 1; }
-  pane_id="$(printf '%s' "$split" | json_value result.pane.pane_id)" || { fail_job "$job_dir" "pane split sans pane_id"; return 1; }
+  pane_id="$(printf '%s' "$split" | json_value result.pane.pane_id)" || { fail_job "$job_dir" "pane split without pane_id"; return 1; }
 
   remote_control_name="$(printf '%s' "$label" | sed 's/^~$/home/')—main"
   if ! started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$START_TIMEOUT_MS" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"; then
@@ -301,11 +301,11 @@ wait_for_clear() {
 
 check_pane_target() {
   pane="$(herdr agent get "$2" 2>/dev/null)"
-  [ "$(printf '%s' "$pane" | json_value result.agent.agent)" = "claude" ] || { fail_job "$1" "plus de Claude dans le pane $2"; return 1; }
+  [ "$(printf '%s' "$pane" | json_value result.agent.agent)" = "claude" ] || { fail_job "$1" "no Claude left in pane $2"; return 1; }
   pane_workspace="$(printf '%s' "$pane" | json_value result.agent.workspace_id)"
-  [ "$pane_workspace" = "$3" ] || { fail_job "$1" "le pane $2 appartient au workspace $pane_workspace"; return 1; }
+  [ "$pane_workspace" = "$3" ] || { fail_job "$1" "pane $2 belongs to workspace $pane_workspace"; return 1; }
   pane_name="$(printf '%s' "$pane" | json_value result.agent.name)"
-  [ -z "$pane_name" ] || { fail_job "$1" "le pane $2 est l'agent $pane_name : vise-le par son nom"; return 1; }
+  [ -z "$pane_name" ] || { fail_job "$1" "pane $2 is agent $pane_name: target it by name"; return 1; }
 }
 
 process_job() {
@@ -319,11 +319,11 @@ process_job() {
   if valid_pane_id "$agent"; then
     check_pane_target "$job_dir" "$agent" "$workspace_id" || return 1
   elif [ -z "$agent_workspace" ]; then
-    mains="$(main_agents_of "$workspace_id")" || { fail_job "$job_dir" "agents herdr illisibles"; return 1; }
-    [ -z "$mains" ] || { fail_job "$job_dir" "$agent a disparu, le -main de $workspace_id est maintenant $(printf '%s' "$mains" | tr '\n' ' ') : renvoie la demande"; return 1; }
+    mains="$(main_agents_of "$workspace_id")" || { fail_job "$job_dir" "unreadable herdr agents"; return 1; }
+    [ -z "$mains" ] || { fail_job "$job_dir" "$agent is gone, the -main of $workspace_id is now $(printf '%s' "$mains" | tr '\n' ' '): resend the request"; return 1; }
     start_agent "$job_dir" "$workspace_id" "$agent" "$label" || return 1
   elif [ "$agent_workspace" != "$workspace_id" ]; then
-    fail_job "$job_dir" "l'agent $agent appartient au workspace $agent_workspace"
+    fail_job "$job_dir" "agent $agent belongs to workspace $agent_workspace"
     return 1
   fi
 
@@ -337,7 +337,7 @@ process_job() {
   if [ "$clear" = "clear" ]; then
     session_before="$(agent_field "$agent" agent_session.value)"
     cleared="$(herdr agent prompt "$agent" "/clear" 2>&1)" || { fail_job "$job_dir" "/clear: $cleared"; return 1; }
-    wait_for_clear "$agent" "$session_before" || { fail_job "$job_dir" "/clear sans nouvelle session après ${CLEAR_TIMEOUT_SECONDS}s"; return 1; }
+    wait_for_clear "$agent" "$session_before" || { fail_job "$job_dir" "/clear without a new session after ${CLEAR_TIMEOUT_SECONDS}s"; return 1; }
     sleep 1
   fi
 
@@ -399,7 +399,7 @@ print_status() {
 
 answered_job_dir() {
   printf '%s' "$1" | grep -Eq '^[0-9]{14}-[0-9]+-[0-9a-f]{8}$' || { echo "invalid job id: $1" >&2; exit 2; }
-  [ -d "$JOBS_DIR/$1" ] || { echo "job inconnu: $1" >&2; exit 2; }
+  [ -d "$JOBS_DIR/$1" ] || { echo "unknown job: $1" >&2; exit 2; }
   printf '%s' "$JOBS_DIR/$1"
 }
 
@@ -408,17 +408,17 @@ store_answer() {
   cat > "$job_dir/answer.tmp"
   if [ -z "$(head -n 1 "$job_dir/answer.tmp" | tr -d '[:space:]')" ]; then
     rm -f "$job_dir/answer.tmp"
-    echo "réponse vide ou sans résumé en première ligne" >&2
+    echo "empty answer or no summary on the first line" >&2
     exit 2
   fi
   mv "$job_dir/answer.tmp" "$job_dir/answer"
-  [ -f "$PUSH_DEVICE_PATH" ] && [ -f "$PLUGIN_DIR/notify-hook.mjs" ] || { echo "réponse gardée, pas de notification : aucun iPhone enregistré" >&2; return 0; }
-  pushed="$(node "$PLUGIN_DIR/notify-hook.mjs" answer "$1" 2>&1)" || echo "réponse gardée, notification non envoyée : $pushed" >&2
+  [ -f "$PUSH_DEVICE_PATH" ] && [ -f "$PLUGIN_DIR/notify-hook.mjs" ] || { echo "answer kept, no notification: no iPhone registered" >&2; return 0; }
+  pushed="$(node "$PLUGIN_DIR/notify-hook.mjs" answer "$1" 2>&1)" || echo "answer kept, notification not sent: $pushed" >&2
 }
 
 print_answer() {
   job_dir="$(answered_job_dir "$1")" || exit 2
-  [ -f "$job_dir/answer" ] || { echo "pas de réponse pour $1" >&2; exit 2; }
+  [ -f "$job_dir/answer" ] || { echo "no answer for $1" >&2; exit 2; }
   cat "$job_dir/answer"
 }
 
@@ -430,7 +430,7 @@ id = "heraldr"
 name = "Heraldr"
 version = "0.1.0"
 min_herdr_version = "0.9.3"
-description = "Push Heraldr quand un agent -main attend une réponse"
+description = "Heraldr push when a -main agent is waiting for an answer"
 platforms = ["macos"]
 
 [[events]]
@@ -462,7 +462,7 @@ store_lexicon() {
   cat > "$temporary"
   if ! plutil -type version -expect integer "$temporary" > /dev/null 2>&1; then
     rm -f "$temporary"
-    echo "lexique illisible" >&2
+    echo "unreadable lexicon" >&2
     exit 2
   fi
   mv "$temporary" "$LEXICON_PATH" || { rm -f "$temporary"; exit 1; }
@@ -471,7 +471,7 @@ store_lexicon() {
 reject_journal() {
   rm -f "$incoming" "$entry" "$fresh"
   release_lock "$JOURNAL_LOCK"
-  echo "journal illisible" >&2
+  echo "unreadable journal" >&2
   exit 2
 }
 
@@ -490,7 +490,7 @@ append_journal() {
   attempts=0
   until acquire_lock "$JOURNAL_LOCK"; do
     attempts=$((attempts + 1))
-    [ $attempts -lt 50 ] || { rm -f "$incoming"; echo "journal occupé" >&2; exit 1; }
+    [ $attempts -lt 50 ] || { rm -f "$incoming"; echo "journal busy" >&2; exit 1; }
     sleep 0.2
   done
   [ -s "$incoming" ] || reject_journal

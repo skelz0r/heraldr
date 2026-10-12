@@ -9,11 +9,11 @@ struct LexiconView: View {
         Group {
             if lexicon.terms.isEmpty {
                 ContentUnavailableView {
-                    Label("Aucun terme", systemImage: "text.badge.checkmark")
+                    Label("No terms", systemImage: "text.badge.checkmark")
                 } description: {
-                    Text("Corrige un mot mal entendu dans l'aperçu d'une dictée : le terme s'ajoutera ici à l'envoi, avec ce qui avait été entendu.")
+                    Text("Fix a misheard word in a dictation preview: the term is added here when you send, with what was heard.")
                 } actions: {
-                    Button("Ajouter un terme") { editing = TermDraft() }
+                    Button("Add a term") { editing = TermDraft() }
                 }
             } else {
                 List {
@@ -26,23 +26,23 @@ struct LexiconView: View {
                             }
                             .tint(.primary)
                             .swipeActions {
-                                Button("Supprimer", systemImage: "trash", role: .destructive) {
+                                Button("Delete", systemImage: "trash", role: .destructive) {
                                     lexicon.forget(term.id)
                                 }
                             }
                         }
                     } footer: {
                         Text(
-                            "Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.\n\n\(backupStatus)"
+                            "Most recent first. A variant typed here, or one of several words, is replaced by its term in every dictation; a learned single-word variant is only hinted to the cleanup.\n\n\(backupStatus)"
                         )
                     }
                 }
             }
         }
-        .navigationTitle("Lexique de dictée")
+        .navigationTitle("Dictation lexicon")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Ajouter un terme", systemImage: "plus") { editing = TermDraft() }
+                Button("Add a term", systemImage: "plus") { editing = TermDraft() }
                     .accessibilityIdentifier("lexicon.add")
             }
         }
@@ -56,11 +56,11 @@ struct LexiconView: View {
     private var backupStatus: String {
         switch backup {
         case .restorePending:
-            "Le lexique sauvegardé sur le Mac sera repris à la prochaine connexion."
+            "The lexicon backed up on the Mac will be restored at the next connection."
         case .changesPending:
-            "Pas encore sauvegardé sur le Mac : ce sera fait à la prochaine connexion."
+            "Not backed up on the Mac yet: it will be at the next connection."
         case .savedOnMac(let date):
-            "Sauvegardé sur le Mac \(date.formatted(.relative(presentation: .named)))."
+            "Backed up on the Mac \(date.formatted(.relative(presentation: .named)))."
         }
     }
 
@@ -115,31 +115,31 @@ private struct TermForm: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Terme") {
-                    TextField("Terme", text: $draft.text)
+                Section("Term") {
+                    TextField("Term", text: $draft.text)
                 }
                 Section {
                     ForEach($draft.variants) { $variant in
-                        TextField("Entendu", text: $variant.heard)
+                        TextField("Heard", text: $variant.heard)
                     }
                     .onDelete { draft.variants.remove(atOffsets: $0) }
-                    Button("Ajouter une variante") { draft.variants.append(.init(heard: "")) }
+                    Button("Add a variant") { draft.variants.append(.init(heard: "")) }
                 } header: {
-                    Text("Variantes entendues")
+                    Text("Heard variants")
                 } footer: {
-                    Text("De 1 à \(DictationLexicon.maxWords) mots pour le terme et pour chaque variante, chacune différente du terme et des autres.")
+                    Text("1 to \(DictationLexicon.maxWords) words for the term and each variant, each one different from the term and the others.")
                 }
             }
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
-            .navigationTitle(draft.original == nil ? "Nouveau terme" : "Modifier le terme")
+            .navigationTitle(draft.original == nil ? "New term" : "Edit term")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuler", systemImage: "xmark", role: .cancel) { dismiss() }
+                    Button("Cancel", systemImage: "xmark", role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Enregistrer", systemImage: "checkmark", role: .confirm) {
+                    Button("Save", systemImage: "checkmark", role: .confirm) {
                         if save(draft.text, draft.heard) { dismiss() }
                     }
                     .disabled(!isValid)

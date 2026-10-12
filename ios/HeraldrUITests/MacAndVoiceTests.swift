@@ -8,37 +8,37 @@ final class MacAndVoiceTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testMenuDuMacPuisOublier() {
+    func testMacMenuThenForget() {
         let app = launch("demo")
         let mac = element("home.mac", in: app)
         waitFor(mac)
-        XCTAssertTrue(mac.label.contains("moi@192.168.1.20"), mac.label)
+        XCTAssertTrue(mac.label.contains("me@192.168.1.20"), mac.label)
         mac.tap()
-        waitFor(app.buttons["Rafraîchir"])
-        XCTAssertTrue(app.buttons["Oublier ce Mac"].exists)
-        capture("menu-mac", in: app)
+        waitFor(app.buttons["Refresh"])
+        XCTAssertTrue(app.buttons["Forget this Mac"].exists)
+        capture("mac-menu", in: app)
 
-        app.buttons["Oublier ce Mac"].tap()
-        waitFor(app.buttons["Oublier et réappairer"])
-        XCTAssertTrue(app.staticTexts["La clé de cet iPhone restera autorisée sur le Mac tant que tu ne la retires pas de ~/.ssh/authorized_keys."].exists)
-        capture("oublier-mac", in: app)
-        app.buttons["Oublier et réappairer"].tap()
+        app.buttons["Forget this Mac"].tap()
+        waitFor(app.buttons["Forget and pair again"])
+        XCTAssertTrue(app.staticTexts["This iPhone's key stays authorized on the Mac until you remove it from ~/.ssh/authorized_keys."].exists)
+        capture("forget-mac", in: app)
+        app.buttons["Forget and pair again"].tap()
 
         waitFor(element("pairing.paste", in: app))
     }
 
-    func testEcranDeDictee() {
+    func testDictationScreen() {
         let app = launch("demo")
         element("home.voice", in: app).tap()
         let allow = springboard.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Autoriser", "Allow", "OK"])).firstMatch
         for _ in 0..<2 where allow.waitForExistence(timeout: 3) {
             allow.tap()
         }
-        waitFor(app.buttons["Arrêter la dictée"])
-        XCTAssertTrue(app.buttons["Annuler"].exists)
-        capture("dictee", in: app)
+        waitFor(app.buttons["Stop dictation"])
+        XCTAssertTrue(app.buttons["Cancel"].exists)
+        capture("dictation", in: app)
 
-        app.buttons["Annuler"].tap()
+        app.buttons["Cancel"].tap()
         waitFor(element("home.voice", in: app))
     }
 }

@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
-        model?.notice = AppModel.Notice(kind: .failed, title: "Notifications indisponibles", detail: error.localizedDescription)
+        model?.notice = AppModel.Notice(kind: .failed, title: "Notifications unavailable", detail: error.localizedDescription)
     }
 
     nonisolated func userNotificationCenter(

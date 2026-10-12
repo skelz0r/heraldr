@@ -94,7 +94,7 @@ struct HerdrError: Error, LocalizedError, Decodable {
     let code: String
     let message: String
 
-    var errorDescription: String? { "herdr : \(message) (\(code))" }
+    var errorDescription: String? { "herdr: \(message) (\(code))" }
 }
 
 private struct HerdrEnvelope<Payload: Decodable>: Decodable {
@@ -157,7 +157,7 @@ struct HerdrClient: Sendable {
         let envelope = try JSONDecoder().decode(HerdrEnvelope<Result>.self, from: response)
         if let error = envelope.error { throw error }
         guard let result = envelope.result else {
-            throw HerdrError(code: "empty_response", message: "réponse vide pour \(method)")
+            throw HerdrError(code: "empty_response", message: "empty response for \(method)")
         }
         return result
     }

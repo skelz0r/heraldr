@@ -59,7 +59,7 @@ function showQuestion(question) {
     `│ ${question}`,
     "",
     "❯ 1. Postgres",
-    "     Robuste et déjà en place.",
+    "     Robust and already in place.",
     "  2. SQLite",
     "  3. Type something.",
     "─".repeat(80),
@@ -80,7 +80,7 @@ function lastToolAlreadyRun() {
   writeFileSync(
     join(world, "home", ".claude", "projects", "-Users-me-work-acme", `${sessionId}.jsonl`),
     [
-      { type: "user", message: { content: "fais X" } },
+      { type: "user", message: { content: "do X" } },
       { type: "assistant", message: { content: [toolUse] } },
       { type: "user", message: { content: [toolResult] } },
     ]
@@ -189,50 +189,50 @@ esac
   writeJson(join(home, ".local", "state", "heraldr", "push-device.json"), {
     token: "ab".repeat(32),
     env: "sandbox",
-    topic: "com.skelz0r.heraldr.dev",
+    topic: "com.example.heraldr.dev",
     team: "ABCDE12345",
   });
 });
 
-describe("notification d'un agent -main qui pose une question", () => {
-  it("prévient l'iPhone avec le workspace, l'agent, la question et le lien de la session Remote Control", async () => {
+describe("notification of a -main agent asking a question", () => {
+  it("alerts the iPhone with the workspace, the agent, the question and the Remote Control session link", async () => {
     setAgent();
-    showQuestion("Quelle base de données utiliser ?");
+    showQuestion("Which database should we use?");
 
     const { code, stderr } = await runHook("blocked");
 
     assert.equal(code, 0, stderr);
     assert.equal(pushes.length, 1);
     const [push] = pushes;
-    assert.equal(push.headers["apns-topic"], "com.skelz0r.heraldr.dev");
+    assert.equal(push.headers["apns-topic"], "com.example.heraldr.dev");
     assert.match(push.headers.authorization, /^bearer /);
     assert.deepEqual(push.body.aps.alert, {
       title: "acme_app",
       subtitle: "acme_app-main",
-      body: "Quelle base de données utiliser ?",
+      body: "Which database should we use?",
     });
     assert.equal(push.body.session_url, "https://claude.ai/code/session_01ABCDEFGHIJKLMNOPQRSTUV");
     assert.equal(push.body.workspace_id, "w1");
     assert.equal(push.body.agent, "acme_app-main");
   });
 
-  it("lit la question à l'écran, le transcript n'ayant encore que l'outil lancé avant elle", async () => {
+  it("reads the question on screen, the transcript only holding the tool run before it", async () => {
     setAgent();
     lastToolAlreadyRun();
-    showQuestion("On garde le cache ou on le vide ?");
+    showQuestion("Do we keep the cache or clear it?");
 
     await runHook("blocked");
 
-    assert.equal(pushes[0].body.aps.alert.body, "On garde le cache ou on le vide ?");
+    assert.equal(pushes[0].body.aps.alert.body, "Do we keep the cache or clear it?");
   });
 
-  it("décrit la commande qu'un Claude demande la permission de lancer", async () => {
+  it("describes the command a Claude asks permission to run", async () => {
     setAgent();
     lastToolAlreadyRun();
     showDialog(
       " Bash command",
       " Tip: auto mode handles these prompts for you",
-      " Supprime les fichiers temporaires",
+      " Delete the temporary files",
       "╌".repeat(80),
       " rm -rf tmp/cache",
       "╌".repeat(80),
@@ -243,26 +243,26 @@ describe("notification d'un agent -main qui pose une question", () => {
 
     await runHook("blocked");
 
-    assert.equal(pushes[0].body.aps.alert.body, "Veut lancer : Supprime les fichiers temporaires");
+    assert.equal(pushes[0].body.aps.alert.body, "Wants to run: Delete the temporary files");
   });
 
-  it("ne montre pas la commande brute quand elle n'a pas de description", async () => {
+  it("does not show the raw command when it has no description", async () => {
     setAgent();
     showDialog(" Bash command", "╌".repeat(80), " rm -rf tmp/cache", "╌".repeat(80), " Do you want to proceed?", " ❯ 1. Yes", "   2. No");
 
     await runHook("blocked");
 
-    assert.equal(pushes[0].body.aps.alert.body, "Veut lancer une commande");
+    assert.equal(pushes[0].body.aps.alert.body, "Wants to run a command");
   });
 
   for (const [title, question, body] of [
-    ["Edit file", "Do you want to make this edit to AppModel.swift?", "Veut modifier : AppModel.swift"],
-    ["Overwrite file", "Do you want to overwrite spec.md?", "Veut modifier : spec.md"],
-    ["Create file", "Do you want to create notes.md?", "Veut créer : notes.md"],
+    ["Edit file", "Do you want to make this edit to AppModel.swift?", "Wants to edit: AppModel.swift"],
+    ["Overwrite file", "Do you want to overwrite spec.md?", "Wants to edit: spec.md"],
+    ["Create file", "Do you want to create notes.md?", "Wants to create: notes.md"],
   ]) {
-    it(`nomme le fichier visé par une permission « ${title} »`, async () => {
+    it(`names the file targeted by a "${title}" permission`, async () => {
       setAgent();
-      showDialog(` ${title}`, " docs/notes.md", "╌".repeat(80), "  1 +bonjour", "╌".repeat(80), ` ${question}`, " ❯ 1. Yes", "   2. No");
+      showDialog(` ${title}`, " docs/notes.md", "╌".repeat(80), "  1 +hello", "╌".repeat(80), ` ${question}`, " ❯ 1. Yes", "   2. No");
 
       await runHook("blocked");
 
@@ -270,16 +270,16 @@ describe("notification d'un agent -main qui pose une question", () => {
     });
   }
 
-  it("se rabat sur le titre de la demande pour un autre outil", async () => {
+  it("falls back on the request title for another tool", async () => {
     setAgent();
     showDialog(" Fetch", " https://example.com", " Do you want to allow Claude to fetch this content?", " ❯ 1. Yes", "   2. No");
 
     await runHook("blocked");
 
-    assert.equal(pushes[0].body.aps.alert.body, "Demande d'autorisation : Fetch");
+    assert.equal(pushes[0].body.aps.alert.body, "Permission request: Fetch");
   });
 
-  it("ignore les agents qui ne sont pas des -main, comme les Claude des worktrees", async () => {
+  it("ignores agents that are not -main, like worktree Claudes", async () => {
     setAgent({ name: null });
 
     await runHook("blocked");
@@ -287,7 +287,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(pushes.length, 0);
   });
 
-  it("ne prévient pas si l'agent n'est plus bloqué à la fin du debounce", async () => {
+  it("does not alert if the agent is no longer blocked at the end of the debounce", async () => {
     setAgent();
     const running = runHook("blocked");
     await sleep(debounceMs / 3);
@@ -298,7 +298,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(pushes.length, 0);
   });
 
-  it("ne prévient qu'une fois tant que l'agent reste bloqué", async () => {
+  it("alerts only once while the agent stays blocked", async () => {
     setAgent();
 
     await runHook("blocked");
@@ -307,7 +307,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(pushes.length, 1);
   });
 
-  it("prévient de nouveau pour la question suivante, une fois l'agent reparti", async () => {
+  it("alerts again for the next question, once the agent resumed", async () => {
     setAgent();
     await runHook("blocked");
     setAgent({ status: "working" });
@@ -319,7 +319,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(pushes.length, 2);
   });
 
-  it("ne fait rien tant que l'iPhone n'a pas envoyé son token", async () => {
+  it("does nothing until the iPhone has sent its token", async () => {
     setAgent();
     rmSync(join(world, "home", ".local", "state", "heraldr", "push-device.json"));
 
@@ -328,7 +328,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(pushes.length, 0);
   });
 
-  it("oublie le token qu'APNs déclare mort", async () => {
+  it("forgets the token APNs declares dead", async () => {
     setAgent();
     apnsAnswer = { status: 410, body: '{"reason":"Unregistered"}' };
 
@@ -338,15 +338,15 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(existsSync(join(world, "home", ".local", "state", "heraldr", "push-device.json")), false);
   });
 
-  it("se rabat sur un texte générique quand la question est introuvable", async () => {
+  it("falls back on a generic text when the question cannot be found", async () => {
     setAgent();
 
     await runHook("blocked");
 
-    assert.equal(pushes[0].body.aps.alert.body, "Attend une réponse");
+    assert.equal(pushes[0].body.aps.alert.body, "Waiting for an answer");
   });
 
-  it("n'envoie pas de lien quand la session Remote Control est introuvable", async () => {
+  it("sends no link when the Remote Control session cannot be found", async () => {
     setAgent();
     rmSync(join(world, "home", ".claude", "sessions"), { recursive: true });
 
@@ -355,7 +355,7 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(pushes[0].body.session_url, undefined);
   });
 
-  it("ne prévient pas pour un agent disparu", async () => {
+  it("does not alert for a vanished agent", async () => {
     removeAgent();
 
     await runHook("blocked");
@@ -364,11 +364,11 @@ describe("notification d'un agent -main qui pose une question", () => {
   });
 });
 
-describe("réponse d'un -main à une simple question", () => {
-  const answer = "Le cache est vidé à chaque déploiement.\n\n## Détail\n\nLe job `purge` tourne après `deploy`.\n";
+describe("answer of a -main to a simple question", () => {
+  const answer = "The cache is cleared on every deploy.\n\n## Details\n\nThe `purge` job runs after `deploy`.\n";
 
-  it("garde la réponse sur le Mac et pousse son résumé à l'iPhone, rattaché à l'envoi", async () => {
-    const jobId = await sentQuestion("Comment marche le cache ?");
+  it("keeps the answer on the Mac and pushes its summary to the iPhone, linked to the send", async () => {
+    const jobId = await sentQuestion("How does the cache work?");
 
     const { code, stderr } = await runDispatch(["answer", jobId], answer);
 
@@ -377,8 +377,8 @@ describe("réponse d'un -main à une simple question", () => {
     assert.equal(pushes.length, 1);
     assert.deepEqual(pushes[0].body.aps.alert, {
       title: "acme_app",
-      subtitle: "Réponse",
-      body: "Le cache est vidé à chaque déploiement.",
+      subtitle: "Answer",
+      body: "The cache is cleared on every deploy.",
     });
     assert.equal(pushes[0].body.kind, "answer");
     assert.equal(pushes[0].body.job_id, jobId);
@@ -387,8 +387,8 @@ describe("réponse d'un -main à une simple question", () => {
     assert.equal((await runDispatch(["read-answer", jobId])).stdout, answer);
   });
 
-  it("signale l'envoi à l'app dans status une fois la réponse remise", async () => {
-    const jobId = await sentQuestion("Comment marche le cache ?");
+  it("flags the send to the app in status once the answer is handed in", async () => {
+    const jobId = await sentQuestion("How does the cache work?");
 
     await runDispatch(["answer", jobId], answer);
 
@@ -396,14 +396,14 @@ describe("réponse d'un -main à une simple question", () => {
     assert.equal(line.split("\t")[5], "answered");
   });
 
-  it("donne à Claude l'id de l'envoi à rappeler pour répondre", async () => {
-    const jobId = await sentQuestion("Comment marche le cache ?\n\nConsignes :\n- answer {{job_id}}");
+  it("gives Claude the id of the send to quote when answering", async () => {
+    const jobId = await sentQuestion("How does the cache work?\n\nInstructions:\n- answer {{job_id}}");
 
     assert.match(readFileSync(join(stateDir(), "jobs", jobId, "prompt"), "utf8"), new RegExp(`- answer ${jobId}$`, "m"));
   });
 
-  it("garde la réponse sans notification tant que l'iPhone n'a pas envoyé son token", async () => {
-    const jobId = await sentQuestion("Comment marche le cache ?");
+  it("keeps the answer without notification until the iPhone has sent its token", async () => {
+    const jobId = await sentQuestion("How does the cache work?");
     rmSync(join(stateDir(), "push-device.json"));
 
     const { code } = await runDispatch(["answer", jobId], answer);
@@ -413,22 +413,22 @@ describe("réponse d'un -main à une simple question", () => {
     assert.equal((await runDispatch(["read-answer", jobId])).stdout, answer);
   });
 
-  it("garde la réponse et oublie le token qu'APNs déclare mort", async () => {
-    const jobId = await sentQuestion("Comment marche le cache ?");
+  it("keeps the answer and forgets the token APNs declares dead", async () => {
+    const jobId = await sentQuestion("How does the cache work?");
     apnsAnswer = { status: 410, body: '{"reason":"Unregistered"}' };
 
     const { code, stderr } = await runDispatch(["answer", jobId], answer);
 
     assert.equal(code, 0);
-    assert.match(stderr, /notification non envoyée/);
+    assert.match(stderr, /notification not sent/);
     assert.equal(existsSync(join(stateDir(), "push-device.json")), false);
     assert.equal((await runDispatch(["read-answer", jobId])).stdout, answer);
   });
 
-  it("refuse une réponse sans résumé ou pour un envoi inconnu", async () => {
-    const jobId = await sentQuestion("Comment marche le cache ?");
+  it("refuses an answer without summary or for an unknown send", async () => {
+    const jobId = await sentQuestion("How does the cache work?");
 
-    assert.equal((await runDispatch(["answer", jobId], "\nRéponse sans résumé")).code, 2);
+    assert.equal((await runDispatch(["answer", jobId], "\nAnswer without summary")).code, 2);
     assert.equal((await runDispatch(["answer", "20261010120000-1-deadbeef"], answer)).code, 2);
     assert.equal((await runDispatch(["answer", "../../etc"], answer)).code, 2);
     assert.equal(pushes.length, 0);

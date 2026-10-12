@@ -47,11 +47,11 @@ extension AgentStatus {
 
     var label: String {
         switch self {
-        case .idle: "Inactif"
-        case .working: "Travaille"
-        case .blocked: "Attend une réponse"
-        case .done: "Terminé"
-        case .unknown: "Non détecté"
+        case .idle: "Idle"
+        case .working: "Working"
+        case .blocked: "Waiting for an answer"
+        case .done: "Done"
+        case .unknown: "Not detected"
         }
     }
 }
@@ -67,10 +67,10 @@ extension SentRequest.Status {
 
     var label: String {
         switch self {
-        case .sending: "Envoi…"
-        case .queued: "En file"
-        case .sent: "Envoyé"
-        case .failed: "Échec"
+        case .sending: "Sending…"
+        case .queued: "Queued"
+        case .sent: "Sent"
+        case .failed: "Failed"
         }
     }
 }
@@ -78,32 +78,32 @@ extension SentRequest.Status {
 extension AppModel.TargetState {
     var headline: String {
         switch self {
-        case .missing: "Pas encore d'agent"
-        case .ambiguousMain: "Plusieurs Claude -main"
-        case .tabWithoutClaude: "Plus de Claude dans ce tab"
-        case .sending: "Envoi en cours…"
-        case .agent(.idle, _), .agent(.done, _): "Prêt"
-        case .agent(.working, true): "Travaille sur ta demande"
-        case .agent(.working, false): "Travaille"
-        case .agent(.blocked, _): "Te pose une question : réponds dans Claude mobile"
-        case .agent(.unknown, _): "État inconnu"
+        case .missing: "No agent yet"
+        case .ambiguousMain: "Several -main Claudes"
+        case .tabWithoutClaude: "No Claude left in this tab"
+        case .sending: "Sending…"
+        case .agent(.idle, _), .agent(.done, _): "Ready"
+        case .agent(.working, true): "Working on your request"
+        case .agent(.working, false): "Working"
+        case .agent(.blocked, _): "Asking you a question: answer in Claude mobile"
+        case .agent(.unknown, _): "Unknown state"
         }
     }
 
     func nextSend(to target: Target, clearingContext: Bool = false) -> String {
         switch self {
-        case .missing: "Un envoi lancera Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label))."
+        case .missing: "A send will start Claude in tab 1, named \(AgentName.forWorkspace(label: target.workspace.label))."
         case .ambiguousMain(let names):
-            "Un envoi échouera : garde un seul de \(names.joined(separator: ", ")), ou nomme-le \(AgentName.forWorkspace(label: target.workspace.label))."
-        case .tabWithoutClaude: "Un envoi échouera : relance Claude dans ce tab sur le Mac."
-        case .sending: "Un nouvel envoi partira juste après."
+            "A send will fail: keep only one of \(names.joined(separator: ", ")), or name it \(AgentName.forWorkspace(label: target.workspace.label))."
+        case .tabWithoutClaude: "A send will fail: restart Claude in this tab on the Mac."
+        case .sending: "A new send will go out right after."
         case .agent(.idle, _), .agent(.done, _):
             target.tab == nil || clearingContext
-                ? "Un envoi vide son contexte puis transmet la demande."
-                : "Un envoi transmet la demande telle quelle, sans vider son contexte."
-        case .agent(.working, _): "Un nouvel envoi attendra la fin de son travail."
-        case .agent(.blocked, _): "Un nouvel envoi attendra que tu lui aies répondu."
-        case .agent(.unknown, _): "Un nouvel envoi attendra qu'il soit prêt."
+                ? "A send clears its context, then hands over the request."
+                : "A send hands over the request as is, keeping its context."
+        case .agent(.working, _): "A new send will wait until it finishes its work."
+        case .agent(.blocked, _): "A new send will wait until you have answered it."
+        case .agent(.unknown, _): "A new send will wait until it is ready."
         }
     }
 }

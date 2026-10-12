@@ -38,7 +38,7 @@ private func world(
         workspaces: [
             .init(id: "wA", number: 1, label: "~"),
             .init(id: "wS", number: 2, label: "Acme"),
-            .init(id: "wM", number: 3, label: "Vidéo studio"),
+            .init(id: "wM", number: 3, label: "Naïve search"),
         ],
         tabs: [
             .init(id: "wA:t1", workspaceId: "wA", number: 1, label: "claude"),
@@ -57,68 +57,68 @@ private func tabClaude(_ status: String) -> FakeMacScenario.Agent {
 }
 
 @MainActor
-@Suite("Notice affichée après un envoi")
+@Suite("Notice shown after a send")
 struct SendNoticeTests {
-    @Test("vers un main prêt : le Mac vide le contexte puis transmet")
+    @Test("to a ready main: the Mac clears the context then hands over")
     func readyMain() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
 
-        try await session.model.send("Corrige le bug", to: Target(session.workspace("wS")))
+        try await session.model.send("Fix the bug", to: Target(session.workspace("wS")))
 
         #expect(session.model.notice?.kind == .sent)
-        #expect(session.model.notice?.title == "Envoyé à Acme")
-        #expect(session.model.notice?.detail == "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
+        #expect(session.model.notice?.title == "Sent to Acme")
+        #expect(session.model.notice?.detail == "The Mac clears Claude's context, then hands it the request.")
     }
 
-    @Test("sans agent : le Mac lance Claude dans le tab 1 sous le nom de l'agent")
+    @Test("without agent: the Mac starts Claude in tab 1 under the agent name")
     func missingAgent() async throws {
         let session = await Session(world())
 
-        try await session.model.send("Ajoute un sous-titre", to: Target(session.workspace("wM")))
+        try await session.model.send("Add a subtitle", to: Target(session.workspace("wM")))
 
-        #expect(session.model.notice?.title == "Envoyé à Vidéo studio")
-        #expect(session.model.notice?.detail == "Le Mac lance Claude dans le tab 1, nommé video-studio-main, puis lui transmet la demande.")
+        #expect(session.model.notice?.title == "Sent to Naïve search")
+        #expect(session.model.notice?.detail == "The Mac starts Claude in tab 1, named naive-search-main, then hands it the request.")
     }
 
-    @Test("vers un workspace renommé : le -main existant reçoit la demande, aucun autre n'est lancé")
+    @Test("to a renamed workspace: the existing -main gets the request, no other one is started")
     func renamedWorkspace() async throws {
         let session = await Session(world(agents: [main("herdr-ios-companion-main", in: "wM", "idle")]))
 
-        try await session.model.send("Ajoute un sous-titre", to: Target(session.workspace("wM")))
+        try await session.model.send("Add a subtitle", to: Target(session.workspace("wM")))
 
-        #expect(session.model.notice?.detail == "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
+        #expect(session.model.notice?.detail == "The Mac clears Claude's context, then hands it the request.")
         #expect(await session.mac.scenario.jobs?.map(\.agent) == ["herdr-ios-companion-main"])
     }
 
-    @Test("vers un agent qui travaille, qui est bloqué ou qui a déjà un envoi en file : en file")
+    @Test("to an agent that works, is blocked or already has a queued send: queued")
     func busyAgent() async throws {
         let session = await Session(
             world(
                 agents: [main("acme-main", in: "wS", "blocked"), main("home-main", in: "wA", "idle")],
                 jobs: [.init(id: "j1", workspaceId: "wA", agent: "home-main", state: "queued")]))
 
-        try await session.model.send("Après ta question", to: Target(session.workspace("wS")))
+        try await session.model.send("After your question", to: Target(session.workspace("wS")))
         #expect(session.model.notice?.kind == .queued)
-        #expect(session.model.notice?.title == "En file pour Acme")
-        #expect(session.model.notice?.detail == "Claude est occupé : la demande partira dès qu'il aura fini.")
+        #expect(session.model.notice?.title == "Queued for Acme")
+        #expect(session.model.notice?.detail == "Claude is busy: the request goes out as soon as it is done.")
 
-        try await session.model.send("Après l'envoi en cours", to: Target(session.workspace("wA")))
-        #expect(session.model.notice?.title == "En file pour ~")
+        try await session.model.send("After the pending send", to: Target(session.workspace("wA")))
+        #expect(session.model.notice?.title == "Queued for ~")
     }
 
-    @Test("vers un tab prêt : telle quelle sans /clear, contexte vidé avec /clear")
+    @Test("to a ready tab: as is without /clear, context cleared with /clear")
     func readyTab() async throws {
         let session = await Session(world(agents: [tabClaude("done")]))
         let target = Target(try session.workspace("wS"), tab: try session.tab("wS:t2"))
 
-        try await session.model.send("Agrandis le bouton", to: target)
-        #expect(session.model.notice?.title == "Envoyé à Acme — login-2fa")
-        #expect(session.model.notice?.detail == "Le Mac transmet la demande telle quelle à Claude, qui garde son contexte.")
+        try await session.model.send("Make the button bigger", to: target)
+        #expect(session.model.notice?.title == "Sent to Acme — login-2fa")
+        #expect(session.model.notice?.detail == "The Mac hands the request as is to Claude, which keeps its context.")
 
         await session.mac.update { $0.agents?[0].status = "idle" }
         await session.model.refresh()
-        try await session.model.send("Repars de zéro", to: target, clearingContext: true)
-        #expect(session.model.notice?.detail == "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
+        try await session.model.send("Start over", to: target, clearingContext: true)
+        #expect(session.model.notice?.detail == "The Mac clears Claude's context, then hands it the request.")
         #expect(
             await session.mac.commands.filter { $0.hasPrefix("enqueue-pane") } == [
                 "enqueue-pane wS wS:p9 keep", "enqueue-pane wS wS:p9 clear",
@@ -127,67 +127,67 @@ struct SendNoticeTests {
 }
 
 @MainActor
-@Suite("Échec d'un envoi")
+@Suite("Failed send")
 struct SendFailureTests {
-    @Test("un envoi refusé par le Mac remonte son erreur à l'aperçu et passe en échec dans l'historique")
+    @Test("a send refused by the Mac reports its error to the preview and is marked failed in the history")
     func refusedByMac() async throws {
         let session = await Session(world(failures: ["enqueue": "2:invalid agent name: x"]))
 
         await #expect(throws: MacLinkError.self) {
-            try await session.model.send("Demande", to: Target(try session.workspace("wS")))
+            try await session.model.send("Request", to: Target(try session.workspace("wS")))
         }
 
         let entry = try #require(session.model.history.entries.first)
         #expect(entry.status == .failed)
-        #expect(entry.error == "Commande refusée par le Mac (2) : invalid agent name: x")
+        #expect(entry.error == "Command refused by the Mac (2): invalid agent name: x")
     }
 
-    @Test("plusieurs -main dont aucun nommé d'après le label : la cible le dit et le Mac refuse l'envoi")
+    @Test("several -main, none named after the label: the target says so and the Mac refuses the send")
     func severalMains() async throws {
         let session = await Session(
             world(agents: [main("w---acme-main", in: "wS", "idle"), main("acme_api-main", in: "wS", "idle")]))
         let target = Target(try session.workspace("wS"))
 
         #expect(session.model.targetState(for: target) == .ambiguousMain(["w---acme-main", "acme_api-main"]))
-        await #expect(throws: MacLinkError.self) { try await session.model.send("Demande", to: target) }
+        await #expect(throws: MacLinkError.self) { try await session.model.send("Request", to: target) }
 
         #expect(
             session.model.history.entries.first?.error
-                == "Commande refusée par le Mac (2) : plusieurs agents -main dans wS : w---acme-main acme_api-main")
+                == "Command refused by the Mac (2): several -main agents in wS: w---acme-main acme_api-main")
         #expect(await session.mac.scenario.jobs?.isEmpty ?? true)
     }
 
-    @Test("un envoi qui échoue sur le Mac avant le rafraîchissement suivant est annoncé")
+    @Test("a send that fails on the Mac before the next refresh is announced")
     func failsBeforeNextRefresh() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wM", "idle")]))
 
-        try await session.model.send("Mauvaise cible", to: Target(session.workspace("wS")))
+        try await session.model.send("Wrong target", to: Target(session.workspace("wS")))
 
         #expect(session.model.notice?.kind == .failed)
-        #expect(session.model.notice?.title == "Échec de l'envoi vers Acme")
-        #expect(session.model.notice?.detail == "l'agent acme-main appartient au workspace wM")
+        #expect(session.model.notice?.title == "Failed to send to Acme")
+        #expect(session.model.notice?.detail == "agent acme-main belongs to workspace wM")
     }
 
-    @Test("un envoi vu en échec par un autre rafraîchissement avant que le Mac ait rendu son id est quand même annoncé")
+    @Test("a send seen failed by another refresh before the Mac returned its id is still announced")
     func failureSeenBeforeJobId() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wM", "idle")]))
         await session.mac.hold("enqueue:done")
         let acme = try session.workspace("wS")
-        let sending = Task { try await session.model.send("Mauvaise cible", to: Target(acme)) }
+        let sending = Task { try await session.model.send("Wrong target", to: Target(acme)) }
         while !(await session.mac.isWaiting(at: "enqueue:done")) { await Task.yield() }
         await session.model.refresh()
         await session.mac.release("enqueue:done")
 
         try await sending.value
 
-        #expect(session.model.notice?.title == "Échec de l'envoi vers Acme")
-        #expect(session.model.notice?.detail == "l'agent acme-main appartient au workspace wM")
+        #expect(session.model.notice?.title == "Failed to send to Acme")
+        #expect(session.model.notice?.detail == "agent acme-main belongs to workspace wM")
     }
 
-    @Test("deux envois suivis qui échouent entre deux rafraîchissements sont annoncés tous les deux")
+    @Test("two tracked sends that fail between two refreshes are both announced")
     func twoFailures() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wS", "working"), main("home-main", in: "wA", "working")]))
-        try await session.model.send("Premier", to: Target(session.workspace("wS")))
+        try await session.model.send("First", to: Target(session.workspace("wS")))
         try await session.model.send("Second", to: Target(session.workspace("wA")))
         let jobs = await session.mac.scenario.jobs ?? []
 
@@ -196,14 +196,14 @@ struct SendFailureTests {
         }
         await session.model.refresh()
 
-        #expect(session.model.notice?.title == "Échec de 2 envois")
-        #expect(session.model.notice?.detail == "Acme : agent wait: agent_not_found\n~ : agent wait: agent_not_found")
+        #expect(session.model.notice?.title == "2 sends failed")
+        #expect(session.model.notice?.detail == "Acme: agent wait: agent_not_found\n~: agent wait: agent_not_found")
     }
 
-    @Test("un échec déjà annoncé ne l'est plus au rafraîchissement suivant")
+    @Test("a failure already announced is not announced again at the next refresh")
     func announcedOnce() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wM", "idle")]))
-        try await session.model.send("Mauvaise cible", to: Target(session.workspace("wS")))
+        try await session.model.send("Wrong target", to: Target(session.workspace("wS")))
         #expect(session.model.notice?.kind == .failed)
         session.model.notice = nil
 
@@ -214,29 +214,29 @@ struct SendFailureTests {
 }
 
 @MainActor
-@Suite("Captures jointes à un envoi")
+@Suite("Screenshots attached to a send")
 struct SendImagesTests {
-    @Test("les captures sont posées sur le Mac une par une, puis citées par leur chemin dans la demande")
+    @Test("screenshots are stored on the Mac one by one, then cited by their path in the request")
     func imagesUploadedThenCited() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
 
-        try await session.model.send("Le bouton déborde", images: [Data([1]), Data([2])], to: Target(session.workspace("wS")))
+        try await session.model.send("The button overflows", images: [Data([1]), Data([2])], to: Target(session.workspace("wS")))
 
         let commands = await session.mac.commands.filter { $0.hasPrefix("attach") || $0.hasPrefix("enqueue") }
-        #expect(commands == ["attach jpg", "attach jpg", "enqueue wS U3VwZXJEb2N1"])
+        #expect(commands == ["attach jpg", "attach jpg", "enqueue wS QWNtZQ=="])
         let prompt = try #require(await session.mac.prompts.first)
         #expect(
             prompt.contains(
-                "Le bouton déborde\n\nCaptures d'écran jointes, à lire avec Read :\n- /Users/moi/.local/state/heraldr/attachments/capture-101.jpg\n- /Users/moi/.local/state/heraldr/attachments/capture-102.jpg"
+                "The button overflows\n\nAttached screenshots, read them with Read:\n- /Users/me/.local/state/heraldr/attachments/capture-101.jpg\n- /Users/me/.local/state/heraldr/attachments/capture-102.jpg"
             ))
         #expect(session.model.history.entries.first?.attachments?.count == 2)
     }
 
-    @Test("une capture refusée fait échouer l'envoi avant le job, les captures posées restent dans l'historique")
+    @Test("a refused screenshot fails the send before the job, the stored screenshots stay in the history")
     func refusedImage() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
         await session.mac.hold("attach")
-        let sending = Task { try await session.model.send("Deux captures", images: [Data([1]), Data([2])], to: Target(session.workspace("wS"))) }
+        let sending = Task { try await session.model.send("Two screenshots", images: [Data([1]), Data([2])], to: Target(session.workspace("wS"))) }
         while !(await session.mac.isWaiting(at: "attach")) { await Task.yield() }
         await session.mac.release("attach", keepHolding: true)
         while !(await session.mac.isWaiting(at: "attach")) { await Task.yield() }
@@ -247,19 +247,19 @@ struct SendImagesTests {
 
         let entry = try #require(session.model.history.entries.first)
         #expect(entry.status == .failed)
-        #expect(entry.attachments == ["/Users/moi/.local/state/heraldr/attachments/capture-101.jpg"])
+        #expect(entry.attachments == ["/Users/me/.local/state/heraldr/attachments/capture-101.jpg"])
         #expect(await session.mac.prompts.isEmpty)
     }
 }
 
 @MainActor
-@Suite("Rafraîchissement de l'écran")
+@Suite("Screen refresh")
 struct RefreshTests {
-    @Test("un échec de tab.list garde la dernière liste de tabs, le reste de l'écran est mis à jour")
+    @Test("a tab.list failure keeps the last tab list, the rest of the screen is updated")
     func tabListFailureKeepsTabs() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
         await session.mac.update {
-            $0.failures = ["tab.list": "tab.list indisponible"]
+            $0.failures = ["tab.list": "tab.list unavailable"]
             $0.agents?[0].status = "working"
         }
 
@@ -270,22 +270,22 @@ struct RefreshTests {
         #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.working, workingOnOurRequest: false))
     }
 
-    @Test("sans liste de tabs reçue, un échec de tab.list laisse les workspaces s'afficher sans tab")
+    @Test("without a tab list received, a tab.list failure lets the workspaces show without tabs")
     func tabListFailureFirstTime() async throws {
-        let session = await Session(world(failures: ["tab.list": "tab.list indisponible"]))
+        let session = await Session(world(failures: ["tab.list": "tab.list unavailable"]))
 
         #expect(session.model.connection == .online)
         #expect(session.model.workspaces.count == 3)
         #expect(session.model.tabs.isEmpty)
     }
 
-    @Test("un rafraîchissement demandé pendant un autre n'est pas perdu")
+    @Test("a refresh requested during another one is not lost")
     func refreshDuringRefresh() async throws {
         let session = await Session(world())
         await session.mac.hold("status")
         let first = Task { await session.model.refresh() }
         while !(await session.mac.isWaiting(at: "status")) { await Task.yield() }
-        await session.mac.update { $0.workspaces?.append(.init(id: "wN", number: 4, label: "Nouveau")) }
+        await session.mac.update { $0.workspaces?.append(.init(id: "wN", number: 4, label: "New")) }
         await session.model.refresh()
         await session.mac.release("status")
 
@@ -294,11 +294,11 @@ struct RefreshTests {
         #expect(session.model.workspaces.map(\.id).contains("wN"))
     }
 
-    @Test("un agent sans tab_id ni workspace_id n'empêche pas de lire les autres")
+    @Test("an agent without tab_id or workspace_id does not prevent reading the others")
     func agentWithoutTab() async throws {
         let session = await Session(
             world(agents: [
-                .init(name: "orphelin-main", kind: "claude", paneId: nil, workspaceId: nil, tabId: nil, status: "idle"),
+                .init(name: "orphan-main", kind: "claude", paneId: nil, workspaceId: nil, tabId: nil, status: "idle"),
                 main("acme-main", in: "wS", "blocked"),
             ]))
 
@@ -306,7 +306,7 @@ struct RefreshTests {
         #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.blocked, workingOnOurRequest: false))
     }
 
-    @Test("le tab ciblé qui disparaît de herdr rend la cible au main de son workspace")
+    @Test("a targeted tab that disappears from herdr hands the target back to the main of its workspace")
     func targetedTabDisappears() async throws {
         let session = await Session(world(agents: [tabClaude("idle")]))
         session.model.select(try session.workspace("wS"), tab: try session.tab("wS:t2"))
@@ -324,12 +324,12 @@ struct RefreshTests {
 }
 
 @MainActor
-@Suite("Cible qui travaille sur la demande de l'app")
+@Suite("Target working on the app's request")
 struct WorkingOnOurRequestTests {
-    @Test("après un envoi, la cible travaille sur ta demande, même après une relance de l'app")
+    @Test("after a send, the target works on your request, even after the app relaunches")
     func survivesRelaunch() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
-        try await session.model.send("Corrige le bug", to: Target(session.workspace("wS")))
+        try await session.model.send("Fix the bug", to: Target(session.workspace("wS")))
         #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.working, workingOnOurRequest: true))
 
         let relaunched = await session.relaunched()
@@ -338,26 +338,26 @@ struct WorkingOnOurRequestTests {
         #expect(relaunched.targetState(for: acme) == .agent(.working, workingOnOurRequest: true))
     }
 
-    @Test("un envoi en échec ne compte pas comme une demande en cours")
+    @Test("a failed send does not count as a pending request")
     func failedSendDoesNotCount() async throws {
         let session = await Session(
             world(
-                agents: [main("acme-main", in: "wS", "working")], failures: ["enqueue": "refusé"]))
+                agents: [main("acme-main", in: "wS", "working")], failures: ["enqueue": "refused"]))
 
-        _ = try? await session.model.send("Corrige le bug", to: Target(session.workspace("wS")))
+        _ = try? await session.model.send("Fix the bug", to: Target(session.workspace("wS")))
 
         #expect(session.model.targetState(for: try session.workspace("wS")) == .agent(.working, workingOnOurRequest: false))
     }
 }
 
 @MainActor
-@Suite("Renvoi depuis l'historique")
+@Suite("Resend from the history")
 struct ResendTests {
-    @Test("un renvoi repart vers le tab d'origine avec le même choix de /clear et les captures déjà posées")
+    @Test("a resend goes back to the original tab with the same /clear choice and the screenshots already stored")
     func resendToTab() async throws {
         let session = await Session(world(agents: [tabClaude("idle")]))
         try await session.model.send(
-            "Agrandis", images: [Data([1])], to: Target(try session.workspace("wS"), tab: try session.tab("wS:t2")),
+            "Make it bigger", images: [Data([1])], to: Target(try session.workspace("wS"), tab: try session.tab("wS:t2")),
             clearingContext: true)
         let entry = try #require(session.model.history.entries.first)
 
@@ -371,56 +371,56 @@ struct ResendTests {
         #expect(session.model.history.entries.first?.attachments == entry.attachments)
     }
 
-    @Test("un renvoi vers un tab disparu ne part pas et le dit")
+    @Test("a resend to a vanished tab does not go out and says so")
     func resendToMissingTab() async throws {
         let session = await Session(world(agents: [tabClaude("idle")]))
-        try await session.model.send("Agrandis", to: Target(try session.workspace("wS"), tab: try session.tab("wS:t2")))
+        try await session.model.send("Make it bigger", to: Target(try session.workspace("wS"), tab: try session.tab("wS:t2")))
         let entry = try #require(session.model.history.entries.first)
         await session.mac.update { $0.tabs?.removeAll { $0.id == "wS:t2" } }
 
         await session.model.resend(entry)
 
-        #expect(session.model.notice?.title == "Acme — login-2fa n'existe plus")
-        #expect(session.model.notice?.detail == "Copie le texte depuis l'historique pour l'envoyer ailleurs.")
+        #expect(session.model.notice?.title == "Acme — login-2fa no longer exists")
+        #expect(session.model.notice?.detail == "Copy the text from the history to send it elsewhere.")
         #expect(session.model.history.entries.count == 1)
     }
 
-    @Test("un renvoi sans workspaces chargés demande d'attendre le Mac")
+    @Test("a resend without loaded workspaces asks to wait for the Mac")
     func resendWhileUnreachable() async throws {
         var scenario = world()
-        scenario.unreachable = "délai dépassé"
+        scenario.unreachable = "timed out"
         scenario.history = [
             SentRequest(
-                id: UUID(), text: "Demande", workspaceId: "wS", workspaceLabel: "Acme", createdAt: .now, status: .sent)
+                id: UUID(), text: "Request", workspaceId: "wS", workspaceLabel: "Acme", createdAt: .now, status: .sent)
         ]
         let session = await Session(scenario)
         let entry = try #require(session.model.history.entries.first)
 
         await session.model.resend(entry)
 
-        #expect(session.model.notice?.title == "Mac injoignable")
-        #expect(session.model.notice?.detail == "Renvoie la demande une fois les workspaces chargés.")
+        #expect(session.model.notice?.title == "Mac unreachable")
+        #expect(session.model.notice?.detail == "Resend the request once the workspaces have loaded.")
     }
 }
 
 @MainActor
-@Suite("Connexion au Mac")
+@Suite("Connection to the Mac")
 struct ConnectionTests {
-    @Test("un Mac injoignable avant la première liste est annoncé avec le détail")
+    @Test("a Mac unreachable before the first list is announced with the detail")
     func unreachableFirst() async {
         var scenario = world()
-        scenario.unreachable = "192.168.1.20: délai dépassé"
+        scenario.unreachable = "192.168.1.20: timed out"
         let session = await Session(scenario)
 
-        #expect(session.model.connection == .unreachable("Mac injoignable (192.168.1.20: délai dépassé)"))
+        #expect(session.model.connection == .unreachable("Mac unreachable (192.168.1.20: timed out)"))
         #expect(session.model.workspaces.isEmpty)
     }
 
-    @Test("une fois une liste arrivée, un Mac injoignable garde la liste et la cible")
+    @Test("once a list arrived, an unreachable Mac keeps the list and the target")
     func unreachableLater() async throws {
         let session = await Session(world())
         session.model.select(try session.workspace("wM"))
-        await session.mac.update { $0.unreachable = "délai dépassé" }
+        await session.mac.update { $0.unreachable = "timed out" }
 
         await session.model.refresh()
 
@@ -428,16 +428,16 @@ struct ConnectionTests {
         #expect(session.model.selectedTarget?.workspace.id == "wM")
         if case .unreachable = session.model.connection {
         } else {
-            Issue.record("connexion \(session.model.connection) au lieu d'injoignable")
+            Issue.record("connection \(session.model.connection) instead of unreachable")
         }
     }
 
-    @Test("au tap sur une question, son workspace devient la cible ; sans lien ouvert, la carte le propose")
+    @Test("on a question tap, its workspace becomes the target; without an opened link, the card offers it")
     func questionTap() async throws {
         let session = await Session(world())
         let question = try #require(
             QuestionNotification(userInfo: [
-                "workspace_id": "wM", "agent": "vid-o-studio-main", "session_url": "https://claude.ai/code/session_01",
+                "workspace_id": "wM", "agent": "na-ve-search-main", "session_url": "https://claude.ai/code/session_01",
             ]))
 
         await session.model.open(question)

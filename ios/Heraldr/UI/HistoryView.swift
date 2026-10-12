@@ -8,7 +8,7 @@ struct HistoryView: View {
     @State private var copiedReset: Task<Void, Never>?
 
     enum Section: String, CaseIterable {
-        case tasks = "Tâches"
+        case tasks = "Tasks"
         case questions = "Questions"
     }
 
@@ -24,7 +24,7 @@ struct HistoryView: View {
             }
             .scrollEdgeEffectStyle(.soft, for: .top)
             .safeAreaBar(edge: .top) {
-                Picker("Historique", selection: $section) {
+                Picker("History", selection: $section) {
                     ForEach(Section.allCases, id: \.self) { Text($0.rawValue) }
                 }
                 .pickerStyle(.segmented)
@@ -32,7 +32,7 @@ struct HistoryView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
-            .navigationTitle("Historique")
+            .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: SentRequest.ID.self) { id in
                 if let entry = model.history.entries.first(where: { $0.id == id }), let answer = entry.answer {
@@ -52,8 +52,8 @@ struct HistoryView: View {
     private var tasks: some View {
         if model.history.tasks.isEmpty {
             ContentUnavailableView(
-                "Aucun envoi", systemImage: "clock.arrow.circlepath",
-                description: Text("Les \(SendHistory.capacity) derniers envois s'afficheront ici."))
+                "No sends", systemImage: "clock.arrow.circlepath",
+                description: Text("The last \(SendHistory.capacity) sends will show up here."))
         } else {
             List(model.history.tasks) { entry in
                 row(for: entry)
@@ -66,8 +66,8 @@ struct HistoryView: View {
     private var questions: some View {
         if model.history.questions.isEmpty {
             ContentUnavailableView(
-                "Aucune question", systemImage: "text.bubble",
-                description: Text("Les réponses aux \(SendHistory.capacity) dernières questions s'afficheront ici."))
+                "No questions", systemImage: "text.bubble",
+                description: Text("Answers to the last \(SendHistory.capacity) questions will show up here."))
         } else {
             List(model.history.questions) { entry in
                 NavigationLink(value: entry.id) {
@@ -79,7 +79,7 @@ struct HistoryView: View {
     }
 
     private func deleteButton(for entry: SentRequest) -> some View {
-        Button("Supprimer", systemImage: "trash", role: .destructive) {
+        Button("Delete", systemImage: "trash", role: .destructive) {
             model.removeFromHistory(entry.id)
         }
     }
@@ -122,7 +122,7 @@ struct HistoryView: View {
                 .font(.body)
                 .lineLimit(4)
             if let attachments = entry.attachments {
-                Text(attachments.count == 1 ? "1 capture jointe" : "\(attachments.count) captures jointes")
+                Text(attachments.count == 1 ? "1 screenshot attached" : "\(attachments.count) screenshots attached")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -139,11 +139,11 @@ struct HistoryView: View {
     private func actions(for entry: SentRequest) -> some View {
         let copied = copiedId == entry.id
         return HStack(spacing: 0) {
-            actionButton("Renvoyer", systemImage: "arrow.clockwise") {
+            actionButton("Resend", systemImage: "arrow.clockwise") {
                 resend(entry)
             }
             .accessibilityIdentifier("history.resend")
-            actionButton(copied ? "Copié" : "Copier", systemImage: copied ? "checkmark" : "doc.on.doc", done: copied) {
+            actionButton(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc", done: copied) {
                 copy(entry)
             }
             .accessibilityIdentifier("history.copy")

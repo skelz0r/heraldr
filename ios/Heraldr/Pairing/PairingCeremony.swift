@@ -13,17 +13,17 @@ enum PairingError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidCode(let error):
-            "Ce n'est pas un code d'appairage herdr (\(error.rawValue))"
+            "Not a herdr pairing code (\(error.rawValue))"
         case .configOnlyCode:
-            "Ce code ne contient pas de clé d'amorçage : relance heeler.pair sur le Mac"
+            "This code has no bootstrap key: run heeler.pair again on the Mac"
         case .expired:
-            "Le code a expiré : relance heeler.pair sur le Mac"
+            "The code expired: run heeler.pair again on the Mac"
         case .enrollmentRefused(let reason):
-            "Le Mac a refusé l'enrôlement (\(reason))"
+            "The Mac refused the enrollment (\(reason))"
         case .enrollmentFailed(let detail):
-            "Enrôlement impossible : \(detail)"
+            "Enrollment failed: \(detail)"
         case .verificationFailed(let detail):
-            "Le Mac n'accepte pas encore la clé de l'iPhone : \(detail)"
+            "The Mac does not accept the iPhone's key yet: \(detail)"
         }
     }
 }
@@ -87,13 +87,13 @@ enum PairingCeremony {
         if text.hasPrefix("HERDR-ENROLL:OK:") {
             let enrolled = String(text.dropFirst("HERDR-ENROLL:OK:".count))
             guard enrolled == deviceKey.fingerprint else {
-                throw PairingError.enrollmentFailed("le Mac a enrôlé une autre clé (\(enrolled))")
+                throw PairingError.enrollmentFailed("the Mac enrolled another key (\(enrolled))")
             }
         } else if text.hasPrefix("HERDR-ENROLL:ERR:") {
             let reason = String(text.dropFirst("HERDR-ENROLL:ERR:".count))
             throw reason == "expired" ? PairingError.expired : PairingError.enrollmentRefused(reason)
         } else {
-            throw PairingError.enrollmentFailed("réponse inattendue : \(text.prefix(120))")
+            throw PairingError.enrollmentFailed("unexpected response: \(text.prefix(120))")
         }
     }
 

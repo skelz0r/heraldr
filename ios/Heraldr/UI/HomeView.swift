@@ -70,12 +70,12 @@ struct HomeView: View {
             SettingsView()
                 .presentationDetents([.medium, .large])
         }
-        .confirmationDialog("Oublier ce Mac ?", isPresented: $confirmingForget, titleVisibility: .visible) {
-            Button("Oublier et réappairer", role: .destructive) {
+        .confirmationDialog("Forget this Mac?", isPresented: $confirmingForget, titleVisibility: .visible) {
+            Button("Forget and pair again", role: .destructive) {
                 Task { await model.forgetMac() }
             }
         } message: {
-            Text("La clé de cet iPhone restera autorisée sur le Mac tant que tu ne la retires pas de ~/.ssh/authorized_keys.")
+            Text("This iPhone's key stays authorized on the Mac until you remove it from ~/.ssh/authorized_keys.")
         }
     }
 
@@ -91,7 +91,7 @@ struct HomeView: View {
             }
             Spacer(minLength: 12)
             if let target = model.selectedTarget {
-                Text("CIBLE")
+                Text("TARGET")
                     .font(.caption.weight(.heavy))
                     .tracking(1.2)
                     .foregroundStyle(.secondary)
@@ -145,25 +145,25 @@ struct HomeView: View {
         switch model.connection {
         case .unreachable(let detail):
             VStack(alignment: .leading, spacing: 12) {
-                Label("Mac injoignable", systemImage: "wifi.exclamationmark")
+                Label("Mac unreachable", systemImage: "wifi.exclamationmark")
                     .font(.title2.bold())
                 Text(detail).font(.footnote).foregroundStyle(.secondary).lineLimit(4)
-                Button("Réessayer") { Task { await model.refresh() } }
+                Button("Retry") { Task { await model.refresh() } }
                     .buttonStyle(.glassProminent)
                     .accessibilityIdentifier("home.retry")
             }
         default:
             HStack(spacing: 10) {
                 ProgressView()
-                Text("Connexion au Mac…").foregroundStyle(.secondary)
+                Text("Connecting to the Mac…").foregroundStyle(.secondary)
             }
         }
     }
 
     private var macPill: some View {
         Menu {
-            Button("Rafraîchir", systemImage: "arrow.clockwise") { Task { await model.refresh() } }
-            Button("Oublier ce Mac", systemImage: "xmark.circle", role: .destructive) { confirmingForget = true }
+            Button("Refresh", systemImage: "arrow.clockwise") { Task { await model.refresh() } }
+            Button("Forget this Mac", systemImage: "xmark.circle", role: .destructive) { confirmingForget = true }
         } label: {
             HStack(spacing: 8) {
                 BrandMark(size: 20)
@@ -181,12 +181,12 @@ struct HomeView: View {
     }
 
     private var historyButton: some View {
-        roundButton("Historique des envois", systemImage: "clock.arrow.circlepath") { showingHistory = true }
+        roundButton("Send history", systemImage: "clock.arrow.circlepath") { showingHistory = true }
             .accessibilityIdentifier("home.history")
     }
 
     private var settingsButton: some View {
-        roundButton("Réglages", systemImage: "gearshape") { showingSettings = true }
+        roundButton("Settings", systemImage: "gearshape") { showingSettings = true }
             .accessibilityIdentifier("home.settings")
     }
 
@@ -210,7 +210,7 @@ struct HomeView: View {
     @ViewBuilder
     private var macDot: some View {
         switch model.connection {
-        case .online: Circle().fill(Color.macOnline).frame(width: 8, height: 8).accessibilityLabel("En ligne")
+        case .online: Circle().fill(Color.macOnline).frame(width: 8, height: 8).accessibilityLabel("Online")
         case .connecting: StatusDot(status: .working, size: 8)
         case .unreachable: StatusDot(status: .blocked, size: 8)
         case .unpaired: StatusDot(status: .unknown, size: 8)
@@ -260,14 +260,14 @@ struct HomeView: View {
         }
         .accessibilityIdentifier("tile.\(workspace.id)")
         .contextMenu {
-            Section("Cibler un tab de \(workspace.label)") {
+            Section("Target a tab of \(workspace.label)") {
                 Button(Tab.mainName) { select(workspace) }
                 let tabs = model.claudeTabs(of: workspace)
                 ForEach(tabs) { tab in
                     Button(tab.displayName) { select(workspace, tab: tab) }
                 }
                 if tabs.isEmpty {
-                    Text("Aucun Claude dans les autres tabs")
+                    Text("No Claude in the other tabs")
                 }
             }
         }
@@ -280,11 +280,11 @@ struct HomeView: View {
 
     private var actionBar: some View {
         HStack(spacing: 16) {
-            sideButton("Écrire", systemImage: "pencil") { open(.write) }
+            sideButton("Write", systemImage: "pencil") { open(.write) }
                 .accessibilityIdentifier("home.write")
             VoiceDrop { open(.voice) }
                 .accessibilityIdentifier("home.voice")
-            sideButton("Coller", systemImage: "doc.on.clipboard") { paste() }
+            sideButton("Paste", systemImage: "doc.on.clipboard") { paste() }
                 .accessibilityIdentifier("home.paste")
         }
         .padding(.bottom, 8)
@@ -314,7 +314,7 @@ struct HomeView: View {
         let images = pasteboard.hasImages ? pasteboard.itemProviders.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) } : []
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !images.isEmpty else {
             model.notice = AppModel.Notice(
-                kind: .failed, title: "Presse-papier vide", detail: "Copie d'abord le texte ou la capture à envoyer.")
+                kind: .failed, title: "Clipboard empty", detail: "First copy the text or screenshot to send.")
             return
         }
         open(.paste(text, images: images))
@@ -386,6 +386,6 @@ struct VoiceDrop: View {
         }
         .buttonStyle(.plain)
         .glassEffect(.clear.interactive(), in: .circle)
-        .accessibilityLabel("Dicter")
+        .accessibilityLabel("Dictate")
     }
 }

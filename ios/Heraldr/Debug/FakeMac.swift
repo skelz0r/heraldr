@@ -3,7 +3,7 @@
 
     actor FakeMac: MacTransport {
         static let pairedMac = PairedMac(
-            addresses: ["192.168.1.20", "100.64.0.2"], port: 22, username: "moi", hostKeyFingerprint: "SHA256:faux")
+            addresses: ["192.168.1.20", "100.64.0.2"], port: 22, username: "me", hostKeyFingerprint: "SHA256:fake")
 
         private(set) var scenario: FakeMacScenario
         private(set) var commands: [String] = []
@@ -64,7 +64,7 @@
                 let mains = mainAgents(of: arguments[1])
                 let named = AgentName.forWorkspace(label: label)
                 guard mains.count <= 1 || mains.contains(named) else {
-                    return Self.failure("2:plusieurs agents -main dans \(arguments[1]) : \(mains.joined(separator: " "))")
+                    return Self.failure("2:several -main agents in \(arguments[1]): \(mains.joined(separator: " "))")
                 }
                 let agent = mains.count == 1 ? mains[0] : named
                 guard !input.isEmpty else { return Self.failure("2:empty prompt") }
@@ -81,10 +81,10 @@
                 guard ["jpg", "png"].contains(arguments.dropFirst().first ?? "") else { return Self.failure("2:invalid extension") }
                 guard !input.isEmpty, input.count <= 20_000_000 else { return Self.failure("2:invalid attachment size: \(input.count)") }
                 sequence += 1
-                return .success("/Users/moi/.local/state/heraldr/attachments/capture-\(sequence).jpg\n")
+                return .success("/Users/me/.local/state/heraldr/attachments/capture-\(sequence).jpg\n")
             case "read-answer" where arguments.count == 2:
                 guard let answer = scenario.answers?[arguments[1]] else {
-                    return CommandResult(exitStatus: 2, stdout: Data(), stderr: Data("pas de réponse pour \(arguments[1])".utf8))
+                    return CommandResult(exitStatus: 2, stdout: Data(), stderr: Data("no answer for \(arguments[1])".utf8))
                 }
                 return .success(answer)
             case "lexicon-get":
@@ -112,7 +112,7 @@
             case "tab.list":
                 return Self.json(["id": "cli", "result": ["type": "tab_list", "tabs": tabsPayload()]])
             default:
-                return Self.json(["id": "cli", "error": ["code": "unknown_method", "message": "méthode inconnue \(method)"]])
+                return Self.json(["id": "cli", "error": ["code": "unknown_method", "message": "unknown method \(method)"]])
             }
         }
 
@@ -150,16 +150,16 @@
             let agents = scenario.agents ?? []
             let isPane = agent.contains(":")
             guard let target = agents.first(where: { isPane ? $0.paneId == agent : $0.name == agent }) else {
-                return isPane ? ("failed", "plus de Claude dans le pane \(agent)") : ("sent", nil)
+                return isPane ? ("failed", "no Claude left in pane \(agent)") : ("sent", nil)
             }
             if isPane && target.kind != "claude" {
-                return ("failed", "plus de Claude dans le pane \(agent)")
+                return ("failed", "no Claude left in pane \(agent)")
             }
             if isPane, let name = target.name {
-                return ("failed", "le pane \(agent) est l'agent \(name) : vise-le par son nom")
+                return ("failed", "pane \(agent) is agent \(name): target it by name")
             }
             if let owner = target.workspaceId, owner != workspaceId {
-                return ("failed", isPane ? "le pane \(agent) appartient au workspace \(owner)" : "l'agent \(agent) appartient au workspace \(owner)")
+                return ("failed", isPane ? "pane \(agent) belongs to workspace \(owner)" : "agent \(agent) belongs to workspace \(owner)")
             }
             let pending = (scenario.jobs ?? []).contains { $0.agent == agent && ($0.state == "queued" || $0.state == "sending") }
             return ["idle", "done"].contains(target.status) && !pending ? ("sent", nil) : ("queued", nil)
@@ -201,7 +201,7 @@
         private func agentsPayload() -> [[String: Any]] {
             (scenario.agents ?? []).map { agent in
                 var payload: [String: Any] = [
-                    "agent_status": agent.status, "focused": false, "revision": 3, "cwd": "/Users/moi/work",
+                    "agent_status": agent.status, "focused": false, "revision": 3, "cwd": "/Users/me/work",
                     "agent_session": ["agent": "claude", "kind": "id", "value": "session"],
                 ]
                 payload["name"] = agent.name

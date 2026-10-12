@@ -3,9 +3,9 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Pastille de la cible et des tuiles de workspace")
+@Suite("Status dot of the target and of the workspace tiles")
 struct TargetStatusTests {
-    @Test("l'agent cible travaille pendant qu'un autre tab du workspace a fini : la pastille est bleue, pas verte")
+    @Test("the target agent works while another tab of the workspace is done: the dot is blue, not green")
     func targetAgentWinsOverOtherTabs() throws {
         let workspaces = try JSONDecoder().decode(
             [Workspace].self,
@@ -36,7 +36,7 @@ struct TargetStatusTests {
         try JSONDecoder().decode([Agent].self, from: Data(json.utf8))
     }
 
-    @Test("un tab ciblé suit son premier Claude sans nom herdr, ni un agent nommé ni un autre type d'agent")
+    @Test("a targeted tab follows its first Claude without a herdr name, neither a named agent nor another kind of agent")
     func tabFollowsItsFirstClaude() throws {
         let agents = try agents(
             """
@@ -55,7 +55,7 @@ struct TargetStatusTests {
         #expect(state == .agent(.blocked, workingOnOurRequest: false))
     }
 
-    @Test("un tab dont le Claude a disparu ne prend plus d'envoi, et l'app ne lance rien à sa place")
+    @Test("a tab whose Claude is gone takes no more sends, and the app starts nothing in its place")
     func tabWithoutClaude() throws {
         let agents = try agents(
             """
@@ -68,7 +68,7 @@ struct TargetStatusTests {
         #expect(!state.acceptsImmediately)
     }
 
-    @Test("un envoi en file vers un tab n'occupe que ce tab, pas le -main du workspace")
+    @Test("a send queued to a tab only keeps that tab busy, not the -main of the workspace")
     func tabJobStaysOnTheTab() throws {
         let agents = try agents(
             """
@@ -88,7 +88,7 @@ struct TargetStatusTests {
 
     private let heraldr = Workspace(id: "wH", number: 6, label: "📯 Heraldr")
 
-    @Test("un workspace renommé garde son -main, quel que soit son nom, et l'app ne propose pas d'en lancer un autre")
+    @Test("a renamed workspace keeps its -main, whatever its name, and the app does not offer to start another one")
     func renamedWorkspaceKeepsItsMain() throws {
         let agents = try agents(
             """
@@ -104,7 +104,7 @@ struct TargetStatusTests {
         #expect(AppModel.TargetState.resolve(for: heraldr, agents: agents, jobs: jobs, lastSentAt: nil, now: .now) == .sending)
     }
 
-    @Test("le -main d'un autre workspace ne compte jamais")
+    @Test("the -main of another workspace never counts")
     func otherWorkspaceMainIgnored() throws {
         let agents = try agents(
             """
@@ -114,7 +114,7 @@ struct TargetStatusTests {
         #expect(AppModel.TargetState.resolve(for: heraldr, agents: agents, jobs: [], lastSentAt: nil, now: .now) == .missing)
     }
 
-    @Test("avec plusieurs -main, celui nommé d'après le label est la cible ; sans lui, l'envoi est bloqué et les nomme, même avec un envoi en file")
+    @Test("with several -main, the one named after the label is the target; without it, the send is blocked and names them, even with a queued send")
     func severalMains() throws {
         let agents = try agents(
             """

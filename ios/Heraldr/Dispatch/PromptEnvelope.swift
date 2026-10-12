@@ -11,8 +11,8 @@ enum PromptEnvelope {
 
     static func forTab(_ text: String, attachments: [String] = []) -> String {
         """
-        Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : \
-        attention aux erreurs de transcription).
+        Request sent from the iPhone (may come from voice dictation: \
+        watch for transcription errors).
 
         \(request(text, attachments: attachments))
         """
@@ -22,56 +22,55 @@ enum PromptEnvelope {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !attachments.isEmpty else { return text }
         let paths = attachments.map { "- \($0)" }.joined(separator: "\n")
-        return "\(text)\n\nCaptures d'écran jointes, à lire avec Read :\n\(paths)"
+        return "\(text)\n\nAttached screenshots, read them with Read:\n\(paths)"
     }
 
     private static func standard(_ request: String) -> String {
         """
-        Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : \
-        attention aux erreurs de transcription).
+        Request sent from the iPhone (may come from voice dictation: \
+        watch for transcription errors).
 
         \(request)
 
-        Consignes :
-        - explore le code pour comprendre la demande, ne modifie rien ici
-        - si la demande est ambiguë, pose tes questions avec AskUserQuestion
-        - si c'est une simple question, sans travail à faire : réponds sans \
-        /start avec `\(answerCommand)`, sur l'entrée standard un résumé \
-        d'une phrase, une ligne vide puis la réponse complète en markdown
-        - sinon, termine obligatoirement en dispatchant le travail avec /start
+        Instructions:
+        - explore the code to understand the request, change nothing here
+        - if the request is ambiguous, ask your questions with AskUserQuestion
+        - if it is a simple question with no work to do: answer without \
+        /start using `\(answerCommand)`, with on standard input a \
+        one-sentence summary, a blank line, then the full answer in markdown
+        - otherwise, you must finish by dispatching the work with /start
         """
     }
 
     private static func home(_ request: String) -> String {
         """
-        Demande envoyée depuis l'iPhone vers Home, la cible par défaut de \
-        l'app (peut venir d'une dictée vocale : attention aux erreurs de \
-        transcription).
+        Request sent from the iPhone to Home, the app's default target \
+        (may come from voice dictation: watch for transcription errors).
 
         \(request)
 
-        Consignes :
-        - ne modifie rien ici
-        - si c'est une simple question, sans travail à faire : réponds-y \
-        toi-même, sans relais ni /start, en explorant ce qu'il faut (le \
-        projet visé compris), puis remets ta réponse avec \
-        `\(answerCommand)`, sur l'entrée standard un résumé d'une phrase, \
-        une ligne vide puis la réponse complète en markdown
-        - sinon, identifie le projet visé parmi les workspaces herdr ouverts : \
-        labels avec `herdr workspace list`, dossiers avec \
+        Instructions:
+        - change nothing here
+        - if it is a simple question with no work to do: answer it \
+        yourself, without relay or /start, exploring whatever you need \
+        (including the target project), then hand in your answer using \
+        `\(answerCommand)`, with on standard input a one-sentence summary, \
+        a blank line, then the full answer in markdown
+        - otherwise, identify the target project among the open herdr \
+        workspaces: labels with `herdr workspace list`, folders with \
         `herdr pane list --workspace <workspace_id>` (cwd)
-        - si plusieurs projets peuvent correspondre, pose la question avec \
-        AskUserQuestion avant tout relais
-        - si un projet est visé, relaie-lui la demande puis arrête-toi, sans \
-        /start : `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" relay \
-        <workspace_id>` avec sur l'entrée standard la demande d'origine, \
-        corrigée des erreurs de transcription évidentes, complétée des \
-        réponses à tes questions et suivie des chemins des captures jointes \
-        s'il y en a
-        - si aucun projet ouvert n'est concerné : explore ce qu'il faut pour \
-        comprendre la demande, pose tes questions avec AskUserQuestion si \
-        elle est ambiguë et termine obligatoirement en dispatchant le \
-        travail avec /start
+        - if several projects could match, ask with AskUserQuestion before \
+        any relay
+        - if a project is targeted, relay the request to it then stop, \
+        without /start: `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" \
+        relay <workspace_id>` with on standard input the original request, \
+        fixed for obvious transcription errors, completed with the answers \
+        to your questions and followed by the paths of the attached \
+        screenshots if any
+        - if no open project is concerned: explore whatever you need to \
+        understand the request, ask your questions with AskUserQuestion if \
+        it is ambiguous, and you must finish by dispatching the work with \
+        /start
         """
     }
 }

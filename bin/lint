@@ -30,7 +30,7 @@ aggregated_agent_status_unread() {
 
 no_known_gaps_in_spec() {
     local section
-    section="$(awk '/^## [0-9]+\. Écarts connus/ { inside = 1; next } /^## / { inside = 0 } inside && NF' docs/spec.md)"
+    section="$(awk '/^## [0-9]+\. Known gaps/ { inside = 1; next } /^## / { inside = 0 } inside && NF' docs/spec.md)"
     [ -z "$section" ] && return 0
     printf 'docs/spec.md lists known gaps: fix the bug in this branch, or describe the real behaviour in the spec\n%s\n' "$section"
     return 1

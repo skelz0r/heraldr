@@ -81,338 +81,338 @@ check() {
 
 ORIGINAL_PATH="$PATH"
 
-echo "un envoi vers un agent occupé attend qu'il redevienne idle"
+echo "a send to a busy agent waits until it is idle again"
 setup_world
 add_agent home-main w1 working
-enqueue w1 '~' "Ma demande"
+enqueue w1 '~' "My request"
 sleep 3
-check "rien n'est envoyé pendant que l'agent travaille" "$(prompts_of home-main)" ""
-check "l'envoi est en attente" "$(job_states)" "queued "
+check "nothing is sent while the agent works" "$(prompts_of home-main)" ""
+check "the send is queued" "$(job_states)" "queued "
 set_status home-main idle
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "dès qu'il est idle : /clear puis la demande, jamais en working" "$(prompts_of home-main)" "idle|/clear
-idle|Ma demande"
+check "as soon as it is idle: /clear then the request, never while working" "$(prompts_of home-main)" "idle|/clear
+idle|My request"
 teardown_world
 
-echo "un envoi vers un agent bloqué attend qu'il ait fini"
+echo "a send to a blocked agent waits until it is done"
 setup_world
 add_agent acme_app-main w2 blocked
-enqueue w2 'acme_app' "Corrige le bug"
+enqueue w2 'acme_app' "Fix the bug"
 sleep 3
-check "rien n'est envoyé pendant que l'agent attend une réponse" "$(prompts_of acme_app-main)" ""
+check "nothing is sent while the agent waits for an answer" "$(prompts_of acme_app-main)" ""
 set_status acme_app-main "done"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "dès qu'il est done : /clear puis la demande" "$(prompts_of acme_app-main)" "done|/clear
-done|Corrige le bug"
+check "as soon as it is done: /clear then the request" "$(prompts_of acme_app-main)" "done|/clear
+done|Fix the bug"
 teardown_world
 
-echo "deux envois vers un agent occupé partent dans l'ordre, chacun après un /clear"
+echo "two sends to a busy agent go out in order, each after a /clear"
 setup_world
 add_agent home-main w1 working
-enqueue w1 '~' "Première"
+enqueue w1 '~' "First"
 sleep 1.1
-enqueue w1 '~' "Seconde"
+enqueue w1 '~' "Second"
 sleep 2
-check "les deux sont en attente" "$(job_states)" "queued queued "
+check "both are queued" "$(job_states)" "queued queued "
 set_status home-main idle
 wait_until 25 '[ "$(job_states)" = "sent sent " ]'
-check "ordre d'arrivée conservé" "$(prompts_of home-main)" "idle|/clear
-idle|Première
+check "arrival order kept" "$(prompts_of home-main)" "idle|/clear
+idle|First
 idle|/clear
-idle|Seconde"
+idle|Second"
 teardown_world
 
-echo "un agent manquant est créé dans le tab 1 du workspace"
+echo "a missing agent is created in tab 1 of the workspace"
 setup_world
-enqueue w1 '~' "Demande à froid"
+enqueue w1 '~' "Cold request"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "split du premier pane du tab 1, dans son cwd" "$(cat "$FAKE_HERDR_WORLD/splits")" "pane split w1:p1 --direction down --cwd /work/project --no-focus"
-check "Claude en yolo avec le nom Remote Control home—main" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w1:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control home—main"
-check "la demande part après /clear" "$(prompts_of home-main)" "idle|/clear
-idle|Demande à froid"
+check "split of the first pane of tab 1, in its cwd" "$(cat "$FAKE_HERDR_WORLD/splits")" "pane split w1:p1 --direction down --cwd /work/project --no-focus"
+check "Claude in yolo mode with the Remote Control name home—main" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w1:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control home—main"
+check "the request goes out after /clear" "$(prompts_of home-main)" "idle|/clear
+idle|Cold request"
 teardown_world
 
-echo "un agent du même nom dans un autre workspace n'est jamais visé"
+echo "an agent with the same name in another workspace is never targeted"
 setup_world
 add_agent home-main w9 idle
-enqueue w1 '~' "Mauvaise cible"
+enqueue w1 '~' "Wrong target"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
-check "l'envoi échoue sans rien envoyer" "$(job_states)|$(prompts_of home-main)" "failed |"
-check "l'app lit le workspace, l'agent, l'état et la raison de l'échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-5)" "w1	home-main	failed	l'agent home-main appartient au workspace w9"
+check "the send fails without sending anything" "$(job_states)|$(prompts_of home-main)" "failed |"
+check "the app reads the workspace, the agent, the state and the failure reason" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-5)" "w1	home-main	failed	agent home-main belongs to workspace w9"
 teardown_world
 
-echo "un workspace renommé garde son -main, quel que soit son nom"
+echo "a renamed workspace keeps its -main, whatever its name"
 setup_world
 add_agent herdr-ios-companion-main wH working
 add_agent wH:pG wH idle
-enqueue wH '📯 Heraldr' "Après le renommage"
+enqueue wH '📯 Heraldr' "After the rename"
 add_workspace wH 6 '📯 Heraldr'
-relay wH "Relayée"
+relay wH "Relayed"
 sleep 2
 set_status herdr-ios-companion-main idle
 wait_until 25 '[ "$(job_states)" = "sent sent " ]'
-check "l'envoi de l'app et le relais de Home vont à l'agent existant" "$(prompts_of herdr-ios-companion-main | grep -c '^idle|/clear$')" "2"
-check "aucun second Claude n'est lancé" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
-check "le Claude sans nom du workspace ne reçoit rien" "$(prompts_of wH:pG)" ""
+check "the app send and the Home relay go to the existing agent" "$(prompts_of herdr-ios-companion-main | grep -c '^idle|/clear$')" "2"
+check "no second Claude is started" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
+check "the unnamed Claude of the workspace receives nothing" "$(prompts_of wH:pG)" ""
 teardown_world
 
-echo "un -main renommé pendant qu'un envoi l'attend n'est jamais doublé"
+echo "a -main renamed while a send waits for it is never duplicated"
 setup_world
 add_agent herdr-ios-companion-main wH working
 mkdir -p "$HERALDR_STATE_DIR/locks/herdr-ios-companion-main"
 echo $$ > "$HERALDR_STATE_DIR/locks/herdr-ios-companion-main/pid"
-enqueue wH '📯 Heraldr' "Avant le renommage"
+enqueue wH '📯 Heraldr' "Before the rename"
 sleep 1
 mv "$FAKE_HERDR_WORLD/agents/herdr-ios-companion-main" "$FAKE_HERDR_WORLD/agents/heraldr-main"
 rm -rf "$HERALDR_STATE_DIR/locks/herdr-ios-companion-main"
 /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" run herdr-ios-companion-main
-check "l'envoi échoue sans lancer de second Claude" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)|$(prompts_of heraldr-main)" "failed ||"
-check "la raison nomme le -main actuel" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "herdr-ios-companion-main a disparu, le -main de wH est maintenant heraldr-main : renvoie la demande"
+check "the send fails without starting a second Claude" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)|$(prompts_of heraldr-main)" "failed ||"
+check "the reason names the current -main" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "herdr-ios-companion-main is gone, the -main of wH is now heraldr-main: resend the request"
 teardown_world
 
-echo "le -main d'un autre workspace n'est jamais visé"
+echo "the -main of another workspace is never targeted"
 setup_world
 add_agent apistration-main w9 idle
-enqueue wH '📯 Heraldr' "Pour Heraldr"
+enqueue wH '📯 Heraldr' "For Heraldr"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "un -main est créé dans le workspace visé" "$(cat "$FAKE_HERDR_WORLD/starts" | cut -d' ' -f4)|$(prompts_of heraldr-main)" "wH:p2|idle|/clear
-idle|Pour Heraldr"
-check "celui de l'autre workspace ne reçoit rien" "$(prompts_of apistration-main)" ""
+check "a -main is created in the target workspace" "$(cat "$FAKE_HERDR_WORLD/starts" | cut -d' ' -f4)|$(prompts_of heraldr-main)" "wH:p2|idle|/clear
+idle|For Heraldr"
+check "the one of the other workspace receives nothing" "$(prompts_of apistration-main)" ""
 teardown_world
 
-echo "avec plusieurs -main dans un workspace, seul celui nommé d'après le label est visé"
+echo "with several -main in a workspace, only the one named after the label is targeted"
 setup_world
 add_agent local_events-main w8 idle
 add_agent morris-main w8 idle
-enqueue w8 '🟡 Morris' "Pour Morris"
+enqueue w8 '🟡 Morris' "For Morris"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "morris-main reçoit la demande, pas local_events-main" "$(prompts_of morris-main)|$(prompts_of local_events-main)" "idle|/clear
-idle|Pour Morris|"
-check "sans -main nommé d'après le label, l'envoi est refusé avec les candidats" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w8 "$(printf 'Archives' | base64)" 2>&1; echo "code $?")" "plusieurs agents -main dans w8 : local_events-main morris-main
+check "morris-main gets the request, not local_events-main" "$(prompts_of morris-main)|$(prompts_of local_events-main)" "idle|/clear
+idle|For Morris|"
+check "without a -main named after the label, the send is refused with the candidates" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w8 "$(printf 'Archives' | base64)" 2>&1; echo "code $?")" "several -main agents in w8: local_events-main morris-main
 code 2"
-check "rien n'est mis en file ni lancé" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" "sent |"
+check "nothing is queued or started" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" "sent |"
 teardown_world
 
-echo "un envoi vers le Claude d'un tab part tel quel, sans /clear ni consigne"
+echo "a send to the Claude of a tab goes out as is, without /clear or instructions"
 setup_world
 add_agent wB:pG wB idle
-enqueue_pane wB wB:pG keep "Le bouton est trop petit"
+enqueue_pane wB wB:pG keep "The button is too small"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "le Claude du tab reçoit le texte brut, contexte gardé" "$(prompts_of wB:pG)" "idle|Le bouton est trop petit"
-check "l'app retrouve l'envoi par son workspace et son pane" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-4)" "wB	wB:pG	sent"
-check "aucun Claude n'est lancé" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
+check "the Claude of the tab gets the raw text, context kept" "$(prompts_of wB:pG)" "idle|The button is too small"
+check "the app finds the send by its workspace and pane" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2-4)" "wB	wB:pG	sent"
+check "no Claude is started" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
 teardown_world
 
-echo "un envoi vers un tab ne vide le contexte que si on le demande"
+echo "a send to a tab clears the context only when asked"
 setup_world
 add_agent wB:pG wB "done"
-enqueue_pane wB wB:pG clear "Repars de zéro"
+enqueue_pane wB wB:pG clear "Start over"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "/clear puis le texte brut" "$(prompts_of wB:pG)" "done|/clear
-done|Repars de zéro"
+check "/clear then the raw text" "$(prompts_of wB:pG)" "done|/clear
+done|Start over"
 teardown_world
 
-echo "les envois vers un tab occupé ou bloqué attendent, dans l'ordre"
+echo "sends to a busy or blocked tab wait, in order"
 setup_world
 add_agent wB:pG wB blocked
-enqueue_pane wB wB:pG keep "Premier retour"
+enqueue_pane wB wB:pG keep "First feedback"
 sleep 1.1
-enqueue_pane wB wB:pG keep "Second retour"
+enqueue_pane wB wB:pG keep "Second feedback"
 sleep 2
-check "rien n'est envoyé pendant qu'il attend une réponse" "$(prompts_of wB:pG)|$(job_states)" "|queued queued "
+check "nothing is sent while it waits for an answer" "$(prompts_of wB:pG)|$(job_states)" "|queued queued "
 set_status wB:pG working
 sleep 2
-check "rien n'est envoyé pendant qu'il travaille" "$(prompts_of wB:pG)" ""
+check "nothing is sent while it works" "$(prompts_of wB:pG)" ""
 set_status wB:pG idle
 wait_until 15 '[ "$(job_states)" = "sent sent " ]'
-check "ordre d'arrivée conservé, jamais en working" "$(prompts_of wB:pG)" "idle|Premier retour
-idle|Second retour"
+check "arrival order kept, never while working" "$(prompts_of wB:pG)" "idle|First feedback
+idle|Second feedback"
 teardown_world
 
-echo "un pane d'un autre workspace ou sans Claude n'est jamais visé"
+echo "a pane of another workspace or without Claude is never targeted"
 setup_world
 add_agent w9:p3 w9 idle
 add_agent wB:p7 wB idle
 echo codex > "$FAKE_HERDR_WORLD/agents/wB:p7/kind"
-enqueue_pane wB w9:p3 keep "Mauvais workspace"
-enqueue_pane wB wB:pZ keep "Pane fermé"
-enqueue_pane wB wB:p7 keep "Pas un Claude"
+enqueue_pane wB w9:p3 keep "Wrong workspace"
+enqueue_pane wB wB:pZ keep "Closed pane"
+enqueue_pane wB wB:p7 keep "Not a Claude"
 wait_until 10 '[ "$(job_states)" = "failed failed failed " ]'
-check "rien n'est envoyé ni lancé" "$(prompts_of w9:p3)$(prompts_of wB:p7)$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
-check "la raison de chaque échec" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3,5 | sort)" "w9:p3	le pane w9:p3 appartient au workspace w9
-wB:p7	plus de Claude dans le pane wB:p7
-wB:pZ	plus de Claude dans le pane wB:pZ"
-check "un pane mal formé ou une option inconnue sont refusés" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB 'wB:p1;rm' keep 2>&1; echo $?)|$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB wB:p1 maybe >/dev/null 2>&1; echo $?)" "invalid pane: wB:p1;rm
+check "nothing is sent or started" "$(prompts_of w9:p3)$(prompts_of wB:p7)$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" ""
+check "the reason of each failure" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3,5 | sort)" "w9:p3	pane w9:p3 belongs to workspace w9
+wB:p7	no Claude left in pane wB:p7
+wB:pZ	no Claude left in pane wB:pZ"
+check "a malformed pane or an unknown option are refused" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB 'wB:p1;rm' keep 2>&1; echo $?)|$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB wB:p1 maybe >/dev/null 2>&1; echo $?)" "invalid pane: wB:p1;rm
 2|2"
 teardown_world
 
-echo "un pane dont le Claude est remplacé pendant l'attente ne reçoit rien"
+echo "a pane whose Claude is replaced while waiting receives nothing"
 setup_world
 add_agent wB:pG wB working
-enqueue_pane wB wB:pG keep "Pour l'ancien Claude"
+enqueue_pane wB wB:pG keep "For the old Claude"
 sleep 2
 echo codex > "$FAKE_HERDR_WORLD/agents/wB:pG/kind"
 set_status wB:pG idle
 wait_until 10 '[ "$(job_states)" = "failed " ]'
-check "l'envoi échoue sans rien envoyer au nouvel agent" "$(job_states)|$(prompts_of wB:pG)" "failed |"
+check "the send fails without sending anything to the new agent" "$(job_states)|$(prompts_of wB:pG)" "failed |"
 teardown_world
 
-echo "le pane d'un agent nommé n'est jamais visé comme un tab"
+echo "the pane of a named agent is never targeted as a tab"
 setup_world
 add_agent wB:pG wB idle
 echo acme-main > "$FAKE_HERDR_WORLD/agents/wB:pG/name"
-enqueue_pane wB wB:pG keep "Contourne la file du main"
+enqueue_pane wB wB:pG keep "Bypass the main queue"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
-check "l'envoi échoue sans rien envoyer, la file du main reste seule" "$(job_states)|$(prompts_of wB:pG)" "failed |"
-check "la raison nomme l'agent" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "le pane wB:pG est l'agent acme-main : vise-le par son nom"
+check "the send fails without sending anything, the main queue stays the only one" "$(job_states)|$(prompts_of wB:pG)" "failed |"
+check "the reason names the agent" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "pane wB:pG is agent acme-main: target it by name"
 teardown_world
 
-echo "l'iPhone enregistre son token et installe le hook de notification"
+echo "the iPhone registers its token and installs the notification hook"
 setup_world
 token="$(printf 'ab%.0s' $(seq 32))"
-echo "// hook" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push "$token" sandbox com.skelz0r.heraldr.dev ABCDE12345
-echo "// hook v2" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push "$token" sandbox com.skelz0r.heraldr.dev ABCDE12345
-check "le token, l'environnement APNs, le topic et l'équipe sont retenus" "$(cat "$HERALDR_STATE_DIR/push-device.json")" "{\"token\":\"$token\",\"env\":\"sandbox\",\"topic\":\"com.skelz0r.heraldr.dev\",\"team\":\"ABCDE12345\"}"
-check "le hook est toujours la version envoyée par l'app" "$(cat "$HERALDR_STATE_DIR/plugin/notify-hook.mjs")" "// hook v2"
-check "le plugin herdr n'est lié qu'une fois" "$(cat "$FAKE_HERDR_WORLD/plugin_links")" "plugin link $HERALDR_STATE_DIR/plugin"
-check "un token mal formé est refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push 'abc;rm' sandbox t ABCDE12345 2>&1; echo $?)" "invalid token
+echo "// hook" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push "$token" sandbox com.example.heraldr.dev ABCDE12345
+echo "// hook v2" | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push "$token" sandbox com.example.heraldr.dev ABCDE12345
+check "the token, the APNs environment, the topic and the team are kept" "$(cat "$HERALDR_STATE_DIR/push-device.json")" "{\"token\":\"$token\",\"env\":\"sandbox\",\"topic\":\"com.example.heraldr.dev\",\"team\":\"ABCDE12345\"}"
+check "the hook is always the version sent by the app" "$(cat "$HERALDR_STATE_DIR/plugin/notify-hook.mjs")" "// hook v2"
+check "the herdr plugin is linked only once" "$(cat "$FAKE_HERDR_WORLD/plugin_links")" "plugin link $HERALDR_STATE_DIR/plugin"
+check "a malformed token is refused" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" register-push 'abc;rm' sandbox t ABCDE12345 2>&1; echo $?)" "invalid token
 2"
 teardown_world
 
-echo "Home relaie une demande au -main du workspace du projet, avec la consigne standard"
+echo "Home relays a request to the -main of the project workspace, with the standard instructions"
 setup_world
-add_workspace w5 5 'Vidéo studio'
+add_workspace w5 5 'Naïve search'
 relay w5 "
-  Ajoute un sous-titre
+  Add a subtitle
 "
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "l'agent du projet est créé dans son workspace, nommé comme le fait l'app" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Vidéo studio—main"
-check "il reçoit /clear puis la demande sans ses blancs autour, comme dans l'app, enveloppée et finie par /start" "$(prompts_of video-studio-main)" "idle|/clear
-idle|Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+check "the project agent is created in its workspace, named as the app does" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Naïve search—main"
+check "it gets /clear then the request without its surrounding blanks, as in the app, wrapped and ending with /start" "$(prompts_of naive-search-main)" "idle|/clear
+idle|Request sent from the iPhone (may come from voice dictation: watch for transcription errors).
 
-Ajoute un sous-titre
+Add a subtitle
 
-Consignes :
-- explore le code pour comprendre la demande, ne modifie rien ici
-- si la demande est ambiguë, pose tes questions avec AskUserQuestion
-- si c'est une simple question, sans travail à faire : réponds sans /start avec \`/bin/sh \"\$HOME/.local/state/heraldr/dispatch.sh\" answer $(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1)\`, sur l'entrée standard un résumé d'une phrase, une ligne vide puis la réponse complète en markdown
-- sinon, termine obligatoirement en dispatchant le travail avec /start"
-check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	video-studio-main"
+Instructions:
+- explore the code to understand the request, change nothing here
+- if the request is ambiguous, ask your questions with AskUserQuestion
+- if it is a simple question with no work to do: answer without /start using \`/bin/sh \"\$HOME/.local/state/heraldr/dispatch.sh\" answer $(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1)\`, with on standard input a one-sentence summary, a blank line, then the full answer in markdown
+- otherwise, you must finish by dispatching the work with /start"
+check "the send shows up in the project workspace" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	naive-search-main"
 teardown_world
 
-echo "une réponse reste lisible une semaine, au-delà de l'heure des autres envois"
+echo "an answer stays readable for a week, beyond the hour of other sends"
 setup_world
 add_agent home-main w1 idle
-enqueue w1 '~' "Comment marche le cache ?"
-enqueue w1 '~' "Corrige le cache"
+enqueue w1 '~' "How does the cache work?"
+enqueue w1 '~' "Fix the cache"
 wait_until 25 '[ "$(job_states)" = "sent sent " ]'
 question="$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | head -1 | cut -f1)"
-printf 'Vidé au déploiement.\n\nDétail.\n' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" answer "$question" 2>/dev/null
+printf 'Cleared on deploy.\n\nDetails.\n' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" answer "$question" 2>/dev/null
 touch -t "$(date -v-2H +%Y%m%d%H%M)" "$HERALDR_STATE_DIR"/jobs/*/state
-check "après deux heures, seule la question répondue reste" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1,4,6)" "$question	sent	answered"
+check "after two hours, only the answered question remains" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1,4,6)" "$question	sent	answered"
 touch -t "$(date -v-8d +%Y%m%d%H%M)" "$HERALDR_STATE_DIR/jobs/$question/answer"
-check "après huit jours, elle disparaît aussi" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status)" ""
+check "after eight days, it is gone too" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status)" ""
 teardown_world
 
-echo "un envoi ne part qu'une fois que Claude a commencé le précédent, jamais pendant son démarrage"
+echo "a send goes out only once Claude has started the previous one, never during its startup"
 setup_world
 add_agent home-main w1 idle
 echo 3 > "$FAKE_HERDR_WORLD/agents/home-main/turn_seconds"
-enqueue w1 '~' "Première"
-enqueue w1 '~' "Seconde"
+enqueue w1 '~' "First"
+enqueue w1 '~' "Second"
 wait_until 40 '[ "$(job_states)" = "sent sent " ]'
-check "le /clear de la seconde attend la fin du travail sur la première" "$(prompts_of home-main)" "idle|/clear
-idle|Première
+check "the /clear of the second waits for the work on the first to end" "$(prompts_of home-main)" "idle|/clear
+idle|First
 idle|/clear
-idle|Seconde"
+idle|Second"
 teardown_world
 
-echo "un Claude que herdr met plus de 5 s à voir travailler ne reçoit pas le /clear suivant pendant son démarrage"
+echo "a Claude that herdr takes more than 5 s to see working does not get the next /clear during its startup"
 setup_world
 export FAKE_HERDR_DETECTION_DELAY=7
 add_agent home-main w1 idle
 echo 2 > "$FAKE_HERDR_WORLD/agents/home-main/turn_seconds"
-enqueue w1 '~' "Lente"
-enqueue w1 '~' "Suivante"
+enqueue w1 '~' "Slow"
+enqueue w1 '~' "Next"
 wait_until 60 '[ "$(job_states)" = "sent sent " ]'
-check "le /clear de la suivante attend la fin de la lente" "$(prompts_of home-main)" "idle|/clear
-idle|Lente
+check "the /clear of the next one waits for the slow one to end" "$(prompts_of home-main)" "idle|/clear
+idle|Slow
 idle|/clear
-idle|Suivante"
+idle|Next"
 unset FAKE_HERDR_DETECTION_DELAY
 teardown_world
 
-echo "six envois de la même seconde partent dans l'ordre d'arrivée"
+echo "six sends in the same second go out in arrival order"
 setup_world
 add_agent wB:pG wB working
 echo 0.3 > "$FAKE_HERDR_WORLD/agents/wB:pG/turn_seconds"
-for request in un deux trois quatre cinq six; do
+for request in one two three four five six; do
   enqueue_pane wB wB:pG keep "$request"
 done
 set_status wB:pG idle
 wait_until 40 '[ "$(job_states)" = "sent sent sent sent sent sent " ]'
-check "les six sont partis" "$(job_states)" "sent sent sent sent sent sent "
-check "ordre d'arrivée conservé" "$(prompts_of wB:pG | cut -d '|' -f2 | tr '\n' ' ')" "un deux trois quatre cinq six "
+check "all six went out" "$(job_states)" "sent sent sent sent sent sent "
+check "arrival order kept" "$(prompts_of wB:pG | cut -d '|' -f2 | tr '\n' ' ')" "one two three four five six "
 teardown_world
 
-echo "un envoi attend le compteur tenu par un autre envoi, même avant que celui-ci ait noté son pid"
+echo "a send waits for the counter held by another send, even before that one wrote its pid"
 setup_world
 mkdir -p "$HERALDR_STATE_DIR/locks/sequence"
 printf 'x' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB wB:pG keep > /dev/null 2>&1 &
 sleep 1
-check "aucun envoi créé tant que le compteur est pris" "$(job_states)" ""
+check "no send created while the counter is taken" "$(job_states)" ""
 rmdir "$HERALDR_STATE_DIR/locks/sequence"
 wait_until 10 '[ -n "$(job_states)" ]'
-check "l'envoi est créé dès que le compteur est rendu" "$(job_states | wc -w | tr -d ' ')" "1"
+check "the send is created as soon as the counter is released" "$(job_states | wc -w | tr -d ' ')" "1"
 teardown_world
 
-echo "un label illisible, l'ancien contrat ou une demande vide ne créent aucun envoi"
+echo "an unreadable label, the old contract or an empty request create no send"
 setup_world
-check "label vide refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 '' 2>&1; echo $?)" "invalid label
+check "empty label refused" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 '' 2>&1; echo $?)" "invalid label
 2"
-check "nom d'agent passé par une app plus ancienne refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 home-main "$(printf '~' | base64)" >/dev/null 2>&1; echo $?)" "2"
-check "demande vide refusée" "$(printf '' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 "$(printf '~' | base64)" 2>&1; echo $?)" "empty prompt
+check "agent name passed by an older app refused" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 home-main "$(printf '~' | base64)" >/dev/null 2>&1; echo $?)" "2"
+check "empty request refused" "$(printf '' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 "$(printf '~' | base64)" 2>&1; echo $?)" "empty prompt
 2"
-check "aucun envoi créé" "$(job_states)" ""
+check "no send created" "$(job_states)" ""
 teardown_world
 
-echo "un Claude qui ne démarre pas fait échouer l'envoi avec la raison de herdr"
+echo "a Claude that does not start fails the send with the herdr reason"
 setup_world
 echo pane_not_ready > "$FAKE_HERDR_WORLD/start_error"
-enqueue w1 '~' "Demande à froid"
+enqueue w1 '~' "Cold request"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
-check "échec annoncé avec la raison de herdr" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4)|$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "failed|agent start: {\"error\":{\"code\":\"pane_not_ready"
+check "failure announced with the herdr reason" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4)|$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "failed|agent start: {\"error\":{\"code\":\"pane_not_ready"
 teardown_world
 
-echo "un /clear sans effet fait échouer l'envoi, sans envoyer la demande dans l'ancien contexte"
+echo "a /clear without effect fails the send, without sending the request in the old context"
 setup_world
 export HERALDR_CLEAR_TIMEOUT_SECONDS=2
 add_agent home-main w1 idle
 touch "$FAKE_HERDR_WORLD/agents/home-main/ignores_clear"
-enqueue w1 '~' "Contexte propre exigé"
+enqueue w1 '~' "Clean context required"
 wait_until 10 '[ "$(job_states)" = "failed " ]'
-check "seul le /clear est parti" "$(prompts_of home-main)" "idle|/clear"
-check "la raison dit que le contexte n'a pas été vidé" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "/clear sans nouvelle session après 2s"
+check "only the /clear went out" "$(prompts_of home-main)" "idle|/clear"
+check "the reason says the context was not cleared" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "/clear without a new session after 2s"
 unset HERALDR_CLEAR_TIMEOUT_SECONDS
 teardown_world
 
-echo "la file d'un agent reprend après un runner mort qui tenait son verrou"
+echo "the queue of an agent resumes after a dead runner that held its lock"
 setup_world
 add_agent home-main w1 idle
 dead_pid="$(sh -c 'echo $$')"
 mkdir -p "$HERALDR_STATE_DIR/locks/home-main"
 echo "$dead_pid" > "$HERALDR_STATE_DIR/locks/home-main/pid"
-enqueue w1 '~' "Après le crash"
+enqueue w1 '~' "After the crash"
 wait_until 15 '[ "$(job_states)" = "sent " ]'
-check "la demande part" "$(prompts_of home-main | tail -n 1)" "idle|Après le crash"
+check "the request goes out" "$(prompts_of home-main | tail -n 1)" "idle|After the crash"
 teardown_world
 
-echo "les envois partis sont oubliés après une heure, les échecs après un jour"
+echo "sent requests are forgotten after an hour, failures after a day"
 setup_world
 add_agent wB:pG wB idle
 echo 0.1 > "$FAKE_HERDR_WORLD/agents/wB:pG/turn_seconds"
-for request in récent ancien; do enqueue_pane wB wB:pG keep "$request"; done
-for request in récent ancien; do enqueue_pane wB wB:pZ keep "$request"; done
+for request in recent old; do enqueue_pane wB wB:pG keep "$request"; done
+for request in recent old; do enqueue_pane wB wB:pZ keep "$request"; done
 wait_until 20 '[ "$(job_states | tr " " "\n" | sort | tr "\n" " ")" = " failed failed sent sent " ]'
 age_job() {
   for job in "$HERALDR_STATE_DIR"/jobs/*; do
@@ -421,72 +421,72 @@ age_job() {
     fi
   done
 }
-age_job wB:pG récent 59M
-age_job wB:pG ancien 61M
-age_job wB:pZ récent 23H
-age_job wB:pZ ancien 25H
-check "restent l'envoi de 59 min et l'échec de 23 h" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3,4 | sort | tr '\t\n' ' |')" "wB:pG sent|wB:pZ failed|"
+age_job wB:pG recent 59M
+age_job wB:pG old 61M
+age_job wB:pZ recent 23H
+age_job wB:pZ old 25H
+check "the 59 min send and the 23 h failure remain" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3,4 | sort | tr '\t\n' ' |')" "wB:pG sent|wB:pZ failed|"
 teardown_world
 
-echo "un relais vers Home ou un workspace inconnu est refusé"
+echo "a relay to Home or to an unknown workspace is refused"
 setup_world
 add_workspace w1 1 'Home'
-relay w1 "Boucle"
-check "relais vers Home, le workspace 1, refusé" "$?" "2"
-relay w404 "Perdu"
-check "relais vers un workspace inconnu refusé" "$?" "2"
-check "aucun envoi créé" "$(job_states)" ""
+relay w1 "Loop"
+check "relay to Home, workspace 1, refused" "$?" "2"
+relay w404 "Lost"
+check "relay to an unknown workspace refused" "$?" "2"
+check "no send created" "$(job_states)" ""
 teardown_world
 
-echo "Home relaie au même agent que celui que l'app viserait pour ce workspace"
+echo "Home relays to the same agent the app would target for this workspace"
 setup_world
 number=2
 while IFS="$(printf '\t')" read -r label agent; do
   add_workspace "w$number" "$number" "$label"
-  relay "w$number" "Demande"
+  relay "w$number" "Request"
   check "$label → $agent" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | awk -F '\t' -v w="w$number" '$2 == w { print $3 }')" "$agent"
   number=$((number + 1))
 done < "$here/agent-names.tsv"
 teardown_world
 
-echo "une capture envoyée par l'iPhone est gardée sur le Mac, lisible par son chemin"
+echo "a screenshot sent by the iPhone is kept on the Mac, readable by its path"
 setup_world
-printf 'faux jpeg' > "$sandbox/capture.jpg"
+printf 'fake jpeg' > "$sandbox/capture.jpg"
 path="$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg < "$sandbox/capture.jpg")"
-check "le chemin rendu est absolu, sous le dossier d'état, avec l'extension" "$(printf '%s' "$path" | grep -Ec "^$HERALDR_STATE_DIR/attachments/[^/]+\.jpg$")" "1"
-check "le fichier est l'image reçue, intacte" "$(cat "$path")" "faux jpeg"
-check "une image vide ou une extension inconnue sont refusées" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg < /dev/null 2>&1; echo $?)|$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach 'sh;rm' 2>&1; echo $?)" "invalid attachment size: 0
+check "the returned path is absolute, under the state folder, with the extension" "$(printf '%s' "$path" | grep -Ec "^$HERALDR_STATE_DIR/attachments/[^/]+\.jpg$")" "1"
+check "the file is the received image, intact" "$(cat "$path")" "fake jpeg"
+check "an empty image or an unknown extension are refused" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg < /dev/null 2>&1; echo $?)|$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach 'sh;rm' 2>&1; echo $?)" "invalid attachment size: 0
 2|invalid extension: sh;rm
 2"
 teardown_world
 
-echo "une capture que le Mac n'a pas pu écrire n'est jamais annoncée comme posée"
+echo "a screenshot the Mac could not write is never announced as stored"
 setup_world
 mkdir -p "$HERALDR_STATE_DIR/attachments"
 chmod 500 "$HERALDR_STATE_DIR/attachments"
 output="$(echo image | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach jpg 2>/dev/null)"
 status=$?
 chmod 700 "$HERALDR_STATE_DIR/attachments"
-check "échec signalé à l'app, sans chemin" "$status|$output" "1|"
+check "failure reported to the app, without path" "$status|$output" "1|"
 teardown_world
 
-echo "une capture reste disponible une semaine, pour un envoi qui attend ou une session lancée par /start"
+echo "a screenshot stays available for a week, for a waiting send or a session started by /start"
 setup_world
 recent="$(echo recent | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach png)"
 old="$(echo old | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" attach png)"
 touch -t "$(date -v-6d +%Y%m%d%H%M)" "$recent"
 touch -t "$(date -v-8d +%Y%m%d%H%M)" "$old"
 /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status > /dev/null
-check "la capture de six jours est gardée, celle de huit jours supprimée" "$([ -f "$recent" ] && echo garde)|$([ -f "$old" ] && echo garde)" "garde|"
+check "the six-day screenshot is kept, the eight-day one deleted" "$([ -f "$recent" ] && echo kept)|$([ -f "$old" ] && echo kept)" "kept|"
 teardown_world
 
-echo "le lexique de l'iPhone se sauvegarde sur le Mac et se relit tel quel"
+echo "the iPhone lexicon is backed up on the Mac and read back as is"
 setup_world
 lexicon() {
   /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" "lexicon-$1"
 }
-check "sans sauvegarde, rien n'est lu et ce n'est pas une erreur" "$(lexicon get; echo "code $?")" "code 0"
-cat > "$sandbox/lexique.json" <<'JSON'
+check "without backup, nothing is read and it is not an error" "$(lexicon get; echo "code $?")" "code 0"
+cat > "$sandbox/lexicon.json" <<'JSON'
 {
   "terms" : [
     {
@@ -501,64 +501,64 @@ cat > "$sandbox/lexique.json" <<'JSON'
   "version" : 1
 }
 JSON
-lexicon put < "$sandbox/lexique.json"
-check "l'écriture réussit" "$?" "0"
-lexicon get > "$sandbox/relu.json"
-check "relu octet pour octet" "$(cmp -s "$sandbox/lexique.json" "$sandbox/relu.json" && echo identique)" "identique"
-check "rangé dans ~/.config/heraldr" "$(cmp -s "$sandbox/lexique.json" "$HERALDR_CONFIG_DIR/lexique.json" && echo identique)" "identique"
+lexicon put < "$sandbox/lexicon.json"
+check "the write succeeds" "$?" "0"
+lexicon get > "$sandbox/read-back.json"
+check "read back byte for byte" "$(cmp -s "$sandbox/lexicon.json" "$sandbox/read-back.json" && echo identical)" "identical"
+check "stored in ~/.config/heraldr" "$(cmp -s "$sandbox/lexicon.json" "$HERALDR_CONFIG_DIR/lexique.json" && echo identical)" "identical"
 printf '{"version":1,"terms":[]}' | lexicon put
-check "une nouvelle sauvegarde écrase la précédente" "$(lexicon get)" '{"version":1,"terms":[]}'
-check "un envoi tronqué est refusé" "$(printf '{"version":1,"ter' | lexicon put 2>&1; echo "code $?")" "lexique illisible
+check "a new backup overwrites the previous one" "$(lexicon get)" '{"version":1,"terms":[]}'
+check "a truncated upload is refused" "$(printf '{"version":1,"ter' | lexicon put 2>&1; echo "code $?")" "unreadable lexicon
 code 2"
-check "une version qui n'est pas un entier est refusée" "$(printf '{"version":"1","terms":[]}' | lexicon put 2>&1; echo "code $?")" "lexique illisible
+check "a version that is not an integer is refused" "$(printf '{"version":"1","terms":[]}' | lexicon put 2>&1; echo "code $?")" "unreadable lexicon
 code 2"
-check "un envoi vide est refusé" "$(lexicon put < /dev/null 2>&1; echo "code $?")" "lexique illisible
+check "an empty upload is refused" "$(lexicon put < /dev/null 2>&1; echo "code $?")" "unreadable lexicon
 code 2"
-check "la sauvegarde précédente reste intacte, sans fichier temporaire" "$(lexicon get; ls "$HERALDR_CONFIG_DIR")" '{"version":1,"terms":[]}lexique.json'
+check "the previous backup stays intact, without temporary file" "$(lexicon get; ls "$HERALDR_CONFIG_DIR")" '{"version":1,"terms":[]}lexique.json'
 teardown_world
 
-echo "le journal des dictées s'ajoute sur le Mac, sans doublon ni entrée abîmée"
+echo "the dictation journal is appended on the Mac, without duplicate or damaged entry"
 setup_world
 journal_append() {
   /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" journal-append
 }
 journal="$HERALDR_CONFIG_DIR/journal-dictees.jsonl"
-first='{"id":"A1","salves":[{"edited":"Lance Acme.","proposed":"Lance Acme.","raw":"lance ack me"}],"sent":"Lance Acme.","version":1}'
-second='{"id":"B2","salves":[],"sent":"Ouvre la PR.","version":1}'
-check "sans journal, le premier envoi le crée" "$(printf '%s\n' "$first" | journal_append; echo "code $?"; cat "$journal")" "code 0
+first='{"id":"A1","salves":[{"edited":"Run Acme.","proposed":"Run Acme.","raw":"run ack me"}],"sent":"Run Acme.","version":1}'
+second='{"id":"B2","salves":[],"sent":"Open the PR.","version":1}'
+check "without journal, the first upload creates it" "$(printf '%s\n' "$first" | journal_append; echo "code $?"; cat "$journal")" "code 0
 $first"
-check "un envoi suivant s'ajoute à la fin, une entrée déjà reçue n'est pas doublée" "$(printf '%s\n%s\n' "$first" "$second" | journal_append; echo "code $?"; cat "$journal")" "code 0
+check "a next upload is appended at the end, an entry already received is not duplicated" "$(printf '%s\n%s\n' "$first" "$second" | journal_append; echo "code $?"; cat "$journal")" "code 0
 $first
 $second"
-check "une entrée tronquée refuse tout l'envoi" "$(printf '%s\n{"id":"C3","version":1,"se\n' '{"id":"D4","version":1}' | journal_append 2>&1; echo "code $?")" "journal illisible
+check "a truncated entry refuses the whole upload" "$(printf '%s\n{"id":"C3","version":1,"se\n' '{"id":"D4","version":1}' | journal_append 2>&1; echo "code $?")" "unreadable journal
 code 2"
-check "une entrée sans version entière est refusée" "$(printf '{"id":"C3","version":"1"}\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+check "an entry without an integer version is refused" "$(printf '{"id":"C3","version":"1"}\n' | journal_append 2>&1; echo "code $?")" "unreadable journal
 code 2"
-check "une entrée sans id lisible est refusée" "$(printf '{"id":"a b","version":1}\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+check "an entry without a readable id is refused" "$(printf '{"id":"a b","version":1}\n' | journal_append 2>&1; echo "code $?")" "unreadable journal
 code 2"
-check "un envoi vide est refusé" "$(journal_append < /dev/null 2>&1; echo "code $?")" "journal illisible
+check "an empty upload is refused" "$(journal_append < /dev/null 2>&1; echo "code $?")" "unreadable journal
 code 2"
-check "une entrée dont l'id porte un retour à la ligne est refusée" "$(printf '{"id":"A1\\n.*","version":1}\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+check "an entry whose id holds a line break is refused" "$(printf '{"id":"A1\\n.*","version":1}\n' | journal_append 2>&1; echo "code $?")" "unreadable journal
 code 2"
-check "une entrée qui n'est pas du JSON est refusée" "$(printf '<plist version="1.0"><dict><key>version</key><integer>1</integer><key>id</key><string>X1</string></dict></plist>\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+check "an entry that is not JSON is refused" "$(printf '<plist version="1.0"><dict><key>version</key><integer>1</integer><key>id</key><string>X1</string></dict></plist>\n' | journal_append 2>&1; echo "code $?")" "unreadable journal
 code 2"
-check "le journal reste intact, sans fichier temporaire" "$(cat "$journal"; ls "$HERALDR_CONFIG_DIR")" "$first
+check "the journal stays intact, without temporary file" "$(cat "$journal"; ls "$HERALDR_CONFIG_DIR")" "$first
 $second
 journal-dictees.jsonl"
 printf '%s' "$first" > "$journal"
 printf '%s\n' "$second" | journal_append
-check "un journal sans retour final reste une ligne par entrée" "$(cat "$journal")" "$first
+check "a journal without final line break stays one line per entry" "$(cat "$journal")" "$first
 $second"
 rm "$journal"
 for n in 1 2 3 4 5 6 7 8; do
   printf '{"id":"P%s","version":1}\n' "$n" | journal_append &
 done
 wait
-check "des ajouts simultanés gardent toutes les entrées" "$(sort "$journal" | tr -d '\n')" '{"id":"P1","version":1}{"id":"P2","version":1}{"id":"P3","version":1}{"id":"P4","version":1}{"id":"P5","version":1}{"id":"P6","version":1}{"id":"P7","version":1}{"id":"P8","version":1}'
+check "simultaneous appends keep every entry" "$(sort "$journal" | tr -d '\n')" '{"id":"P1","version":1}{"id":"P2","version":1}{"id":"P3","version":1}{"id":"P4","version":1}{"id":"P5","version":1}{"id":"P6","version":1}{"id":"P7","version":1}{"id":"P8","version":1}'
 teardown_world
 
 if [ $failures -gt 0 ]; then
-  echo "$failures échec(s)"
+  echo "$failures failure(s)"
   exit 1
 fi
-echo "tous les cas passent"
+echo "all cases pass"

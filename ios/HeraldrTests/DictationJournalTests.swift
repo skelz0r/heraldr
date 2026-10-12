@@ -4,7 +4,7 @@ import Testing
 @testable import Heraldr
 
 @MainActor
-@Suite("Journal des dictées envoyé au Mac")
+@Suite("Dictation journal sent to the Mac")
 struct DictationJournalTests {
     private actor FakeMac {
         private(set) var received: [Data] = []
@@ -15,7 +15,7 @@ struct DictationJournalTests {
         }
 
         func append(_ entries: Data) throws {
-            guard reachable else { throw MacLinkError.unreachable("hors ligne") }
+            guard reachable else { throw MacLinkError.unreachable("offline") }
             received.append(entries)
         }
 
@@ -39,18 +39,18 @@ struct DictationJournalTests {
     }
 
     @Test(
-        "un envoi dicté en deux salves garde, pour chacune, le brut, le texte après remplacement, les indices, le texte proposé et ce qu'il est devenu jusqu'à l'envoi"
+        "a send dictated in two bursts keeps, for each one, the raw text, the text after replacement, the hints, the proposed text and what it became until the send"
     )
     func dictatedSendIsJournaled() async throws {
         var lexicon = DictationLexicon()
         lexicon.define("Acme", heard: ["ack me"])
-        lexicon.learn(sent: "Ouvre le git hub du projet ce soir.", origin: dictated("Ouvre le guithub du projet ce soir."))
+        lexicon.learn(sent: "Open the git hub of the project tonight.", origin: dictated("Open the guithub of the project tonight."))
         let first = await TranscriptCleaner.clean(
-            "lance ack me et le guithub", lexicon: lexicon, model: CleaningModel { _, _ in .text("Lance Acme et le git hub.") })
+            "run ack me and the guithub", lexicon: lexicon, model: CleaningModel { _, _ in .text("Run Acme and the git hub.") })
         let second = await TranscriptCleaner.clean(
-            "puis ouvre la PR", lexicon: lexicon, model: CleaningModel { _, _ in .failed(reason: "Apple Intelligence est désactivé") })
-        let edited = "Lance Acme et le GitHub."
-        let sent = "Lance Acme et le GitHub.\nPuis ouvre la PR."
+            "then open the PR", lexicon: lexicon, model: CleaningModel { _, _ in .failed(reason: "Apple Intelligence is turned off") })
+        let edited = "Run Acme and the GitHub."
+        let sent = "Run Acme and the GitHub.\nThen open the PR."
         let origin = ComposeView.Origin.dictated(DictatedText(first).appending(second, after: edited))
         let journal = DictationJournal(fileURL: fileURL)
         let mac = FakeMac()
@@ -65,78 +65,78 @@ struct DictationJournalTests {
         #expect(
             entry.salves == [
                 DictationJournalEntry.Salve(
-                    raw: "lance ack me et le guithub",
-                    replaced: "lance Acme et le guithub",
+                    raw: "run ack me and the guithub",
+                    replaced: "run Acme and the guithub",
                     replacements: [DictationLexicon.Replacement(heard: "ack me", term: "Acme")],
                     hints: [CleaningTrace.Hint(heard: "guithub", term: "git hub", applied: true)],
-                    proposed: "Lance Acme et le git hub.",
+                    proposed: "Run Acme and the git hub.",
                     reason: nil,
-                    previewed: "Lance Acme et le git hub.",
+                    previewed: "Run Acme and the git hub.",
                     edited: edited),
                 DictationJournalEntry.Salve(
-                    raw: "puis ouvre la PR",
-                    replaced: "puis ouvre la PR",
+                    raw: "then open the PR",
+                    replaced: "then open the PR",
                     replacements: [],
                     hints: [],
-                    proposed: "puis ouvre la PR",
-                    reason: "Apple Intelligence est désactivé",
-                    previewed: "Lance Acme et le GitHub.\npuis ouvre la PR",
+                    proposed: "then open the PR",
+                    reason: "Apple Intelligence is turned off",
+                    previewed: "Run Acme and the GitHub.\nthen open the PR",
                     edited: sent),
             ])
     }
 
-    @Test("un indice que le modèle n'a pas suivi est noté non appliqué")
+    @Test("a hint the model did not follow is recorded as not applied")
     func ignoredHintIsNotApplied() async throws {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ouvre le git hub du projet ce soir.", origin: dictated("Ouvre le guithub du projet ce soir."))
+        lexicon.learn(sent: "Open the git hub of the project tonight.", origin: dictated("Open the guithub of the project tonight."))
         let salve = await TranscriptCleaner.clean(
-            "regarde le guithub", lexicon: lexicon, model: CleaningModel { _, _ in .text("Regarde le guithub.") })
+            "look at the guithub", lexicon: lexicon, model: CleaningModel { _, _ in .text("Look at the guithub.") })
         let journal = DictationJournal(fileURL: fileURL)
         let mac = FakeMac()
 
-        journal.record(sent: "Regarde le guithub.", origin: .dictated(DictatedText(salve)))
+        journal.record(sent: "Look at the guithub.", origin: .dictated(DictatedText(salve)))
         await journal.upload(with: mac.mirror)
 
         let entry = try #require(await mac.entries.first)
         #expect(entry.salves.map(\.hints) == [[CleaningTrace.Hint(heard: "guithub", term: "git hub", applied: false)]])
     }
 
-    @Test("le journal en attente sur l'iPhone n'entre pas dans la sauvegarde iCloud")
+    @Test("the journal pending on the iPhone is left out of the iCloud backup")
     func pendingJournalIsExcludedFromBackup() throws {
         let journal = DictationJournal(fileURL: fileURL)
 
-        journal.record(sent: "Lance les tests.", origin: dictated("Lance les tests."))
+        journal.record(sent: "Run the tests.", origin: dictated("Run the tests."))
 
         #expect(try fileURL.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
     }
 
-    @Test("un envoi écrit ou collé n'entre pas au journal")
+    @Test("a written or pasted send is not journaled")
     func writtenOrPastedSendIsNotJournaled() async {
         let journal = DictationJournal(fileURL: fileURL)
         let mac = FakeMac()
 
-        journal.record(sent: "Écrit à la main", origin: .written)
-        journal.record(sent: "Collé du presse-papiers", origin: .pasted)
+        journal.record(sent: "Typed by hand", origin: .written)
+        journal.record(sent: "Pasted from the clipboard", origin: .pasted)
         await journal.upload(with: mac.mirror)
 
         #expect(await mac.received.isEmpty)
     }
 
-    @Test("Mac injoignable : le journal n'est pas perdu, même après une relance, et part une seule fois à la connexion suivante")
+    @Test("Mac unreachable: the journal is not lost, even after a relaunch, and goes out only once at the next connection")
     func journalWaitsForTheMac() async {
         let mac = FakeMac()
         await mac.setReachable(false)
         let journal = DictationJournal(fileURL: fileURL)
 
-        journal.record(sent: "Lance les tests.", origin: dictated("Lance les tests."))
+        journal.record(sent: "Run the tests.", origin: dictated("Run the tests."))
         await journal.upload(with: mac.mirror)
-        journal.record(sent: "Puis pousse.", origin: dictated("Puis pousse."))
+        journal.record(sent: "Then push.", origin: dictated("Then push."))
         await mac.setReachable(true)
         let relaunched = DictationJournal(fileURL: fileURL)
         await relaunched.upload(with: mac.mirror)
         await relaunched.upload(with: mac.mirror)
 
-        #expect(await mac.entries.map(\.sent) == ["Lance les tests.", "Puis pousse."])
+        #expect(await mac.entries.map(\.sent) == ["Run the tests.", "Then push."])
         #expect(await mac.received.count == 1)
     }
 }

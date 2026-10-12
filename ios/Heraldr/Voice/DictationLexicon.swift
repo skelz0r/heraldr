@@ -277,7 +277,7 @@ struct DictationLexicon: Codable, Equatable, Sendable {
     }
 
     static func key(_ text: String) -> String {
-        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "fr_FR"))
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
     private static func changedHunks(_ before: [String], _ after: [String]) -> [(before: Range<Int>, after: Range<Int>)] {
@@ -321,7 +321,7 @@ extension DictationLexicon {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let version = try container.decode(Int.self, forKey: .version)
         guard version <= Self.formatVersion else {
-            throw DecodingError.dataCorruptedError(forKey: .version, in: container, debugDescription: "format \(version) inconnu")
+            throw DecodingError.dataCorruptedError(forKey: .version, in: container, debugDescription: "unknown format \(version)")
         }
         terms = try container.decode([DictationTerm].self, forKey: .terms)
     }

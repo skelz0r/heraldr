@@ -53,7 +53,7 @@ struct WaitBadge: View {
     var compact = false
 
     var body: some View {
-        Label("en attente", systemImage: "clock")
+        Label("waiting", systemImage: "clock")
             .font(.system(size: compact ? 10 : 12, weight: .bold))
             .labelStyle(.titleAndIcon)
             .padding(.horizontal, compact ? 6 : 8)
@@ -128,11 +128,11 @@ struct UnopenedQuestionCard: View {
                     .frame(width: 36, height: 36)
                     .background(AgentStatus.blocked.color, in: .circle)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(question.agent) attend une réponse").font(.subheadline.bold())
-                    Text("La session ne s'est pas ouverte dans Claude.").font(.footnote).foregroundStyle(.secondary)
+                    Text("\(question.agent) is waiting for an answer").font(.subheadline.bold())
+                    Text("The session did not open in Claude.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
-                Button("Fermer", systemImage: "xmark", action: dismiss)
+                Button("Close", systemImage: "xmark", action: dismiss)
                     .labelStyle(.iconOnly)
                     .buttonStyle(.glass)
             }
@@ -140,7 +140,7 @@ struct UnopenedQuestionCard: View {
                 openURL(question.sessionURL ?? Self.claudeCode)
                 dismiss()
             } label: {
-                Label("Ouvrir dans Claude", systemImage: "arrow.up.forward.app")
+                Label("Open in Claude", systemImage: "arrow.up.forward.app")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)

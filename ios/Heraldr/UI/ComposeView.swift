@@ -127,9 +127,9 @@ struct ComposeView: View {
                     if let dictationError {
                         Text(dictationError).foregroundStyle(AgentStatus.blocked.color)
                     } else if dictation.phase == .preparing {
-                        Text("Préparation du micro…").foregroundStyle(.secondary)
+                        Text("Preparing the microphone…").foregroundStyle(.secondary)
                     } else if dictation.finalizedText.isEmpty && dictation.volatileText.isEmpty {
-                        Text("Parle, je t'écoute.").foregroundStyle(.secondary)
+                        Text("Go ahead, I'm listening.").foregroundStyle(.secondary)
                     } else {
                         Text("\(dictation.finalizedText)\(Text(dictation.volatileText).foregroundStyle(.secondary))")
                     }
@@ -157,7 +157,7 @@ struct ComposeView: View {
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityLabel("Annuler")
+                .accessibilityLabel("Cancel")
 
                 Button {
                     Task { await finishDictation() }
@@ -168,7 +168,7 @@ struct ComposeView: View {
                 .buttonStyle(.plain)
                 .glassEffect(.regular.tint(.heraldrAccent).interactive(), in: .circle)
                 .disabled(dictation.phase != .recording)
-                .accessibilityLabel("Arrêter la dictée")
+                .accessibilityLabel("Stop dictation")
 
                 Color.clear.frame(width: 64, height: 64)
             }
@@ -187,14 +187,14 @@ struct ComposeView: View {
             Spacer()
             HStack(spacing: 10) {
                 Image(systemName: "sparkles")
-                Text("Nettoyage…")
+                Text("Cleaning up…")
             }
             .font(.title3.weight(.semibold))
             .padding(.horizontal, 22)
             .padding(.vertical, 14)
             .glassEffect(.regular, in: .capsule)
             .phaseAnimator([0.5, 1]) { content, phase in content.opacity(phase) }
-            Text("Foundation Models, sur l'appareil").font(.footnote).foregroundStyle(.secondary)
+            Text("Foundation Models, on device").font(.footnote).foregroundStyle(.secondary)
                 .padding(.bottom, 40)
         }
     }
@@ -209,10 +209,10 @@ struct ComposeView: View {
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .circle)
-                .accessibilityLabel("Fermer")
+                .accessibilityLabel("Close")
                 .accessibilityIdentifier("compose.close")
                 Spacer()
-                Text("Aperçu").font(.headline)
+                Text("Preview").font(.headline)
                 Spacer()
                 Color.clear.frame(width: 44, height: 44)
             }
@@ -256,7 +256,7 @@ struct ComposeView: View {
                     .accessibilityIdentifier("compose.text")
                     .overlay(alignment: .topLeading) {
                         if text.isEmpty {
-                            Text("Que doit faire l'agent ?")
+                            Text("What should the agent do?")
                                 .font(.system(size: 19, weight: .medium))
                                 .foregroundStyle(.tertiary)
                                 .padding(.top, 8)
@@ -285,7 +285,7 @@ struct ComposeView: View {
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .disabled(sending || remainingSlots == 0)
-                .accessibilityLabel("Joindre des captures")
+                .accessibilityLabel("Attach screenshots")
                 .accessibilityIdentifier("compose.attach")
                 .onChange(of: pickedPhotos) { _, picked in
                     guard !picked.isEmpty else { return }
@@ -295,7 +295,7 @@ struct ComposeView: View {
                 Button {
                     dictateFollowUp()
                 } label: {
-                    Label(text.isEmpty ? "Dicter" : "Dicter la suite", systemImage: "mic.fill")
+                    Label(text.isEmpty ? "Dictate" : "Dictate more", systemImage: "mic.fill")
                         .font(.footnote.weight(.bold))
                         .fixedSize()
                         .padding(.horizontal, 14)
@@ -311,7 +311,7 @@ struct ComposeView: View {
                 Button {
                     clearsContext.toggle()
                 } label: {
-                    Label("Envoyer /clear avant", systemImage: clearsContext ? "checkmark.square.fill" : "square")
+                    Label("Send /clear first", systemImage: clearsContext ? "checkmark.square.fill" : "square")
                         .font(.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(.rect)
@@ -322,13 +322,13 @@ struct ComposeView: View {
             }
 
             if targetVanished {
-                Text("Ce tab n'existe plus : choisis une autre cible.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
+                Text("This tab no longer exists: pick another target.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("compose.vanished")
             }
 
             if importFailed {
-                Text("Une image n'a pas pu être lue.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
+                Text("An image could not be read.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -343,7 +343,7 @@ struct ComposeView: View {
             } label: {
                 HStack(spacing: 10) {
                     if sending { ProgressView().tint(Color.onAccent) } else { Image(systemName: "arrow.up") }
-                    Text("Envoyer")
+                    Text("Send")
                 }
                 .font(.title3.weight(.bold))
                 .foregroundStyle(Color.onAccent)
@@ -383,12 +383,12 @@ struct ComposeView: View {
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                                     .strokeBorder(.primary.opacity(0.2), lineWidth: 0.5)
                             }
-                            .accessibilityLabel("Capture \(index + 1)")
+                            .accessibilityLabel("Screenshot \(index + 1)")
                     } else {
                         ProgressView()
                             .frame(width: Self.thumbnailHeight * 0.6, height: Self.thumbnailHeight)
                             .glassEffect(.regular, in: .rect(cornerRadius: 14, style: .continuous))
-                            .accessibilityLabel("Capture \(index + 1) en préparation")
+                            .accessibilityLabel("Screenshot \(index + 1) loading")
                     }
                 }
                 .overlay(alignment: .topTrailing) {
@@ -405,7 +405,7 @@ struct ComposeView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(sending)
-                    .accessibilityLabel("Retirer la capture \(index + 1)")
+                    .accessibilityLabel("Remove screenshot \(index + 1)")
                 }
                 .accessibilityElement(children: .contain)
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
@@ -419,18 +419,18 @@ struct ComposeView: View {
         HStack(spacing: 8) {
             switch origin {
             case .written:
-                Label("Écrit", systemImage: "pencil")
+                Label("Written", systemImage: "pencil")
             case .pasted:
-                Label("Collé", systemImage: "doc.on.clipboard")
+                Label("Pasted", systemImage: "doc.on.clipboard")
             case .dictated(let dictated):
                 if let reason = dictated.salves.lastRawReason {
-                    Label("Transcription brute : \(reason)", systemImage: "exclamationmark.triangle")
+                    Label("Raw transcript: \(reason)", systemImage: "exclamationmark.triangle")
                         .foregroundStyle(AgentStatus.blocked.color)
                 } else {
-                    Label("Dictée nettoyée", systemImage: "sparkles")
+                    Label("Dictation cleaned up", systemImage: "sparkles")
                 }
                 if dictated.salves.contains(where: { $0.isCleaned || $0.text != $0.raw }) {
-                    Button("Voir l'original") { showingRaw = true }.foregroundStyle(Color.heraldrAccent)
+                    Button("See original") { showingRaw = true }.foregroundStyle(Color.heraldrAccent)
                 }
             }
             Spacer()
@@ -484,7 +484,7 @@ struct ComposeView: View {
     private func finishDictation() async {
         let raw = await dictation.stop()
         guard !raw.isEmpty else {
-            dictationError = "Rien n'a été entendu."
+            dictationError = "Nothing was heard."
             return
         }
         stage = .cleaning(raw: raw)
@@ -585,7 +585,7 @@ struct TargetPicker: View {
                     }
                 }
             }
-            .navigationTitle("Changer de cible")
+            .navigationTitle("Change target")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -619,7 +619,7 @@ struct RawTranscriptSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Transcription originale").font(.headline)
+                Text("Original transcript").font(.headline)
                 if case .dictated(let dictated) = origin {
                     ForEach(Array(dictated.salves.enumerated()), id: \.offset) { index, salve in
                         if index > 0 { Divider() }

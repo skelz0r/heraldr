@@ -43,7 +43,7 @@ struct AnswerContent: View {
                 if loading {
                     ProgressView()
                         .frame(maxWidth: .infinity)
-                        .accessibilityLabel("Chargement de la réponse complète")
+                        .accessibilityLabel("Loading the full answer")
                 }
                 if let failure {
                     Text(failure)
@@ -63,7 +63,7 @@ struct CopyAnswerButton: View {
     @State private var copied = false
 
     var body: some View {
-        Button(copied ? "Copié" : "Copier", systemImage: copied ? "checkmark" : "doc.on.doc") {
+        Button(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc") {
             UIPasteboard.general.string = answer.body.isEmpty ? answer.summary : answer.body
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             withAnimation { copied = true }

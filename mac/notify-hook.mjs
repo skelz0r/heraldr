@@ -100,15 +100,15 @@ function pendingRequest(paneId) {
   if (title === "Bash command") {
     const separator = rest.findIndex((line) => /^╌+$/.test(line));
     const description = rest.slice(0, separator < 0 ? 0 : separator).filter((line) => !line.startsWith("Tip:"));
-    return description.length > 0 ? shorten(`Veut lancer : ${description.join(" ")}`) : "Veut lancer une commande";
+    return description.length > 0 ? shorten(`Wants to run: ${description.join(" ")}`) : "Wants to run a command";
   }
   const asking = rest.findLast((line) => line.startsWith("Do you want to "));
   if (!asking) return null;
   const edited = asking.match(/^Do you want to (?:make this edit to|overwrite) (.+)\?$/);
-  if (edited) return shorten(`Veut modifier : ${edited[1]}`);
+  if (edited) return shorten(`Wants to edit: ${edited[1]}`);
   const created = asking.match(/^Do you want to create (.+)\?$/);
-  if (created) return shorten(`Veut créer : ${created[1]}`);
-  return shorten(`Demande d'autorisation : ${title}`);
+  if (created) return shorten(`Wants to create: ${created[1]}`);
+  return shorten(`Permission request: ${title}`);
 }
 
 function apnsKey() {
@@ -189,7 +189,7 @@ async function main() {
   const question = pendingRequest(paneId);
   const body = {
     aps: {
-      alert: { title: label, subtitle: agent.name, body: question ?? "Attend une réponse" },
+      alert: { title: label, subtitle: agent.name, body: question ?? "Waiting for an answer" },
       sound: "default",
       "thread-id": agent.name,
     },
@@ -206,7 +206,7 @@ async function deliver(device, key, headers, body) {
   if (response.status === 200) return;
   if (response.status === 410 || /BadDeviceToken|Unregistered/.test(response.answer)) {
     rmSync(join(stateDir, "push-device.json"), { force: true });
-    throw new Error(`APNs a rejeté le token (${response.status} ${response.answer}), appareil oublié`);
+    throw new Error(`APNs rejected the token (${response.status} ${response.answer}), device forgotten`);
   }
   throw new Error(`APNs ${response.status} ${response.answer}`);
 }
@@ -220,19 +220,19 @@ function readJobFile(jobId, name) {
 }
 
 async function pushAnswer(jobId) {
-  if (!/^[0-9]{14}-[0-9]+-[0-9a-f]{8}$/.test(jobId ?? "")) throw new Error(`job invalide : ${jobId}`);
+  if (!/^[0-9]{14}-[0-9]+-[0-9a-f]{8}$/.test(jobId ?? "")) throw new Error(`invalid job: ${jobId}`);
   const answer = readJobFile(jobId, "answer");
-  if (answer === null) throw new Error(`pas de réponse pour ${jobId}`);
+  if (answer === null) throw new Error(`no answer for ${jobId}`);
   const device = readJson(join(stateDir, "push-device.json"));
   const key = apnsKey();
-  if (!device || !key) throw new Error("aucun iPhone ou aucune clé APNs");
+  if (!device || !key) throw new Error("no iPhone or no APNs key");
 
   const agent = readJobFile(jobId, "agent");
   const workspaceId = readJobFile(jobId, "workspace_id");
   const summary = answer.split("\n")[0].trim();
   const body = {
     aps: {
-      alert: { title: readJobFile(jobId, "label") ?? workspaceId, subtitle: "Réponse", body: shorten(summary) },
+      alert: { title: readJobFile(jobId, "label") ?? workspaceId, subtitle: "Answer", body: shorten(summary) },
       sound: "default",
       "thread-id": agent,
     },

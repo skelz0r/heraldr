@@ -11,15 +11,15 @@ enum MacLinkError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unreachable(let detail):
-            "Mac injoignable (\(detail))"
+            "Mac unreachable (\(detail))"
         case .hostKeyChanged(let presented):
-            "La clé du Mac a changé (\(presented)) : refais l'appairage"
+            "The Mac's key changed (\(presented)): pair again"
         case .authenticationRefused:
-            "Le Mac refuse la clé de cet iPhone : refais l'appairage"
+            "The Mac refuses this iPhone's key: pair again"
         case .tailscaleSSH:
-            "Tailscale SSH a répondu à la place du sshd du Mac : désactive-le (RunSSH: false)"
+            "Tailscale SSH answered instead of the Mac's sshd: turn it off (RunSSH: false)"
         case .commandFailed(let status, let stderr):
-            "Commande refusée par le Mac (\(status)) : \(stderr)"
+            "Command refused by the Mac (\(status)): \(stderr)"
         }
     }
 }
@@ -88,7 +88,7 @@ enum SSHDialer {
         }
         if let mismatchedKey { throw MacLinkError.hostKeyChanged(presented: mismatchedKey) }
         if sawTailscale { throw MacLinkError.tailscaleSSH }
-        throw MacLinkError.unreachable(attempts.joined(separator: " ; "))
+        throw MacLinkError.unreachable(attempts.joined(separator: "; "))
     }
 }
 
@@ -117,7 +117,7 @@ actor MacLink: MacTransport {
         let result = try await run("printf %s \"$HOME\"")
         let resolved = result.output
         guard result.exitStatus == 0, resolved.hasPrefix("/") else {
-            throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "HOME introuvable")
+            throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "HOME not found")
         }
         home = resolved
         return "\(resolved)/.config/herdr/herdr.sock"

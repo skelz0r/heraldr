@@ -14,49 +14,49 @@ force_try:
 force_cast:
   severity: error
 
-# Dictation.swift garde les trois seules échappatoires de concurrence :
-# AVAudioConverter et AVAudioPCMBuffer ne sont pas Sendable, et le tap
-# audio appelle AudioFeeder sur un thread temps réel unique ; le bloc
-# d'entrée de convert est rappelé de façon synchrone sur ce thread.
+# Dictation.swift keeps the only three concurrency escape hatches:
+# AVAudioConverter and AVAudioPCMBuffer are not Sendable, and the audio
+# tap calls AudioFeeder on a single real-time thread; the input block of
+# convert is called back synchronously on that thread.
 custom_rules:
   unchecked_sendable:
     name: "@unchecked Sendable"
     regex: '@unchecked\s+Sendable'
-    message: "Rends le type réellement Sendable (acteur, valeur, Mutex) au lieu de faire taire le compilateur"
+    message: "Make the type truly Sendable (actor, value, Mutex) instead of silencing the compiler"
     severity: error
     excluded:
       - ios/Heraldr/Voice/Dictation.swift
   nonisolated_unsafe:
     name: "nonisolated(unsafe)"
     regex: 'nonisolated\(unsafe\)'
-    message: "Isole l'état sur un acteur ou rends-le Sendable au lieu de nonisolated(unsafe)"
+    message: "Isolate the state on an actor or make it Sendable instead of nonisolated(unsafe)"
     severity: error
     excluded:
       - ios/Heraldr/Voice/Dictation.swift
   preconcurrency:
     name: "@preconcurrency"
     regex: '@preconcurrency'
-    message: "@preconcurrency masque les erreurs de concurrence de Swift 6 : corrige l'isolation"
+    message: "@preconcurrency hides Swift 6 concurrency errors: fix the isolation"
     severity: error
     excluded:
       - ios/Heraldr/Voice/Dictation.swift
   print_call:
     name: "print("
     regex: '(?<![\w.])print\('
-    message: "Pas de print( dans l'app : un état visible passe par l'UI, un diagnostic par un test"
+    message: "No print( in the app: visible state goes through the UI, a diagnosis through a test"
     severity: error
   swiftlint_disable:
     name: "swiftlint:disable"
     regex: 'swiftlint:disable'
-    message: "Pas d'exception en commentaire : une exception justifiée va dans .swiftlint.yml"
+    message: "No exception in a comment: a justified exception goes in .swiftlint.yml"
     severity: error
   async_notification_delegate:
-    name: "Délégué de notifications async"
+    name: "Async notification delegate"
     regex: 'func\s+userNotificationCenter\([^)]*\)\s+async'
-    message: "Variante à completion handler obligatoire : la variante async crashe au tap app hors premier plan (f4b5ff9)"
+    message: "Completion handler variant required: the async variant crashes on a tap while the app is not in the foreground (f4b5ff9)"
     severity: error
   sleep_without_cancellation_check:
-    name: "Sleep sans contrôle d'annulation"
+    name: "Sleep without cancellation check"
     regex: '\n\s*try\?\s+await\s+Task\.sleep\([^\n]*\)\s*\n(?!\s*guard\s+!Task\.isCancelled)'
-    message: "try? avale l'annulation : la suite s'exécute quand même (notice effacée par un .task(id:) relancé). Enchaîne avec guard !Task.isCancelled else { return }"
+    message: "try? swallows cancellation: the rest runs anyway (notice cleared by a restarted .task(id:)). Follow with guard !Task.isCancelled else { return }"
     severity: error

@@ -3,7 +3,7 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Lexique de dictée")
+@Suite("Dictation lexicon")
 struct DictationLexiconTests {
     private func dictated(_ text: String) -> ComposeView.Origin {
         .dictated(DictatedText(.cleaned(text, raw: text)))
@@ -19,125 +19,125 @@ struct DictationLexiconTests {
         return DictationLexiconStore(fileURL: directory.appending(path: "dictation-lexicon.json"), defaults: defaults)
     }
 
-    @Test("une substitution courte corrigée dans l'aperçu devient un terme avec ce qui avait été entendu")
+    @Test("a short substitution fixed in the preview becomes a term with what was heard")
     func shortSubstitutionIsLearned() {
         var lexicon = DictationLexicon()
 
         lexicon.learn(
-            sent: "Ensuite git push la branche sur origin.",
-            origin: dictated("Ensuite on push la branche sur origin."))
+            sent: "Then git push the branch to origin.",
+            origin: dictated("Then on push the branch to origin."))
 
         #expect(summary(lexicon) == ["git push ← on push"])
         #expect(lexicon.terms.first?.source == .learned)
         #expect(lexicon.vocabulary == ["git push"])
     }
 
-    @Test("une réécriture longue du texte n'est pas retenue")
+    @Test("a long rewrite of the text is not learned")
     func longRewriteIsNotLearned() {
         var lexicon = DictationLexicon()
 
         lexicon.learn(
-            sent: "Corrige le crash au lancement quand le Mac est injoignable.",
-            origin: dictated("Alors en fait il faudrait regarder pourquoi l'app plante quand on la lance sans réseau."))
+            sent: "Fix the crash at launch when the Mac is unreachable.",
+            origin: dictated("So actually we should look into why the app crashes when you start it offline."))
 
         #expect(lexicon.terms.isEmpty)
     }
 
-    @Test("un remplacement de plus de trois mots n'est pas retenu, même dans un texte peu modifié")
+    @Test("a replacement of more than three words is not learned, even in a barely edited text")
     func longSubstitutionIsNotLearned() {
         var lexicon = DictationLexicon()
 
         lexicon.learn(
-            sent: "Regarde le fichier dispatch.sh dans le dossier mac du projet heraldr et dis-moi ce qui cloche.",
-            origin: dictated("Regarde le fichier des pâtes chez le pain dans le dossier mac du projet heraldr et dis-moi ce qui cloche."))
+            sent: "Look at the dispatch.sh file in the mac folder of the heraldr project and tell me what is wrong.",
+            origin: dictated("Look at the this patch dot s h file in the mac folder of the heraldr project and tell me what is wrong."))
 
         #expect(lexicon.terms.isEmpty)
     }
 
-    @Test("un envoi écrit ou collé n'apprend rien")
+    @Test("a written or pasted send teaches nothing")
     func writtenOrPastedSendsTeachNothing() {
         var lexicon = DictationLexicon()
 
-        lexicon.learn(sent: "Ensuite git push la branche.", origin: .written)
-        lexicon.learn(sent: "Ensuite git push la branche.", origin: .pasted)
+        lexicon.learn(sent: "Then git push the branch.", origin: .written)
+        lexicon.learn(sent: "Then git push the branch.", origin: .pasted)
 
         #expect(lexicon.terms.isEmpty)
     }
 
-    @Test("une dictée envoyée telle quelle, ou retouchée seulement en casse et ponctuation, n'apprend rien")
+    @Test("a dictation sent as is, or only touched up in case and punctuation, teaches nothing")
     func untouchedDictationTeachesNothing() {
         var lexicon = DictationLexicon()
 
-        lexicon.learn(sent: "ensuite, on push la branche", origin: dictated("Ensuite on push la branche."))
+        lexicon.learn(sent: "then, on push the branch", origin: dictated("Then on push the branch."))
 
         #expect(lexicon.terms.isEmpty)
     }
 
-    @Test("une même erreur corrigée de nouveau remonte en tête sans doublon")
+    @Test("the same mistake fixed again moves to the top without duplicate")
     func repeatedCorrectionIsNotDuplicated() {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
-        lexicon.learn(sent: "Ouvre le fichier GitHub demain.", origin: dictated("Ouvre le fichier guide hub demain."))
+        lexicon.learn(sent: "Then git push the branch.", origin: dictated("Then on push the branch."))
+        lexicon.learn(sent: "Open the GitHub file tomorrow.", origin: dictated("Open the guide hub file tomorrow."))
 
-        lexicon.learn(sent: "Puis git push vers main.", origin: dictated("Puis on push vers main."))
+        lexicon.learn(sent: "Then git push to main.", origin: dictated("Then on push to main."))
 
         #expect(summary(lexicon) == ["git push ← on push", "GitHub ← guide hub"])
         #expect(lexicon.terms.first?.variants.first?.count == 2)
     }
 
-    @Test("une autre erreur pour un terme connu s'ajoute à ses variantes")
+    @Test("another mistake for a known term joins its variants")
     func newVariantJoinsKnownTerm() {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ouvre le tableau de bord de Acme demain matin.", origin: dictated("Ouvre le tableau de bord de ack me demain matin."))
+        lexicon.learn(sent: "Open the Acme dashboard tomorrow morning.", origin: dictated("Open the ack me dashboard tomorrow morning."))
 
-        lexicon.learn(sent: "Relance acme ce soir.", origin: dictated("Relance ak me ce soir."))
+        lexicon.learn(sent: "Restart acme tonight please.", origin: dictated("Restart ac me tonight please."))
 
-        #expect(summary(lexicon) == ["Acme ← ak me ← ack me"])
+        #expect(summary(lexicon) == ["Acme ← ac me ← ack me"])
     }
 
-    @Test("revenir dans l'aperçu sur un remplacement fait par le code oublie la variante, sans apprendre l'inverse")
+    @Test("undoing in the preview a replacement made by the code forgets the variant, without learning the reverse")
     func revertedReplacementForgetsVariant() {
         var lexicon = DictationLexicon()
-        lexicon.define("Acme", heard: ["ack me", "ak me"])
+        lexicon.define("Acme", heard: ["ack me", "ac me"])
 
         lexicon.learn(
-            sent: "Ouvre le tableau de bord de ack me demain matin.",
-            origin: dictated("Ouvre le tableau de bord de Acme demain matin."))
+            sent: "Open the ack me dashboard tomorrow morning.",
+            origin: dictated("Open the Acme dashboard tomorrow morning."))
 
-        #expect(summary(lexicon) == ["Acme ← ak me"])
+        #expect(summary(lexicon) == ["Acme ← ac me"])
     }
 
-    @Test("revenir sur le remplacement d'un seul mot oublie aussi la variante, malgré le mot voisin retenu")
+    @Test("undoing a single-word replacement also forgets the variant, despite the neighbouring word kept")
     func revertedSingleWordReplacementForgetsVariant() {
         var lexicon = DictationLexicon()
         lexicon.define("GitHub", heard: ["guithub", "guide hub"])
 
         lexicon.learn(
-            sent: "Ouvre le guithub demain matin.",
-            origin: dictated("Ouvre le GitHub demain matin."))
+            sent: "Open the guithub tomorrow morning.",
+            origin: dictated("Open the GitHub tomorrow morning."))
 
         #expect(summary(lexicon) == ["GitHub ← guide hub"])
     }
 
-    @Test("au-delà de 200 termes, les moins récents sont oubliés")
+    @Test("beyond 200 terms, the least recent ones are forgotten")
     func oldestTermsAreForgotten() {
         var lexicon = DictationLexicon()
         for index in 1...205 {
-            lexicon.learn(sent: "lance terme\(index) maintenant", origin: dictated("lance erreur\(index) maintenant"))
+            lexicon.learn(sent: "run term\(index) now", origin: dictated("run error\(index) now"))
         }
 
         #expect(lexicon.terms.count == 200)
-        #expect(lexicon.terms.first?.text == "terme205 maintenant")
-        #expect(lexicon.terms.last?.text == "terme6 maintenant")
+        #expect(lexicon.terms.first?.text == "term205 now")
+        #expect(lexicon.terms.last?.text == "term6 now")
     }
 
-    @Test("une correction tapée entre deux salves est retenue à l'envoi, une seule fois")
+    @Test("a correction typed between two dictation bursts is learned on send, only once")
     func correctionBetweenSalvesIsLearnedOnce() {
         var lexicon = DictationLexicon()
-        let first = DictatedText(.cleaned("Ensuite on push la branche.", raw: "Ensuite on push la branche."))
+        let first = DictatedText(.cleaned("Then on push the branch.", raw: "Then on push the branch."))
         let second = first.appending(
-            .cleaned("Puis ouvre la pull request.", raw: "Puis ouvre la pull request."),
-            after: "Ensuite git push la branche.")
+            .cleaned("Then open the pull request.", raw: "Then open the pull request."),
+            after: "Then git push the branch.")
 
         lexicon.learn(sent: second.text, origin: .dictated(second))
 
@@ -145,26 +145,26 @@ struct DictationLexiconTests {
         #expect(lexicon.terms.first?.variants.first?.count == 1)
     }
 
-    @Test("le texte écrit avant une salve n'est pas pris pour une correction")
+    @Test("text written before a dictation burst is not taken for a correction")
     func textWrittenBeforeSalveIsNotACorrection() {
         var lexicon = DictationLexicon()
         let dictated = DictatedText(
-            .cleaned("Ensuite on push la branche.", raw: "Ensuite on push la branche."),
-            after: "Corrige le bug de connexion sur la page de login.")
+            .cleaned("Then on push the branch.", raw: "Then on push the branch."),
+            after: "Fix the sign-in bug on the login page.")
 
         lexicon.learn(
-            sent: "Corrige le bug de connexion sur la page de login.\nEnsuite git push la branche.",
+            sent: "Fix the sign-in bug on the login page.\nThen git push the branch.",
             origin: .dictated(dictated))
 
         #expect(summary(lexicon) == ["git push ← on push"])
     }
 
-    @Test("le lexique survit à la relance de l'app")
+    @Test("the lexicon survives an app relaunch")
     func lexiconSurvivesRelaunch() throws {
         let store = try temporaryStore()
         var lexicon = DictationLexicon()
         lexicon.learn(
-            sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."),
+            sent: "Then git push the branch.", origin: dictated("Then on push the branch."),
             at: Date(timeIntervalSince1970: 1_760_000_000))
         lexicon.define("Acme", heard: ["ack me"], at: Date(timeIntervalSince1970: 1_760_000_100))
 
@@ -173,14 +173,14 @@ struct DictationLexiconTests {
         #expect(store.load() == lexicon)
     }
 
-    @Test("les corrections de l'ancien lexique deviennent des termes avec leurs variantes, une seule fois")
+    @Test("corrections from the old lexicon become terms with their variants, only once")
     func legacyCorrectionsAreMigrated() throws {
         let store = try temporaryStore()
         store.defaults.set(
             Data(
                 """
                 {"corrections":[
-                  {"heard":"ak me","meant":"Acme","count":1,"learnedAt":781000300},
+                  {"heard":"ac me","meant":"Acme","count":1,"learnedAt":781000300},
                   {"heard":"on push","meant":"git push","count":3,"learnedAt":781000200},
                   {"heard":"ack me","meant":"acme","count":2,"learnedAt":781000100}
                 ]}
@@ -188,18 +188,18 @@ struct DictationLexiconTests {
 
         let migrated = store.load()
 
-        #expect(summary(migrated) == ["Acme ← ak me ← ack me", "git push ← on push"])
+        #expect(summary(migrated) == ["Acme ← ac me ← ack me", "git push ← on push"])
         #expect(migrated.terms.flatMap(\.variants).map(\.count) == [1, 2, 3])
         #expect(migrated.terms.allSatisfy { $0.source == .learned })
         #expect(store.defaults.data(forKey: "dictation-lexicon") == nil)
         #expect(store.load() == migrated)
     }
 
-    @Test("un terme saisi à la main garde ses variantes et prend celles d'un autre terme")
+    @Test("a hand-typed term keeps its variants and takes those of another term")
     func typedTermClaimsVariants() {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ouvre le fichier GitHub demain.", origin: dictated("Ouvre le fichier guide hub demain."))
-        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+        lexicon.learn(sent: "Open the GitHub file tomorrow.", origin: dictated("Open the guide hub file tomorrow."))
+        lexicon.learn(sent: "Then git push the branch.", origin: dictated("Then on push the branch."))
 
         let accepted = lexicon.define("Git Hub", heard: ["  guide hub ", "", "guide hope"])
 
@@ -209,28 +209,28 @@ struct DictationLexiconTests {
         #expect(lexicon.terms.first?.variants.map(\.source) == [.typed, .typed])
     }
 
-    @Test("modifier un terme retire les variantes effacées et garde l'origine de celles qui restent")
+    @Test("editing a term removes the erased variants and keeps the origin of the remaining ones")
     func editingTermKeepsRemainingVariants() {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ouvre le tableau de bord de Acme demain matin.", origin: dictated("Ouvre le tableau de bord de ack me demain matin."))
-        lexicon.learn(sent: "Relance acme ce soir.", origin: dictated("Relance ak me ce soir."))
+        lexicon.learn(sent: "Open the Acme dashboard tomorrow morning.", origin: dictated("Open the ack me dashboard tomorrow morning."))
+        lexicon.learn(sent: "Restart acme tonight please.", origin: dictated("Restart ac me tonight please."))
 
-        lexicon.define("Acme", heard: ["ack me", "ak mee"], replacing: "acme")
+        lexicon.define("Acme", heard: ["ack me", "acne"], replacing: "acme")
 
-        #expect(summary(lexicon) == ["Acme ← ack me ← ak mee"])
+        #expect(summary(lexicon) == ["Acme ← ack me ← acne"])
         #expect(lexicon.terms.first?.source == .learned)
         #expect(lexicon.terms.first?.variants.map(\.source) == [.learned, .typed])
     }
 
-    @Test("un terme ou une variante vide, trop longue, ou identique à une autre est refusé")
+    @Test("an empty, too long, or duplicate term or variant is refused")
     func invalidTermIsRejected() {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+        lexicon.learn(sent: "Then git push the branch.", origin: dictated("Then on push the branch."))
 
         let accepted = [
             lexicon.define("  ", heard: ["on push"]),
             lexicon.define("git push origin main", heard: ["on push"]),
-            lexicon.define("git push", heard: ["on pousse vers origin"]),
+            lexicon.define("git push", heard: ["on push to origin"]),
             lexicon.define("GitHub", heard: ["Github"]),
             lexicon.define("git push", heard: ["on push", "On Push"]),
         ]
@@ -239,10 +239,10 @@ struct DictationLexiconTests {
         #expect(summary(lexicon) == ["git push ← on push"])
     }
 
-    @Test("un terme supprimé ne guide plus la dictée")
+    @Test("a deleted term no longer guides dictation")
     func forgottenTermIsGone() {
         var lexicon = DictationLexicon()
-        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+        lexicon.learn(sent: "Then git push the branch.", origin: dictated("Then on push the branch."))
 
         lexicon.forget(lexicon.terms[0].id)
 

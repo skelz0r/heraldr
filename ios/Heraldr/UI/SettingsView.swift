@@ -8,28 +8,28 @@ struct SettingsView: View {
         @Bindable var model = model
         NavigationStack {
             List {
-                Section("Dictée") {
+                Section("Dictation") {
                     NavigationLink {
                         LexiconView(lexicon: $model.lexicon, backup: model.lexiconBackup)
                     } label: {
-                        LabeledContent("Lexique", value: "\(model.lexicon.terms.count)")
+                        LabeledContent("Lexicon", value: "\(model.lexicon.terms.count)")
                     }
                     .accessibilityIdentifier("settings.lexicon")
                 }
-                Section("Build installé") {
+                Section("Installed build") {
                     LabeledContent("Version", value: build.version)
-                    LabeledContent("Commit", value: build.commit ?? "inconnu")
-                    LabeledContent("Buildé") {
+                    LabeledContent("Commit", value: build.commit ?? "unknown")
+                    LabeledContent("Built") {
                         if let builtAt = build.builtAt {
                             Text(builtAt, format: .dateTime.day().month().year().hour().minute())
                         } else {
-                            Text("inconnu")
+                            Text("unknown")
                         }
                     }
                 }
             }
             .textSelection(.enabled)
-            .navigationTitle("Réglages")
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

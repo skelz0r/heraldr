@@ -4,7 +4,7 @@ import Testing
 @testable import Heraldr
 
 @MainActor
-@Suite("Sauvegarde du lexique sur le Mac")
+@Suite("Lexicon backup on the Mac")
 struct LexiconBackupTests {
     private actor FakeMac {
         var file: Data?
@@ -21,7 +21,7 @@ struct LexiconBackupTests {
         }
 
         func read() throws -> Data {
-            guard readable else { throw MacLinkError.commandFailed(status: 1, stderr: "lecture impossible") }
+            guard readable else { throw MacLinkError.commandFailed(status: 1, stderr: "read failed") }
             reads += 1
             return file ?? Data()
         }
@@ -56,9 +56,9 @@ struct LexiconBackupTests {
         lexicon.terms.map(\.text)
     }
 
-    @Test("après un nouvel appairage avec un lexique local vide, le lexique du Mac est restauré et survit à la relance")
+    @Test("after a new pairing with an empty local lexicon, the Mac lexicon is restored and survives a relaunch")
     func emptyLexiconIsRestoredAfterPairing() async {
-        let backup = lexicon([("Acme", ["ack me"]), ("herdr", ["air de heure"])])
+        let backup = lexicon([("Acme", ["ack me"]), ("herdr", ["her door"])])
         let mac = FakeMac(file: backup.json)
         let keeper = LexiconKeeper(store: store)
 
@@ -70,10 +70,10 @@ struct LexiconBackupTests {
         #expect(LexiconKeeper(store: store).lexicon == backup)
     }
 
-    @Test("après un nouvel appairage avec un lexique local non vide, le Mac n'est pas relu et sa sauvegarde est écrasée")
+    @Test("after a new pairing with a non-empty local lexicon, the Mac is not read and its backup is overwritten")
     func localLexiconOverwritesMacAfterPairing() async {
         let local = lexicon([("Acme", ["ack me"])])
-        let mac = FakeMac(file: lexicon([("herdr", ["air de heure"])]).json)
+        let mac = FakeMac(file: lexicon([("herdr", ["her door"])]).json)
         store.save(local)
         let keeper = LexiconKeeper(store: store)
 
@@ -87,7 +87,7 @@ struct LexiconBackupTests {
     }
 
     @Test(
-        "lecture du Mac impossible pendant la restauration : sa sauvegarde n'est pas écrasée, elle est reprise à la connexion suivante avec ce qui a été appris entre-temps"
+        "Mac unreadable during the restore: its backup is not overwritten, it is restored at the next connection along with what was learned in the meantime"
     )
     func restoreIsRetriedWithoutOverwritingMac() async {
         let backup = lexicon([("Acme", ["ack me"])])
@@ -109,7 +109,7 @@ struct LexiconBackupTests {
         #expect(await mac.file == relaunched.lexicon.json)
     }
 
-    @Test("un changement du lexique est sauvegardé une fois sur le Mac, pas à chaque connexion")
+    @Test("a lexicon change is backed up once on the Mac, not at every connection")
     func changeIsBackedUpOnce() async {
         let mac = FakeMac()
         let keeper = LexiconKeeper(store: store)

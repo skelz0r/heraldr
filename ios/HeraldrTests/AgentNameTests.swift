@@ -3,14 +3,14 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Nom de l'agent herdr visé dans un workspace")
+@Suite("Name of the herdr agent targeted in a workspace")
 struct AgentNameTests {
-    @Test("le workspace ~ vise home-main")
+    @Test("the ~ workspace targets home-main")
     func homeWorkspace() {
         #expect(AgentName.forWorkspace(label: "~") == "home-main")
     }
 
-    @Test("l'app et dispatch.sh relay donnent le même nom d'agent, valide pour herdr", arguments: try AgentNameVectors.shared())
+    @Test("the app and dispatch.sh relay give the same agent name, valid for herdr", arguments: try AgentNameVectors.shared())
     func sharedWithDispatchScript(vector: AgentNameVectors.Vector) {
         let name = AgentName.forWorkspace(label: vector.label)
 

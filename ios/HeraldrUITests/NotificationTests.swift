@@ -8,22 +8,22 @@ final class NotificationTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testTapSurUneQuestionAppTuee() {
+    func testTapOnAQuestionWithAppKilled() {
         let app = launchAllowingNotifications(environment: ["HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH": "1"])
         app.terminate()
 
         tapNotification()
 
-        assertQuestionOpened(in: app, capturedAs: "question-non-ouverte-app-tuee")
+        assertQuestionOpened(in: app, capturedAs: "unopened-question-app-killed")
     }
 
-    func testTapSurUneQuestionAppEnArrierePlan() {
+    func testTapOnAQuestionWithAppInBackground() {
         let app = launchAllowingNotifications()
         XCUIDevice.shared.press(.home)
 
         tapNotification()
 
-        assertQuestionOpened(in: app, capturedAs: "question-non-ouverte")
+        assertQuestionOpened(in: app, capturedAs: "unopened-question")
     }
 
     private func launchAllowingNotifications(environment: [String: String] = [:]) -> XCUIApplication {
@@ -38,8 +38,8 @@ final class NotificationTests: XCTestCase {
     }
 
     private func tapNotification() {
-        let banner = springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Quelle base pour l'export")).firstMatch
-        XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification absente")
+        let banner = springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Which database for the export")).firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
         banner.tap()
     }
 
@@ -48,8 +48,8 @@ final class NotificationTests: XCTestCase {
         XCTAssertEqual(label(of: "target.workspace", in: app), "Acme")
         let card = element("question.card", in: app)
         waitFor(card)
-        XCTAssertTrue(app.staticTexts["acme-main attend une réponse"].exists)
-        XCTAssertTrue(app.staticTexts["La session ne s'est pas ouverte dans Claude."].exists)
+        XCTAssertTrue(app.staticTexts["acme-main is waiting for an answer"].exists)
+        XCTAssertTrue(app.staticTexts["The session did not open in Claude."].exists)
         capture(screen, in: app)
     }
 }

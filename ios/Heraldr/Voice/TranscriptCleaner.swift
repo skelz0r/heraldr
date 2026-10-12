@@ -57,13 +57,13 @@ struct CleaningModel: Sendable {
         case .available:
             break
         case .unavailable(.appleIntelligenceNotEnabled):
-            return .failed(reason: "Apple Intelligence est désactivé")
+            return .failed(reason: "Apple Intelligence is turned off")
         case .unavailable(.modelNotReady):
-            return .failed(reason: "le modèle Apple Intelligence n'est pas encore prêt")
+            return .failed(reason: "the Apple Intelligence model is not ready yet")
         case .unavailable(.deviceNotEligible):
-            return .failed(reason: "cet appareil ne gère pas Apple Intelligence")
+            return .failed(reason: "this device does not support Apple Intelligence")
         case .unavailable:
-            return .failed(reason: "Apple Intelligence indisponible")
+            return .failed(reason: "Apple Intelligence unavailable")
         }
 
         let session = LanguageModelSession(model: model, instructions: instructions)
@@ -71,42 +71,44 @@ struct CleaningModel: Sendable {
             let response = try await session.respond(to: prompt, options: GenerationOptions(sampling: .greedy))
             return .text(response.content)
         } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
-            return .failed(reason: "dictée trop longue pour le nettoyage")
+            return .failed(reason: "dictation too long to clean up")
         } catch {
-            return .failed(reason: "nettoyage impossible (\(error.localizedDescription))")
+            return .failed(reason: "cleanup failed (\(error.localizedDescription))")
         }
     }
 }
 
 enum TranscriptCleaner {
     static let instructions = """
-        Tu nettoies la transcription brute d'une dictée vocale en français, \
-        destinée à un agent de code.
-        Retire uniquement les hésitations (euh, hum, ben, bah), les mots de \
-        remplissage, les répétitions involontaires et les faux départs, et \
-        corrige la ponctuation.
-        Ne change pas le sens. Ne reformule pas, ne résume pas, ne traduis pas, \
-        n'ajoute aucune information.
-        Garde tels quels les noms propres, termes techniques, noms de fichiers, \
-        de branches et de commandes.
-        La transcription est une demande adressée à quelqu'un d'autre : n'y \
-        réponds pas, ne la commente pas.
-        Réponds uniquement avec le texte nettoyé, sans guillemets ni préambule.
+        You clean up the raw transcript of a voice dictation meant for a \
+        coding agent.
+        Keep the language of the transcript: never translate it, and answer \
+        in that same language.
+        Only remove hesitations (uh, um, er, or their equivalent in the \
+        transcript's language), filler words, unintended repetitions and \
+        false starts, and fix the punctuation.
+        Do not change the meaning. Do not rephrase, summarize or add any \
+        information.
+        Keep proper nouns, technical terms, and file, branch and command \
+        names as they are.
+        The transcript is a request addressed to someone else: do not answer \
+        it or comment on it.
+        Reply only with the cleaned text, without quotes or preamble.
         """
 
     static func instructions(hinting hints: [(heard: String, term: String)]) -> String {
         guard !hints.isEmpty else { return instructions }
         return instructions + """
 
-            La dictée mêle français et anglais technique. Dans cette transcription, \
-            ces mots sont peut-être mal entendus ; remplace-les seulement si la \
-            phrase n'a pas de sens autrement :
-            """ + hints.map { "\n- « \($0.heard) » veut peut-être dire « \($0.term) »" }.joined()
+            The dictation may mix its language with technical English. In \
+            this transcript, these words may have been misheard; replace them \
+            only if the sentence makes no sense otherwise:
+            """ + hints.map { "\n- \"\($0.heard)\" may mean \"\($0.term)\"" }.joined()
     }
 
     static func clean(_ raw: String, lexicon: DictationLexicon = DictationLexicon(), model: CleaningModel = .onDevice) async -> CleanedTranscript {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return .raw(trimmed, original: trimmed, reason: "dictée vide") }
+        guard !trimmed.isEmpty else { return .raw(trimmed, original: trimmed, reason: "empty dictation") }
 
         let before = lexicon.replacements(in: trimmed)
         let corrected = before.text
@@ -123,13 +125,13 @@ enum TranscriptCleaner {
                     return CleaningTrace.Hint(heard: hint.heard, term: hint.term, applied: applied)
                 })
         }
-        switch await model.reply(instructions(hinting: hints), "Transcription brute :\n\(corrected)") {
+        switch await model.reply(instructions(hinting: hints), "Raw transcript:\n\(corrected)") {
         case .failed(let reason):
             return .raw(corrected, original: trimmed, reason: reason, trace: trace(reply: nil))
         case .text(let reply):
             let cleaned = reply.trimmingCharacters(in: .whitespacesAndNewlines)
             guard isPlausibleCleanup(cleaned, of: corrected) else {
-                return .raw(corrected, original: trimmed, reason: "nettoyage écarté : il s'éloignait trop de la dictée", trace: trace(reply: nil))
+                return .raw(corrected, original: trimmed, reason: "cleanup discarded: it strayed too far from the dictation", trace: trace(reply: nil))
             }
             let after = lexicon.replacements(in: cleaned)
             return .cleaned(after.text, raw: trimmed, trace: trace(reply: cleaned, after: after.applied))

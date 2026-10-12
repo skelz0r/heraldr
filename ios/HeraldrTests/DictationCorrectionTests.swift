@@ -3,7 +3,7 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Correction d'une dictée par le lexique")
+@Suite("Dictation corrected by the lexicon")
 struct DictationCorrectionTests {
     private actor Recorder {
         var instructions: [String] = []
@@ -14,14 +14,14 @@ struct DictationCorrectionTests {
     }
 
     private static let unchanged = CleaningModel { _, prompt in
-        .text(String(prompt.dropFirst("Transcription brute :\n".count)))
+        .text(String(prompt.dropFirst("Raw transcript:\n".count)))
     }
 
     private static func answering(_ text: String) -> CleaningModel {
         CleaningModel { _, _ in .text(text) }
     }
 
-    private static let unavailable = CleaningModel { _, _ in .failed(reason: "Apple Intelligence est désactivé") }
+    private static let unavailable = CleaningModel { _, _ in .failed(reason: "Apple Intelligence is turned off") }
 
     private func learned(_ pairs: [(proposed: String, sent: String)]) -> DictationLexicon {
         var lexicon = DictationLexicon()
@@ -32,58 +32,58 @@ struct DictationCorrectionTests {
     }
 
     private let acme = (
-        proposed: "Ouvre le tableau de bord de ack me demain matin.",
-        sent: "Ouvre le tableau de bord de Acme demain matin."
+        proposed: "Open the ack me dashboard tomorrow morning.",
+        sent: "Open the Acme dashboard tomorrow morning."
     )
 
-    @Test("« ack me » dicté donne « Acme » dans le texte proposé, quelle que soit la sortie du modèle")
+    @Test("dictated \"ack me\" gives \"Acme\" in the proposed text, whatever the model output")
     func knownVariantIsAlwaysReplaced() async {
         let lexicon = learned([acme])
-        let raw = "Envoie la facture à ack me ce soir"
+        let raw = "Send the invoice to ack me tonight"
 
         let outcomes = [
             await TranscriptCleaner.clean(raw, lexicon: lexicon, model: Self.unchanged),
-            await TranscriptCleaner.clean(raw, lexicon: lexicon, model: Self.answering("Envoie la facture à ack me ce soir.")),
+            await TranscriptCleaner.clean(raw, lexicon: lexicon, model: Self.answering("Send the invoice to ack me tonight.")),
             await TranscriptCleaner.clean(raw, lexicon: lexicon, model: Self.unavailable),
         ]
 
         #expect(
             outcomes.map(\.text) == [
-                "Envoie la facture à Acme ce soir",
-                "Envoie la facture à Acme ce soir.",
-                "Envoie la facture à Acme ce soir",
+                "Send the invoice to Acme tonight",
+                "Send the invoice to Acme tonight.",
+                "Send the invoice to Acme tonight",
             ])
         #expect(outcomes.map(\.raw) == [raw, raw, raw])
     }
 
-    @Test("une variante apprise d'un seul mot n'est jamais remplacée d'office : elle est seulement signalée au nettoyage")
+    @Test("a learned single-word variant is never replaced outright: it is only hinted to the cleanup")
     func learnedSingleWordIsOnlyHinted() async {
-        let lexicon = learned([(proposed: "Ouvre le guithub du projet ce soir.", sent: "Ouvre le git hub du projet ce soir.")])
+        let lexicon = learned([(proposed: "Open the guithub of the project tonight.", sent: "Open the git hub of the project tonight.")])
         let recorder = Recorder()
         let model = CleaningModel { instructions, prompt in
             await recorder.record(instructions)
-            return .text(String(prompt.dropFirst("Transcription brute :\n".count)))
+            return .text(String(prompt.dropFirst("Raw transcript:\n".count)))
         }
 
-        let cleaned = await TranscriptCleaner.clean("Regarde le guithub", lexicon: lexicon, model: model)
+        let cleaned = await TranscriptCleaner.clean("Look at the guithub", lexicon: lexicon, model: model)
 
-        #expect(cleaned.text == "Regarde le guithub")
-        #expect(await recorder.instructions.first?.hasSuffix("\n- « guithub » veut peut-être dire « git hub »") == true)
+        #expect(cleaned.text == "Look at the guithub")
+        #expect(await recorder.instructions.first?.hasSuffix("\n- \"guithub\" may mean \"git hub\"") == true)
     }
 
-    @Test("le nettoyage ne reçoit que trois variantes au plus, celles entendues dans la dictée")
+    @Test("the cleanup gets three variants at most, those heard in the dictation")
     func onlyHeardVariantsAreHinted() async {
         let lexicon = learned(
             ["alpha", "bravo", "charlie", "delta", "echo"].map { word in
-                (proposed: "Lance \(word)x vers la prod ce soir.", sent: "Lance \(word) one vers la prod ce soir.")
+                (proposed: "Ship \(word)x to prod tonight please.", sent: "Ship \(word) one to prod tonight please.")
             })
         let recorder = Recorder()
         let model = CleaningModel { instructions, _ in
             await recorder.record(instructions)
-            return .text("texte")
+            return .text("text")
         }
 
-        _ = await TranscriptCleaner.clean("Rien de connu ici", lexicon: lexicon, model: model)
+        _ = await TranscriptCleaner.clean("Nothing known here", lexicon: lexicon, model: model)
         _ = await TranscriptCleaner.clean("alphax bravox charliex deltax", lexicon: lexicon, model: model)
 
         let instructions = await recorder.instructions
@@ -92,36 +92,36 @@ struct DictationCorrectionTests {
         #expect(instructions.last?.contains("echox") == false)
     }
 
-    @Test("une variante n'est pas remplacée à l'intérieur d'un mot plus long")
+    @Test("a variant is not replaced inside a longer word")
     func variantInsideLongerWordIsKept() async {
         var lexicon = learned([acme])
-        lexicon.define("Docu", heard: ["doc"])
+        lexicon.define("Docs", heard: ["doc"])
 
         let cleaned = await TranscriptCleaner.clean(
-            "Lis la doc et la documentation du ack mete", lexicon: lexicon, model: Self.unavailable)
+            "Read the doc and the documentation of the ack meter", lexicon: lexicon, model: Self.unavailable)
 
-        #expect(cleaned.text == "Lis la Docu et la documentation du ack mete")
+        #expect(cleaned.text == "Read the Docs and the documentation of the ack meter")
     }
 
-    @Test("la casse du terme est gardée, quelle que soit celle de la dictée")
+    @Test("the case of the term is kept, whatever the case of the dictation")
     func termCaseIsKept() async {
         var lexicon = DictationLexicon()
         lexicon.define("Acme", heard: ["ack me"])
 
         let cleaned = await TranscriptCleaner.clean(
-            "acme, puis ack me.", lexicon: lexicon, model: Self.unavailable)
+            "acme, then Ack Me.", lexicon: lexicon, model: Self.unavailable)
 
-        #expect(cleaned.text == "Acme, puis Acme.")
+        #expect(cleaned.text == "Acme, then Acme.")
     }
 
-    @Test("la variante la plus longue l'emporte sur une plus courte qu'elle contient")
+    @Test("the longest variant wins over a shorter one it contains")
     func longestVariantWins() async {
         var lexicon = DictationLexicon()
-        lexicon.define("Acme", heard: ["ak me"])
-        lexicon.define("Docu", heard: ["doc"])
+        lexicon.define("AcmeDocs", heard: ["ack me doc"])
+        lexicon.define("Docs", heard: ["doc"])
 
-        let cleaned = await TranscriptCleaner.clean("Ouvre le ak me et la doc", lexicon: lexicon, model: Self.unavailable)
+        let cleaned = await TranscriptCleaner.clean("Open the ack me doc and the doc", lexicon: lexicon, model: Self.unavailable)
 
-        #expect(cleaned.text == "Ouvre le Acme et la Docu")
+        #expect(cleaned.text == "Open the AcmeDocs and the Docs")
     }
 }

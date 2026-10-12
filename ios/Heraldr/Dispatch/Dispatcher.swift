@@ -40,7 +40,7 @@ struct Dispatcher: Sendable {
         guard
             let url = Bundle.main.url(forResource: "dispatch", withExtension: "sh"),
             let data = try? Data(contentsOf: url)
-        else { fatalError("dispatch.sh absent du bundle") }
+        else { fatalError("dispatch.sh missing from the bundle") }
         return data
     }()
 
@@ -48,7 +48,7 @@ struct Dispatcher: Sendable {
         guard
             let url = Bundle.main.url(forResource: "notify-hook", withExtension: "mjs"),
             let data = try? Data(contentsOf: url)
-        else { fatalError("notify-hook.mjs absent du bundle") }
+        else { fatalError("notify-hook.mjs missing from the bundle") }
         return data
     }()
 
@@ -112,7 +112,7 @@ struct Dispatcher: Sendable {
         let result = try await link.run("/bin/sh \(Self.script) read-answer \(quoted(jobId))")
         guard result.exitStatus == 0 else { throw failure(result) }
         guard let answer = Answer(scriptOutput: result.output) else {
-            throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "réponse illisible")
+            throw MacLinkError.commandFailed(status: result.exitStatus, stderr: "unreadable answer")
         }
         return answer
     }

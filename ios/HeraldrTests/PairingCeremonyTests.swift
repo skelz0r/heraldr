@@ -4,7 +4,7 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Appairage refusé avant tout contact avec le Mac")
+@Suite("Pairing refused before any contact with the Mac")
 struct PairingCeremonyTests {
     private let deviceKey = DeviceKey(privateKey: .init())
 
@@ -12,7 +12,7 @@ struct PairingCeremonyTests {
         try #require(try PairingCodeVectors.shared().valid.first { $0.name == name })
     }
 
-    @Test("un code expiré est refusé, pour ne jamais présenter une clé d'amorçage périmée")
+    @Test("an expired code is refused, so an outdated bootstrap key is never presented")
     func expiredCode() async throws {
         let code = try vector(named: "with bootstrap seed and expiry")
         let expiry = Date(timeIntervalSince1970: TimeInterval(code.payload.expiresAt!))
@@ -25,7 +25,7 @@ struct PairingCeremonyTests {
         }
     }
 
-    @Test("un code sans clé d'amorçage est refusé : il ne permet pas d'enrôler l'iPhone")
+    @Test("a code without bootstrap key is refused: it cannot enroll the iPhone")
     func configOnlyCode() async throws {
         let code = try vector(named: "config-only single LAN IPv4, default port")
 
@@ -38,7 +38,7 @@ struct PairingCeremonyTests {
     }
 }
 
-@Suite("Réponse du Mac à l'enrôlement de la clé de l'iPhone")
+@Suite("Mac response to the enrollment of the iPhone key")
 struct EnrollmentResponseTests {
     private let deviceKey = DeviceKey(privateKey: .init())
 
@@ -51,43 +51,43 @@ struct EnrollmentResponseTests {
         }
     }
 
-    @Test("le Mac confirme l'empreinte de la clé de l'iPhone : enrôlement accepté")
+    @Test("the Mac confirms the fingerprint of the iPhone key: enrollment accepted")
     func enrolled() {
         #expect(refusal("HERDR-ENROLL:OK:\(deviceKey.fingerprint)\n") == nil)
     }
 
-    @Test("le Mac a enrôlé une autre clé que celle de l'iPhone : refusé avec l'empreinte reçue")
+    @Test("the Mac enrolled another key than the iPhone one: refused with the received fingerprint")
     func otherKey() {
-        #expect(refusal("HERDR-ENROLL:OK:SHA256:autre") == "Enrôlement impossible : le Mac a enrôlé une autre clé (SHA256:autre)")
+        #expect(refusal("HERDR-ENROLL:OK:SHA256:other") == "Enrollment failed: the Mac enrolled another key (SHA256:other)")
     }
 
-    @Test("le Mac refuse l'enrôlement : sa raison est affichée")
+    @Test("the Mac refuses the enrollment: its reason is shown")
     func refused() {
-        #expect(refusal("HERDR-ENROLL:ERR:already-used") == "Le Mac a refusé l'enrôlement (already-used)")
+        #expect(refusal("HERDR-ENROLL:ERR:already-used") == "The Mac refused the enrollment (already-used)")
     }
 
-    @Test("le code a expiré pendant l'enrôlement : même texte qu'un code expiré avant")
+    @Test("the code expired during enrollment: same text as a code expired before")
     func expiredDuringEnrollment() {
-        #expect(refusal("HERDR-ENROLL:ERR:expired") == "Le code a expiré : relance heeler.pair sur le Mac")
+        #expect(refusal("HERDR-ENROLL:ERR:expired") == "The code expired: run heeler.pair again on the Mac")
     }
 
-    @Test("une réponse qui n'est pas du protocole d'enrôlement est refusée")
+    @Test("a response outside the enrollment protocol is refused")
     func unexpected() {
-        #expect(refusal("Welcome to macOS") == "Enrôlement impossible : réponse inattendue : Welcome to macOS")
+        #expect(refusal("Welcome to macOS") == "Enrollment failed: unexpected response: Welcome to macOS")
     }
 }
 
-@Suite("Clé hôte du Mac épinglée")
+@Suite("Pinned Mac host key")
 struct PinnedHostKeyTests {
-    @Test("un serveur SSH qui présente une autre clé que celle du QR est refusé avant toute authentification")
+    @Test("an SSH server presenting another key than the QR one is refused before any authentication")
     func otherHostKeyRefused() async {
         await #expect {
             _ = try await SSHDialer.connect(
                 addresses: ["127.0.0.1"], port: 22, username: "heraldr-tests",
-                hostKeyFingerprint: "SHA256:clé-du-qr", identity: SSHIdentity(DeviceKey(privateKey: .init())))
+                hostKeyFingerprint: "SHA256:qr-key", identity: SSHIdentity(DeviceKey(privateKey: .init())))
         } throws: { error in
             guard case MacLinkError.hostKeyChanged(let presented) = error else { return false }
-            return presented.hasPrefix("SHA256:") && presented != "SHA256:clé-du-qr"
+            return presented.hasPrefix("SHA256:") && presented != "SHA256:qr-key"
         }
     }
 }

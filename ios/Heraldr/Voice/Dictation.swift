@@ -14,19 +14,19 @@ enum DictationError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .microphoneDenied:
-            "Accès au micro refusé : autorise-le dans Réglages"
+            "Microphone access denied: allow it in Settings"
         case .localeUnsupported:
-            "La transcription en français n'est pas disponible sur cet iPhone"
+            "Transcription in this language is not available on this iPhone"
         case .noAudioFormat:
-            "Aucun format audio compatible avec la transcription"
+            "No audio format compatible with transcription"
         case .audioEngine(let detail):
-            "Micro indisponible : \(detail)"
+            "Microphone unavailable: \(detail)"
         case .noMicrophone:
-            "Aucun micro disponible"
+            "No microphone available"
         case .step(let step, let error as DictationError):
-            "\(step) : \(error.localizedDescription)"
+            "\(step): \(error.localizedDescription)"
         case .step(let step, let error):
-            "\(step) : \(error.localizedDescription) (\((error as NSError).domain) \((error as NSError).code))"
+            "\(step): \(error.localizedDescription) (\((error as NSError).domain) \((error as NSError).code))"
         }
     }
 }
@@ -56,7 +56,7 @@ final class Dictation {
         (finalizedText + volatileText).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func start(locale requested: Locale = Locale(identifier: "fr-FR"), vocabulary: [String] = []) async throws {
+    func start(locale requested: Locale = .current, vocabulary: [String] = []) async throws {
         guard phase == .idle else { return }
         phase = .preparing
         finalizedText = ""
@@ -106,13 +106,13 @@ final class Dictation {
             throw DictationError.localeUnsupported
         }
 
-        try await Self.step("Téléchargement du modèle de transcription") {
+        try await Self.step("Downloading the transcription model") {
             if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
                 try await request.downloadAndInstall()
             }
         }
 
-        try Self.step("Configuration de la session audio") {
+        try Self.step("Setting up the audio session") {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.record, mode: .measurement)
             try session.setActive(true, options: .notifyOthersOnDeactivation)
@@ -124,13 +124,13 @@ final class Dictation {
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module], considering: inputFormat) else {
             throw DictationError.noAudioFormat
         }
-        let feeder = try Self.step("Conversion audio") {
+        let feeder = try Self.step("Converting audio") {
             try AudioFeeder(from: inputFormat, to: analyzerFormat) { [weak self] level in
                 Task { @MainActor in self?.level = level }
             }
         }
         let analyzer = SpeechAnalyzer(modules: [module])
-        try await Self.step("Démarrage de la transcription") {
+        try await Self.step("Starting transcription") {
             if !vocabulary.isEmpty {
                 let context = AnalysisContext()
                 context.contextualStrings[.general] = vocabulary
@@ -150,7 +150,7 @@ final class Dictation {
 
         feeder.attach(to: engine.inputNode, format: inputFormat)
         engine.prepare()
-        try Self.step("Démarrage du micro") {
+        try Self.step("Starting the microphone") {
             try engine.start()
         }
 

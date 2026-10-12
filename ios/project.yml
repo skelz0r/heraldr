@@ -1,7 +1,7 @@
 name: Heraldr
 
 options:
-  developmentLanguage: fr
+  developmentLanguage: en
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -45,7 +45,7 @@ targets:
         script: |
           set -e
           plist="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
-          commit=$(git -C "${SRCROOT}" rev-parse --short HEAD 2>/dev/null || echo "inconnu")
+          commit=$(git -C "${SRCROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
           if [ -n "$(git -C "${SRCROOT}" status --porcelain 2>/dev/null)" ]; then
             commit="${commit}-dirty"
           fi
@@ -57,7 +57,7 @@ targets:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleLocalizations: [fr]
+        CFBundleLocalizations: [en]
         HeraldrTeamID: $(DEVELOPMENT_TEAM)
         HeraldrBuildCommit: ""
         HeraldrBuildDate: ""
@@ -83,10 +83,10 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        INFOPLIST_KEY_NSCameraUsageDescription: "La caméra sert à scanner le QR d'appairage affiché par herdr sur le Mac."
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Le micro sert à dicter les demandes envoyées aux agents herdr."
-        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "La dictée est transcrite sur l'iPhone, sans quitter l'appareil."
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Le réseau local sert à joindre le Mac en SSH."
+        INFOPLIST_KEY_NSCameraUsageDescription: "The camera scans the pairing QR code shown by herdr on the Mac."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "The microphone lets you dictate the requests sent to herdr agents."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Dictation is transcribed on the iPhone, without leaving the device."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "The local network is used to reach the Mac over SSH."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
 
   HeraldrTests:

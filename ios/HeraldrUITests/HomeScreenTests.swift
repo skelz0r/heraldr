@@ -6,93 +6,93 @@ final class HomeScreenTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testCibleParDefautEtEtatDeChaqueAgent() {
+    func testDefaultTargetAndStateOfEachAgent() {
         let app = launch("demo")
         waitFor(element("tile.wH", in: app))
         XCTAssertEqual(label(of: "target.workspace", in: app), "~")
         XCTAssertEqual(label(of: "target.tab", in: app), "main")
-        XCTAssertEqual(label(of: "target.state", in: app), "Prêt")
-        capture("accueil", in: app)
+        XCTAssertEqual(label(of: "target.state", in: app), "Ready")
+        capture("home", in: app)
 
         let expected: [(tile: String, state: String, next: String)] = [
-            ("wH", "Travaille", "Un nouvel envoi attendra la fin de son travail."),
-            ("wS", "Envoi en cours…", "Un nouvel envoi partira juste après."),
-            ("wM", "Prêt", "Un envoi vide son contexte puis transmet la demande."),
-            ("wL", "État inconnu", "Un nouvel envoi attendra qu'il soit prêt."),
-            ("wB", "Pas encore d'agent", "Un envoi lancera Claude dans le tab 1, nommé blog-main."),
-            ("wK", "Plusieurs Claude -main", "Un envoi échouera : garde un seul de w---morris-main, morris_api-main, ou nomme-le morris-main."),
+            ("wH", "Working", "A new send will wait until it finishes its work."),
+            ("wS", "Sending…", "A new send will go out right after."),
+            ("wM", "Ready", "A send clears its context, then hands over the request."),
+            ("wL", "Unknown state", "A new send will wait until it is ready."),
+            ("wB", "No agent yet", "A send will start Claude in tab 1, named blog-main."),
+            ("wK", "Several -main Claudes", "A send will fail: keep only one of w---morris-main, morris_api-main, or name it morris-main."),
         ]
         for (tile, state, next) in expected {
             element("tile.\(tile)", in: app).tap()
             XCTAssertEqual(label(of: "target.state", in: app), state, tile)
             XCTAssertEqual(label(of: "target.next", in: app), next, tile)
-            capture("cible-\(tile)", in: app)
+            capture("target-\(tile)", in: app)
         }
     }
 
-    func testAgentBloqueSansEnvoiEnFile() {
+    func testBlockedAgentWithoutQueuedSend() {
         let app = launch("demo")
         element("tile.wH", in: app).press(forDuration: 1)
-        app.buttons["journal-dictee"].firstMatch.tap()
+        app.buttons["dictation-journal"].firstMatch.tap()
         element("tile.wH", in: app).press(forDuration: 1)
         app.buttons["tab 4"].firstMatch.tap()
         XCTAssertEqual(label(of: "target.tab", in: app), "tab 4")
-        XCTAssertEqual(label(of: "target.state", in: app), "Te pose une question : réponds dans Claude mobile")
-        XCTAssertEqual(label(of: "target.next", in: app), "Un nouvel envoi attendra que tu lui aies répondu.")
-        capture("cible-tab-bloque", in: app)
+        XCTAssertEqual(label(of: "target.state", in: app), "Asking you a question: answer in Claude mobile")
+        XCTAssertEqual(label(of: "target.next", in: app), "A new send will wait until you have answered it.")
+        capture("target-blocked-tab", in: app)
     }
 
-    func testCiblerUnTabParAppuiLong() {
+    func testTargetATabWithLongPress() {
         let app = launch("demo")
         let heraldr = element("tile.wH", in: app)
         waitFor(heraldr)
         heraldr.press(forDuration: 1)
         waitFor(app.buttons["harness-qa"])
         XCTAssertTrue(app.buttons["main"].exists)
-        XCTAssertTrue(app.buttons["journal-dictee"].exists)
-        capture("menu-tabs", in: app, dark: false)
+        XCTAssertTrue(app.buttons["dictation-journal"].exists)
+        capture("tabs-menu", in: app, dark: false)
         app.buttons["harness-qa"].tap()
 
         XCTAssertEqual(label(of: "target.workspace", in: app), "Heraldr")
         XCTAssertEqual(label(of: "target.tab", in: app), "harness-qa")
-        XCTAssertEqual(label(of: "target.state", in: app), "Prêt")
-        XCTAssertEqual(label(of: "target.next", in: app), "Un envoi transmet la demande telle quelle, sans vider son contexte.")
-        capture("cible-tab", in: app)
+        XCTAssertEqual(label(of: "target.state", in: app), "Ready")
+        XCTAssertEqual(label(of: "target.next", in: app), "A send hands over the request as is, keeping its context.")
+        capture("target-tab", in: app)
 
         heraldr.tap()
         XCTAssertEqual(label(of: "target.tab", in: app), "main")
     }
 
-    func testWorkspaceSansAutreTabClaude() {
+    func testWorkspaceWithoutOtherClaudeTab() {
         let app = launch("demo")
         let acme = element("tile.wS", in: app)
         waitFor(acme)
         acme.press(forDuration: 1)
-        waitFor(app.descendants(matching: .any)["Aucun Claude dans les autres tabs"].firstMatch)
-        capture("menu-sans-tab", in: app, dark: false)
+        waitFor(app.descendants(matching: .any)["No Claude in the other tabs"].firstMatch)
+        capture("menu-without-tab", in: app, dark: false)
     }
 
-    func testMacInjoignable() {
+    func testMacUnreachable() {
         let app = launch("unreachable")
-        waitFor(app.staticTexts["Mac injoignable"])
+        waitFor(app.staticTexts["Mac unreachable"])
         waitFor(element("home.retry", in: app))
-        capture("injoignable", in: app)
+        capture("unreachable", in: app)
     }
 
-    func testConnexionEnCours() {
+    func testConnecting() {
         let app = launch("connecting")
-        waitFor(app.staticTexts["Connexion au Mac…"])
-        capture("connexion", in: app)
+        waitFor(app.staticTexts["Connecting to the Mac…"])
+        capture("connecting", in: app)
     }
 
-    func testPresseVideAnnonce() {
+    func testEmptyClipboardAnnounced() {
         UIPasteboard.general.items = []
         let app = launch("demo")
         element("home.paste", in: app).tap()
         let notice = element("notice", in: app)
         waitFor(notice)
-        XCTAssertTrue(notice.label.contains("Presse-papier vide"))
-        XCTAssertTrue(notice.label.contains("Copie d'abord le texte ou la capture à envoyer."))
-        capture("presse-papier-vide", in: app)
+        XCTAssertTrue(notice.label.contains("Clipboard empty"))
+        XCTAssertTrue(notice.label.contains("First copy the text or screenshot to send."))
+        capture("empty-clipboard", in: app)
     }
 }

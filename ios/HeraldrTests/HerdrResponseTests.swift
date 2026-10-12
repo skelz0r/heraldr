@@ -3,31 +3,31 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Réponses de l'API herdr lues par l'app")
+@Suite("herdr API responses read by the app")
 struct HerdrResponseTests {
     private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
         try JSONDecoder().decode(type, from: Data(json.utf8))
     }
 
-    @Test("une liste de workspaces de herdr 0.9.3 se lit, champs inconnus ignorés")
+    @Test("a herdr 0.9.3 workspace list is read, unknown fields ignored")
     func workspaceList() throws {
         let workspaces = try decode(
             [Workspace].self,
             """
             [
               {"active_tab_id":"wA:t1","agent_status":"done","focused":false,"label":"Home","number":1,"pane_count":4,"tab_count":2,"workspace_id":"wA"},
-              {"active_tab_id":"wE:t1","agent_status":"working","focused":true,"label":"Video studio","number":5,"pane_count":2,"tab_count":1,"workspace_id":"wE"}
+              {"active_tab_id":"wE:t1","agent_status":"working","focused":true,"label":"Naïve search","number":5,"pane_count":2,"tab_count":1,"workspace_id":"wE"}
             ]
             """)
 
         #expect(
             workspaces == [
                 Workspace(id: "wA", number: 1, label: "Home"),
-                Workspace(id: "wE", number: 5, label: "Video studio"),
+                Workspace(id: "wE", number: 5, label: "Naïve search"),
             ])
     }
 
-    @Test("un état d'agent apparu dans une future version de herdr s'affiche inconnu sans casser la liste")
+    @Test("an agent state introduced by a future herdr version shows as unknown without breaking the list")
     func unknownAgentStatus() throws {
         let agents = try decode(
             [Agent].self,
@@ -38,7 +38,7 @@ struct HerdrResponseTests {
         #expect(agents.first?.agentStatus == .unknown)
     }
 
-    @Test("un Claude lancé à la main, sans nom d'agent, ne casse pas la liste des agents")
+    @Test("a Claude started by hand, without agent name, does not break the agent list")
     func unnamedAgent() throws {
         let agents = try decode(
             [Agent].self,
@@ -52,19 +52,19 @@ struct HerdrResponseTests {
         #expect(agents.map(\.name) == [nil, "home-main"])
     }
 
-    @Test("un agent sans tab_id ni workspace_id se lit, ses autres champs gardés")
+    @Test("an agent without tab_id or workspace_id is read, its other fields kept")
     func agentWithoutTab() throws {
         let agents = try decode(
             [Agent].self,
             """
-            [{"agent":"claude","agent_status":"idle","name":"orphelin-main","pane_id":"wA:p9"}]
+            [{"agent":"claude","agent_status":"idle","name":"orphan-main","pane_id":"wA:p9"}]
             """)
 
-        #expect(agents.first?.name == "orphelin-main")
+        #expect(agents.first?.name == "orphan-main")
         #expect(agents.first?.tabId == nil)
     }
 
-    @Test("Home, le workspace numéro 1, passe en tête quel que soit son label, puis l'ordre herdr")
+    @Test("Home, workspace number 1, comes first whatever its label, then the herdr order")
     func homeFirst() {
         let ordered = Workspace.ordered([
             Workspace(id: "w9", number: 3, label: "apistration"),
@@ -76,7 +76,7 @@ struct HerdrResponseTests {
         #expect(ordered.first?.isHome == true)
     }
 
-    @Test("la liste des tabs de herdr se lit ; le tab 1 s'affiche main quel que soit son label")
+    @Test("the herdr tab list is read; tab 1 shows as main whatever its label")
     func tabList() throws {
         let tabs = try decode(
             [Tab].self,

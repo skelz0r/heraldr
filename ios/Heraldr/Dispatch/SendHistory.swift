@@ -49,7 +49,7 @@ struct SentRequest: Codable, Identifiable, Equatable, Sendable {
 
 struct SendHistory: Codable, Equatable, Sendable {
     static let capacity = 20
-    static let interruptedError = "Envoi interrompu avant la réponse du Mac."
+    static let interruptedError = "Send interrupted before the Mac replied."
 
     private(set) var entries: [SentRequest] = []
 
@@ -98,7 +98,7 @@ struct SendHistory: Codable, Equatable, Sendable {
             case .sent: entries[index].status = .sent
             case .failed:
                 entries[index].status = .failed
-                entries[index].error = job.error ?? "erreur inconnue"
+                entries[index].error = job.error ?? "unknown error"
             }
         }
     }

@@ -18,16 +18,16 @@ struct PairingView: View {
                 }
                 .padding(.top, 12)
 
-                Text("Appairer le Mac")
+                Text("Pair the Mac")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Sur le Mac, dans herdr :").font(.subheadline).foregroundStyle(.secondary)
+                    Text("On the Mac, in herdr:").font(.subheadline).foregroundStyle(.secondary)
                     Text("herdr plugin action invoke heeler.pair")
                         .font(.system(.footnote, design: .monospaced).weight(.semibold))
                         .textSelection(.enabled)
-                    Text("puis scanne le QR affiché, valable deux minutes.").font(.subheadline).foregroundStyle(.secondary)
+                    Text("then scan the QR code shown, valid for two minutes.").font(.subheadline).foregroundStyle(.secondary)
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -44,7 +44,7 @@ struct PairingView: View {
                                 Rectangle().fill(.ultraThinMaterial)
                                 VStack(spacing: 12) {
                                     ProgressView().controlSize(.large)
-                                    Text("Enrôlement de l'iPhone…").font(.headline)
+                                    Text("Enrolling the iPhone…").font(.headline)
                                 }
                             }
                             .clipShape(.rect(cornerRadius: 28, style: .continuous))
@@ -63,7 +63,7 @@ struct PairingView: View {
                 Button {
                     if let code = UIPasteboard.general.string { submit(code) }
                 } label: {
-                    Label("Coller le code d'appairage", systemImage: "doc.on.clipboard")
+                    Label("Paste the pairing code", systemImage: "doc.on.clipboard")
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 52)
                 }
@@ -85,7 +85,7 @@ struct PairingView: View {
                 Rectangle().fill(.black.opacity(0.25))
                 VStack(spacing: 8) {
                     Image(systemName: "qrcode.viewfinder").font(.system(size: 54))
-                    Text("Caméra indisponible : colle le code à la place").font(.footnote)
+                    Text("Camera unavailable: paste the code instead").font(.footnote)
                 }
                 .foregroundStyle(.secondary)
             }

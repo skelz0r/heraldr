@@ -41,9 +41,9 @@ struct PairingCodeVectors: Decodable {
     private final class BundleMarker {}
 }
 
-@Suite("Code d'appairage HERDR-PAIR:1, vecteurs de test partagés avec le plugin Heeler")
+@Suite("HERDR-PAIR:1 pairing code, test vectors shared with the Heeler plugin")
 struct PairingCodeTests {
-    @Test("un code valide se décode vers le payload attendu", arguments: try PairingCodeVectors.shared().valid)
+    @Test("a valid code decodes to the expected payload", arguments: try PairingCodeVectors.shared().valid)
     func decodesValidVector(vector: PairingCodeVectors.Valid) throws {
         let code = try PairingCode(parsing: vector.code)
 
@@ -55,12 +55,12 @@ struct PairingCodeTests {
         #expect(code.bootstrap.map { Int($0.expiresAt.timeIntervalSince1970) } == vector.payload.expiresAt)
     }
 
-    @Test("un code canonique se réencode à l'identique", arguments: try PairingCodeVectors.shared().valid.filter { $0.decodeOnly != true })
+    @Test("a canonical code re-encodes identically", arguments: try PairingCodeVectors.shared().valid.filter { $0.decodeOnly != true })
     func roundTripsCanonicalVector(vector: PairingCodeVectors.Valid) throws {
         #expect(try PairingCode(parsing: vector.code).canonicalCode == vector.code)
     }
 
-    @Test("un code invalide est refusé avec l'erreur attendue", arguments: try PairingCodeVectors.shared().invalid)
+    @Test("an invalid code is refused with the expected error", arguments: try PairingCodeVectors.shared().invalid)
     func rejectsInvalidVector(vector: PairingCodeVectors.Invalid) {
         #expect(throws: PairingCode.ParseError(rawValue: vector.error)!) {
             try PairingCode(parsing: vector.code)

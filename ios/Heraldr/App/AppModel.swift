@@ -265,7 +265,7 @@ final class AppModel {
             loading: entry?.answer == nil)
         guard entry?.answer == nil else { return }
         do {
-            guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+            guard let link else { throw MacLinkError.unreachable("no paired Mac") }
             let answer = try await Dispatcher(link: link).answer(toJob: notification.jobId)
             history.receive(answer, forJob: notification.jobId)
             guard presentedAnswer?.id == notification.jobId else { return }
@@ -274,7 +274,7 @@ final class AppModel {
         } catch {
             guard presentedAnswer?.id == notification.jobId else { return }
             presentedAnswer?.loading = false
-            presentedAnswer?.failure = "Réponse complète indisponible : \(error.localizedDescription)"
+            presentedAnswer?.failure = "Full answer unavailable: \(error.localizedDescription)"
         }
     }
 
@@ -297,7 +297,7 @@ final class AppModel {
             try await Dispatcher(link: link).registerPush(pushDevice)
             pushDeviceRegistered = true
         } catch {
-            notice = Notice(kind: .failed, title: "Notifications non installées sur le Mac", detail: error.localizedDescription)
+            notice = Notice(kind: .failed, title: "Notifications not set up on the Mac", detail: error.localizedDescription)
         }
     }
 
@@ -313,8 +313,8 @@ final class AppModel {
     private func syncLexicon() async {
         guard let link, let restored = await lexiconKeeper.sync(with: Dispatcher(link: link).lexiconMirror) else { return }
         notice = Notice(
-            kind: .sent, title: "Lexique restauré depuis le Mac",
-            detail: restored > 1 ? "\(restored) termes repris de la sauvegarde." : "1 terme repris de la sauvegarde.")
+            kind: .sent, title: "Lexicon restored from the Mac",
+            detail: restored > 1 ? "\(restored) terms recovered from the backup." : "1 term recovered from the backup.")
     }
 
     func recordDictation(sent text: String, origin: ComposeView.Origin) {
@@ -335,7 +335,7 @@ final class AppModel {
         history.attach(entryId, paths: uploaded)
         let state = targetState(for: target)
         do {
-            guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
+            guard let link else { throw MacLinkError.unreachable("no paired Mac") }
             let dispatcher = Dispatcher(link: link)
             let paneId = try target.tab.map { tab in
                 guard let paneId = tab.firstClaude(in: agents)?.paneId else { throw TargetError.noClaude(target) }
@@ -368,21 +368,21 @@ final class AppModel {
         switch state {
         case .missing:
             return Notice(
-                kind: .sent, title: "Envoyé à \(label)",
-                detail: "Le Mac lance Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label)), puis lui transmet la demande.")
+                kind: .sent, title: "Sent to \(label)",
+                detail: "The Mac starts Claude in tab 1, named \(AgentName.forWorkspace(label: target.workspace.label)), then hands it the request.")
         case .agent(let status, _) where status.isReady && (target.tab == nil || clearingContext):
-            return Notice(kind: .sent, title: "Envoyé à \(label)", detail: "Le Mac vide le contexte de Claude, puis lui transmet la demande.")
+            return Notice(kind: .sent, title: "Sent to \(label)", detail: "The Mac clears Claude's context, then hands it the request.")
         case .agent(let status, _) where status.isReady:
-            return Notice(kind: .sent, title: "Envoyé à \(label)", detail: "Le Mac transmet la demande telle quelle à Claude, qui garde son contexte.")
+            return Notice(kind: .sent, title: "Sent to \(label)", detail: "The Mac hands the request as is to Claude, which keeps its context.")
         default:
-            return Notice(kind: .queued, title: "En file pour \(label)", detail: "Claude est occupé : la demande partira dès qu'il aura fini.")
+            return Notice(kind: .queued, title: "Queued for \(label)", detail: "Claude is busy: the request goes out as soon as it is done.")
         }
     }
 
     func resend(_ entry: SentRequest) async {
         await refresh()
         guard !workspaces.isEmpty else {
-            notice = Notice(kind: .failed, title: "Mac injoignable", detail: "Renvoie la demande une fois les workspaces chargés.")
+            notice = Notice(kind: .failed, title: "Mac unreachable", detail: "Resend the request once the workspaces have loaded.")
             return
         }
         guard
@@ -390,8 +390,8 @@ final class AppModel {
             entry.tabId == nil || tabs.contains(where: { $0.id == entry.tabId })
         else {
             notice = Notice(
-                kind: .failed, title: "\(entry.targetLabel) n'existe plus",
-                detail: "Copie le texte depuis l'historique pour l'envoyer ailleurs.")
+                kind: .failed, title: "\(entry.targetLabel) no longer exists",
+                detail: "Copy the text from the history to send it elsewhere.")
             return
         }
         let target = target(in: workspace, tabId: entry.tabId)
@@ -399,7 +399,7 @@ final class AppModel {
             try await send(
                 entry.text, uploaded: entry.attachments ?? [], to: target, clearingContext: entry.clearsContext ?? false)
         } catch {
-            notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(entry.targetLabel)", detail: error.localizedDescription)
+            notice = Notice(kind: .failed, title: "Failed to send to \(entry.targetLabel)", detail: error.localizedDescription)
         }
     }
 
@@ -431,12 +431,12 @@ final class AppModel {
                 ?? job.workspaceId
         }
         guard failures.count > 1 else {
-            notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(label(of: first))", detail: first.error ?? "erreur inconnue")
+            notice = Notice(kind: .failed, title: "Failed to send to \(label(of: first))", detail: first.error ?? "unknown error")
             return
         }
         notice = Notice(
-            kind: .failed, title: "Échec de \(failures.count) envois",
-            detail: failures.map { "\(label(of: $0)) : \($0.error ?? "erreur inconnue")" }.joined(separator: "\n"))
+            kind: .failed, title: "\(failures.count) sends failed",
+            detail: failures.map { "\(label(of: $0)): \($0.error ?? "unknown error")" }.joined(separator: "\n"))
     }
 
     private func schedulePolling() {
@@ -456,7 +456,7 @@ enum TargetError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noClaude(let target): "Plus de Claude dans \(target.label) : relance-le sur le Mac."
+        case .noClaude(let target): "No Claude left in \(target.label): restart it on the Mac."
         }
     }
 }

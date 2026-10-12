@@ -3,14 +3,14 @@ import Testing
 
 @testable import Heraldr
 
-@Suite("Contrat entre l'app et dispatch.sh")
+@Suite("Contract between the app and dispatch.sh")
 struct DispatchScriptContractTests {
-    @Test("les lignes de dispatch.sh status deviennent les envois affichés par l'app")
+    @Test("dispatch.sh status lines become the sends shown by the app")
     func statusLines() {
         let jobs = DispatchJob.parse(
             statusOutput: """
                 20261010120000-41-ab12cd34\tw1\thome-main\tqueued\t
-                20261010120100-42-ef56ab78\tw5\tvideo-studio-main\tfailed\tl'agent video-studio-main appartient au workspace w9
+                20261010120100-42-ef56ab78\tw5\tnaive-search-main\tfailed\tagent naive-search-main belongs to workspace w9
 
                 """)
 
@@ -18,54 +18,54 @@ struct DispatchScriptContractTests {
             jobs == [
                 DispatchJob(id: "20261010120000-41-ab12cd34", workspaceId: "w1", agent: "home-main", state: .queued, error: nil),
                 DispatchJob(
-                    id: "20261010120100-42-ef56ab78", workspaceId: "w5", agent: "video-studio-main", state: .failed,
-                    error: "l'agent video-studio-main appartient au workspace w9"),
+                    id: "20261010120100-42-ef56ab78", workspaceId: "w5", agent: "naive-search-main", state: .failed,
+                    error: "agent naive-search-main belongs to workspace w9"),
             ])
         #expect(jobs.map(\.isPending) == [true, false])
     }
 
-    @Test("un envoi auquel le -main a répondu est signalé par status, un script plus ancien sans cette colonne reste lisible")
+    @Test("a send the -main answered is flagged by status, an older script without that column stays readable")
     func answeredColumn() {
         let jobs = DispatchJob.parse(statusOutput: "a\tw1\thome-main\tsent\t\tanswered\nb\tw1\thome-main\tsent\t\t\nc\tw1\thome-main\tsent\t\n")
 
         #expect(jobs.map(\.answered) == [true, false, false])
     }
 
-    @Test("la sortie de read-answer donne le résumé, puis la réponse complète en markdown")
+    @Test("read-answer output gives the summary, then the full answer in markdown")
     func readAnswer() throws {
-        let answer = try #require(Answer(scriptOutput: "Le cache est vidé à chaque déploiement.\n\n## Détail\n\nLe job `purge` tourne après `deploy`.\n"))
+        let answer = try #require(Answer(scriptOutput: "The cache is cleared on every deploy.\n\n## Details\n\nThe `purge` job runs after `deploy`.\n"))
 
-        #expect(answer.summary == "Le cache est vidé à chaque déploiement.")
-        #expect(answer.body == "## Détail\n\nLe job `purge` tourne après `deploy`.")
-        #expect(Answer(scriptOutput: "\nsans résumé") == nil)
+        #expect(answer.summary == "The cache is cleared on every deploy.")
+        #expect(answer.body == "## Details\n\nThe `purge` job runs after `deploy`.")
+        #expect(Answer(scriptOutput: "\nno summary") == nil)
     }
 
-    @Test("un état inconnu d'un script plus récent est ignoré sans masquer les autres envois")
+    @Test("an unknown state from a newer script is ignored without hiding the other sends")
     func unknownState() {
         let jobs = DispatchJob.parse(statusOutput: "a\tw1\thome-main\tcancelled\t\nb\tw1\thome-main\tsending\t\n")
 
         #expect(jobs.map(\.id) == ["b"])
     }
 
-    @Test("sans script installé sur le Mac, aucun envoi n'est listé")
+    @Test("without a script installed on the Mac, no send is listed")
     func noScript() {
         #expect(DispatchJob.parse(statusOutput: "").isEmpty)
     }
 
-    @Test("le relais de Home enveloppe la demande exactement comme l'app le fait pour un projet")
+    @Test("the Home relay wraps the request exactly as the app does for a project")
     func relayEnvelopeMatchesApp() throws {
         let script = String(decoding: Dispatcher.bundledScript, as: UTF8.self)
         let heredoc = try #require(script.firstMatch(of: #/standard_envelope\(\) \{\n  cat <<EOF\n(?<body>.*?)\nEOF\n/#.dotMatchesNewlines()))
-        let project = Workspace(id: "w5", number: 5, label: "Video studio")
+        let project = Workspace(id: "w5", number: 5, label: "Naïve search")
 
         let shellBody = heredoc.body.replacingOccurrences(of: "\\`", with: "`").replacingOccurrences(of: "\\$", with: "$")
-        #expect(PromptEnvelope.wrap("Ajoute un sous-titre", for: project) == shellBody.replacingOccurrences(of: "$1", with: "Ajoute un sous-titre"))
+        #expect(PromptEnvelope.wrap("Add a subtitle", for: project) == shellBody.replacingOccurrences(of: "$1", with: "Add a subtitle"))
     }
 
-    @Test("Home comme un projet savent remettre la réponse à une simple question à l'envoi qui l'a posée")
+    @Test("Home and a project both know how to hand the answer to a simple question back to the send that asked it")
     func answerCommand() {
         let home = Workspace(id: "wA", number: 1, label: "Home")
-        let project = Workspace(id: "w5", number: 5, label: "Video studio")
+        let project = Workspace(id: "w5", number: 5, label: "Naïve search")
 
         for workspace in [home, project] {
             #expect(PromptEnvelope.wrap("x", for: workspace).contains("dispatch.sh\" answer \(PromptEnvelope.jobIdPlaceholder)"))
@@ -73,47 +73,47 @@ struct DispatchScriptContractTests {
         #expect(!PromptEnvelope.forTab("x").contains("answer"))
     }
 
-    @Test("Home, quel que soit son label, reçoit la consigne qui relaie au projet ; un projet ne la reçoit jamais")
+    @Test("Home, whatever its label, gets the instructions to relay to the project; a project never gets them")
     func homeEnvelope() {
         let home = Workspace(id: "wA", number: 1, label: "Home")
-        let project = Workspace(id: "w5", number: 5, label: "Video studio")
+        let project = Workspace(id: "w5", number: 5, label: "Naïve search")
 
         #expect(PromptEnvelope.wrap("x", for: home).contains("dispatch.sh\" relay"))
         #expect(!PromptEnvelope.wrap("x", for: project).contains("relay"))
     }
 
-    @Test("un envoi vers un tab prévient d'une dictée possible, sans consigne ni /start")
+    @Test("a send to a tab warns about possible dictation, without instructions or /start")
     func tabEnvelope() {
         #expect(
-            PromptEnvelope.forTab("  Le bouton est trop petit\n") == """
-                Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+            PromptEnvelope.forTab("  The button is too small\n") == """
+                Request sent from the iPhone (may come from voice dictation: watch for transcription errors).
 
-                Le bouton est trop petit
+                The button is too small
                 """)
     }
 
-    @Test("les captures jointes sont citées par leur chemin sur le Mac, après le texte, vers un main comme vers un tab")
+    @Test("attached screenshots are cited by their path on the Mac, after the text, to a main as to a tab")
     func attachmentsCitedByPath() {
-        let project = Workspace(id: "w5", number: 5, label: "Video studio")
-        let paths = ["/Users/moi/.local/state/heraldr/attachments/a.jpg", "/Users/moi/.local/state/heraldr/attachments/b.jpg"]
+        let project = Workspace(id: "w5", number: 5, label: "Naïve search")
+        let paths = ["/Users/me/.local/state/heraldr/attachments/a.jpg", "/Users/me/.local/state/heraldr/attachments/b.jpg"]
         let cited = """
-            Le bouton déborde
+            The button overflows
 
-            Captures d'écran jointes, à lire avec Read :
-            - /Users/moi/.local/state/heraldr/attachments/a.jpg
-            - /Users/moi/.local/state/heraldr/attachments/b.jpg
+            Attached screenshots, read them with Read:
+            - /Users/me/.local/state/heraldr/attachments/a.jpg
+            - /Users/me/.local/state/heraldr/attachments/b.jpg
             """
 
-        #expect(PromptEnvelope.wrap("Le bouton déborde\n", attachments: paths, for: project) == PromptEnvelope.wrap(cited, for: project))
-        #expect(PromptEnvelope.forTab("Le bouton déborde", attachments: paths).hasSuffix(cited))
+        #expect(PromptEnvelope.wrap("The button overflows\n", attachments: paths, for: project) == PromptEnvelope.wrap(cited, for: project))
+        #expect(PromptEnvelope.forTab("The button overflows", attachments: paths).hasSuffix(cited))
     }
 
-    @Test("Home relaie les chemins des captures jointes avec la demande")
+    @Test("Home relays the paths of attached screenshots with the request")
     func homeRelaysAttachments() {
         let home = Workspace(id: "wA", number: 1, label: "Home")
         let prompt = PromptEnvelope.wrap("x", attachments: ["/tmp/a.jpg"], for: home)
 
         #expect(prompt.contains("- /tmp/a.jpg"))
-        #expect(prompt.contains("suivie des chemins des captures jointes"))
+        #expect(prompt.contains("followed by the paths of the attached screenshots"))
     }
 }
