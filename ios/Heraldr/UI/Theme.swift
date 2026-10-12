@@ -55,6 +55,25 @@ extension AgentStatus {
     }
 }
 
+extension SentRequest.Status {
+    var color: Color {
+        switch self {
+        case .sending, .queued: Color(light: 0xFFCC00, dark: 0xFFD60A)
+        case .sent: Color(light: 0x248A3D, dark: 0x30D158)
+        case .failed: Color(light: 0xD70015, dark: 0xFF453A)
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .sending: "Envoi…"
+        case .queued: "En file"
+        case .sent: "Envoyé"
+        case .failed: "Échec"
+        }
+    }
+}
+
 extension AppModel.TargetState {
     var headline: String {
         switch self {

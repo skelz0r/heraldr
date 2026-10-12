@@ -51,7 +51,7 @@ struct HistoryView: View {
             if entry.status == .failed, let error = entry.error {
                 Text(error)
                     .font(.footnote)
-                    .foregroundStyle(AgentStatus.blocked.color)
+                    .foregroundStyle(SentRequest.Status.failed.color)
                     .lineLimit(3)
             }
             HStack(spacing: 8) {
@@ -89,39 +89,24 @@ struct HistoryView: View {
 
 struct SentStatusBadge: View {
     let status: SentRequest.Status
+    @State private var pulsing = false
 
     var body: some View {
-        Label(title, systemImage: icon)
-            .font(.system(size: 12, weight: .bold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.18), in: .capsule)
-            .foregroundStyle(color)
-    }
-
-    private var title: String {
-        switch status {
-        case .sending: "Envoi…"
-        case .queued: "En file"
-        case .sent: "Envoyé"
-        case .failed: "Échec"
-        }
-    }
-
-    private var icon: String {
-        switch status {
-        case .sending: "arrow.up.circle"
-        case .queued: "clock"
-        case .sent: "paperplane.fill"
-        case .failed: "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var color: Color {
-        switch status {
-        case .sending, .queued: AgentStatus.working.color
-        case .sent: AgentStatus.done.color
-        case .failed: AgentStatus.blocked.color
-        }
+        Circle()
+            .fill(status == .queued ? .clear : status.color)
+            .strokeBorder(status == .queued ? status.color : .clear, lineWidth: 2)
+            .frame(width: 10, height: 10)
+            .background {
+                if status == .sending {
+                    Circle()
+                        .fill(status.color.opacity(pulsing ? 0 : 0.7))
+                        .scaleEffect(pulsing ? 2.5 : 1)
+                        .animation(.easeOut(duration: 1.4).repeatForever(autoreverses: false), value: pulsing)
+                        .onAppear { pulsing = true }
+                }
+            }
+            .padding(4)
+            .accessibilityElement()
+            .accessibilityLabel(status.label)
     }
 }
