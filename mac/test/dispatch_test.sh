@@ -18,6 +18,7 @@ setup_world() {
 
 teardown_world() {
   pkill -f "$HERALDR_STATE_DIR/dispatch.sh" 2>/dev/null
+  pkill -f "$sandbox/bin/herdr" 2>/dev/null
   rm -rf "$sandbox"
 }
 
@@ -257,6 +258,34 @@ touch -t "$(date -v-2H +%Y%m%d%H%M)" "$HERALDR_STATE_DIR"/jobs/*/state
 check "après deux heures, seule la question répondue reste" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1,4,6)" "$question	sent	answered"
 touch -t "$(date -v-8d +%Y%m%d%H%M)" "$HERALDR_STATE_DIR/jobs/$question/answer"
 check "après huit jours, elle disparaît aussi" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status)" ""
+teardown_world
+
+echo "un envoi ne part qu'une fois que Claude a commencé le précédent, jamais pendant son démarrage"
+setup_world
+add_agent home-main w1 idle
+echo 3 > "$FAKE_HERDR_WORLD/agents/home-main/turn_seconds"
+enqueue w1 home-main '~' "Première"
+enqueue w1 home-main '~' "Seconde"
+wait_until 40 '[ "$(job_states)" = "sent sent " ]'
+check "le /clear de la seconde attend la fin du travail sur la première" "$(prompts_of home-main)" "idle|/clear
+idle|Première
+idle|/clear
+idle|Seconde"
+teardown_world
+
+echo "un Claude que herdr met plus de 5 s à voir travailler ne reçoit pas le /clear suivant pendant son démarrage"
+setup_world
+export FAKE_HERDR_DETECTION_DELAY=7
+add_agent home-main w1 idle
+echo 2 > "$FAKE_HERDR_WORLD/agents/home-main/turn_seconds"
+enqueue w1 home-main '~' "Lente"
+enqueue w1 home-main '~' "Suivante"
+wait_until 60 '[ "$(job_states)" = "sent sent " ]'
+check "le /clear de la suivante attend la fin de la lente" "$(prompts_of home-main)" "idle|/clear
+idle|Lente
+idle|/clear
+idle|Suivante"
+unset FAKE_HERDR_DETECTION_DELAY
 teardown_world
 
 echo "un relais vers Home ou un workspace inconnu est refusé"

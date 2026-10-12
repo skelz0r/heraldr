@@ -478,7 +478,8 @@ envoi vers un tab suit §6.3.
 3. agent `working` ou `blocked` : l'envoi attend sur le Mac et part dès
    qu'il redevient `idle` ou `done`
 4. plusieurs envois vers un même agent partent dans l'ordre, chacun
-   précédé de son `/clear`
+   précédé de son `/clear` ; le suivant attend que Claude ait commencé
+   puis fini le précédent
 5. un agent du même nom dans un autre workspace n'est jamais visé :
    l'envoi échoue
 

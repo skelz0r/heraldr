@@ -106,8 +106,17 @@ mort) et traite les jobs de l'agent dans l'ordre d'horodatage :
 5. `herdr agent prompt <agent> "/clear"` sans `--wait` (spike 1 :
    `--wait` échoue en `agent_prompt_stalled`), puis attente du
    changement de `agent_session.value`
-6. `herdr agent prompt <agent> "<prompt enveloppé>"` sans attendre la
-   fin du travail
+6. `herdr agent prompt <agent> "<prompt enveloppé>" --wait --until
+   working --until blocked` : rend la main dès que herdr voit Claude
+   travailler, sans attendre la fin. Sans cette attente, herdr montre
+   encore l'agent `idle` le temps de détecter le nouveau tour, et le
+   job suivant passait son `agent wait` puis envoyait son `/clear`
+   pendant que Claude démarrait le précédent. Un `agent_prompt_stalled`
+   (rien vu en 5 s, comme pour `/clear`) compte comme envoyé, le texte
+   est parti, mais le runner attend encore jusqu'à 30 s (`agent wait
+   --until working --until blocked`) que herdr voie Claude travailler :
+   un démarrage lent n'est pas vidé par le `/clear` suivant. Un tour
+   assez court pour finir avant d'être vu coûte ces 30 s au job suivant
 7. `state` passe à `sent`, ou `failed` avec l'erreur ; les jobs `sent`
    sont supprimés après une heure, les `failed` après un jour
 

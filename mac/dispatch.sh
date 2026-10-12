@@ -20,6 +20,8 @@ ATTACHMENT_RETENTION_MINUTES=10080
 ATTACHMENT_MAX_BYTES=20000000
 ANSWERED_RETENTION_MINUTES=10080
 CLEAR_TIMEOUT_SECONDS=20
+PROMPT_START_TIMEOUT_MS=10000
+STALLED_PROMPT_GRACE_MS=30000
 START_TIMEOUT_MS=60000
 
 json_value() {
@@ -289,7 +291,10 @@ process_job() {
     sleep 1
   fi
 
-  prompted="$(herdr agent prompt "$agent" "$(cat "$job_dir/prompt")" 2>&1)" || { fail_job "$job_dir" "prompt: $prompted"; return 1; }
+  prompted="$(herdr agent prompt "$agent" "$(cat "$job_dir/prompt")" --wait --until working --until blocked --timeout "$PROMPT_START_TIMEOUT_MS" 2>&1)" || case "$prompted" in
+    *agent_prompt_stalled*) herdr agent wait "$agent" --until working --until blocked --timeout "$STALLED_PROMPT_GRACE_MS" >/dev/null 2>&1 ;;
+    *) fail_job "$job_dir" "prompt: $prompted"; return 1 ;;
+  esac
   date -u +%Y-%m-%dT%H:%M:%SZ > "$job_dir/sent_at"
   set_state "$job_dir" sent
 }
