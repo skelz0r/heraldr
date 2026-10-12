@@ -1,10 +1,43 @@
-# Heraldr
+<p align="center">
+  <img src="docs/branding/logo/voice-and-lanes-dark.svg" width="112" alt="Heraldr logo">
+</p>
+
+<h1 align="center">Heraldr</h1>
+
+<p align="center">
+  <b>Speak an idea on your iPhone, a Claude Code agent picks it up on your Mac.</b><br>
+  A voice-first dispatch remote for <a href="https://herdr.dev">herdr</a> workspaces, over plain SSH.
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="250" alt="Home screen: target workspace and the state of each agent">
+  &nbsp;
+  <img src="docs/screenshots/preview.png" width="250" alt="Preview before sending">
+  &nbsp;
+  <img src="docs/screenshots/history.png" width="250" alt="History of sent requests">
+</p>
 
 Heraldr is an iOS app that dispatches work to Claude Code agents running
 in herdr workspaces on a Mac. From the iPhone, you dictate an idea and
 development starts on the Mac; during QA, you dictate your review to
 the Claude that wrote the feature. The app talks to the Mac over SSH,
 with nothing running permanently on the Mac side.
+
+## Highlights
+
+- **One gesture.** A big voice button, on-device transcription, cleanup
+  by Apple Intelligence, a preview, send. Write and Paste (text or
+  screenshots) are one tap away.
+- **Every agent at a glance.** One tile per herdr workspace with the
+  live state of its Claude: ready, thinking, working, waiting for you.
+- **Never interrupts.** A request sent to a busy Claude waits in a queue
+  on the Mac and goes out when it is done, in order.
+- **Questions come back to you.** When an agent asks something, a push
+  notification opens its session in the Claude app.
+- **Learns your words.** A dictation lexicon fixes project names the
+  speech recognizer keeps mishearing.
+- **No server.** Pairing by QR code, a pinned host key, SSH over the LAN
+  or Tailscale. Nothing to install or keep running on the Mac.
 
 **Work in progress.** The project changes quickly, with no stability
 guarantees: commands, conventions and the contract with the Mac can
@@ -80,6 +113,14 @@ sequenceDiagram
 
 ### Start an idea
 
+<p align="center">
+  <img src="docs/screenshots/sent.png" width="230" alt="Request sent to the main Claude of a workspace">
+  &nbsp;
+  <img src="docs/screenshots/question.png" width="230" alt="An agent waiting for an answer">
+  &nbsp;
+  <img src="docs/screenshots/answer.png" width="230" alt="An answer from an agent">
+</p>
+
 Big voice button, you speak, the dictation is transcribed and cleaned
 up on the iPhone, you proofread, you send. The `<slug>-main` of the
 chosen workspace (or Home) receives the request with instructions:
@@ -88,6 +129,14 @@ When it asks a question, a notification arrives; tapping it opens its
 session in the Claude app so you can answer.
 
 ### Iterate on a feature in progress
+
+<p align="center">
+  <img src="docs/screenshots/target-a-tab.png" width="230" alt="Long-press a workspace to target one of its tabs">
+  &nbsp;
+  <img src="docs/screenshots/tab-target.png" width="230" alt="A worktree tab as the target">
+  &nbsp;
+  <img src="docs/screenshots/lexicon.png" width="230" alt="Dictation lexicon">
+</p>
 
 While you test on the Mac, long-press the workspace tile, pick
 "Target a tab of `<label>`", and choose the worktree's tab. What you
