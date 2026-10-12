@@ -94,7 +94,9 @@ Frontières à mocker, et rien d'autre :
 
 - herdr : `mac/test/fake-herdr` dans le PATH, monde décrit en fichiers
 - APNs : serveur HTTP/2 local (`HERALDR_APNS_ORIGIN`)
-- SSH : pas de couture aujourd'hui, voir ci-dessous
+- SSH et Mac : `FakeMac` (`ios/Heraldr/Debug/`), conforme à
+  `MacTransport`, scénario décrit en données (`FakeMacScenario`) ;
+  `AppModel(environment: .fake(scenario, mac:, suiteName:))`
 - Keychain, UserDefaults, Foundation Models, Speech, caméra, horloge :
   injection (`now:` de `PairingCeremony.pair`)
 - jamais un type de l'app (`Dispatcher`, `HerdrClient`, `AppModel`…)
@@ -110,12 +112,14 @@ Où placer un test :
   lu par les deux, déclaré en ressource de `HeraldrTests` dans
   `project.yml`
 
-Pas de test aujourd'hui pour `AppModel` (choix de la notice, échec
-annoncé, état de la cible) ni pour l'exec SSH : `AppModel` crée
-lui-même `MacLink` et lit des stores statiques. Les garanties qui
-coûtent cher (file, workspace, ordre) sont tenues par `dispatch.sh` et
-testées là. Introduire un protocole de transport sous `MacLink` le jour
-où un bug de ce côté passe inaperçu, pas avant.
+`AppModel` se teste par sa surface publique (`refresh`, `send`,
+`resend`, `open`, `targetState`…) contre `FakeMac`
+(`ios/HeraldrTests/AppModelTests.swift`) : notice, échec annoncé,
+cible, rafraîchissement. `FakeMac` est un double de la frontière, à
+faire évoluer comme `dispatch.sh` et herdr quand ils changent : il ne
+doit jamais accepter ce que le vrai refuse. Les garanties de la file
+(workspace, ordre, attente) restent tenues et testées par
+`dispatch.sh`.
 
 Pas de tests UI (XCUITest) : sans couture SSH, l'app ne dépasse pas
 l'écran d'appairage en simulateur. Le jour où il en faut, ajouter une

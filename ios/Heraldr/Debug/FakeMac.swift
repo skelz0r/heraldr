@@ -31,8 +31,8 @@ actor FakeMac: MacTransport {
         holds.insert(step)
     }
 
-    func release(_ step: String) {
-        holds.remove(step)
+    func release(_ step: String, keepHolding: Bool = false) {
+        if !keepHolding { holds.remove(step) }
         waiting.removeValue(forKey: step)?.resume()
     }
 

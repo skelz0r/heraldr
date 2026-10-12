@@ -4,20 +4,26 @@ import Foundation
 extension AppEnvironment {
     static let fakeDefaultsSuite = "com.skelz0r.heraldr.fake-mac"
 
-    static func fake(_ scenario: FakeMacScenario, mac: FakeMac? = nil, suiteName: String = fakeDefaultsSuite) -> AppEnvironment {
+    static func fake(
+        _ scenario: FakeMacScenario, mac: FakeMac? = nil, suiteName: String = fakeDefaultsSuite, relaunching: Bool = false
+    ) -> AppEnvironment {
         let mac = mac ?? FakeMac(scenario)
-        UserDefaults().removePersistentDomain(forName: suiteName)
+        if !relaunching {
+            UserDefaults().removePersistentDomain(forName: suiteName)
+        }
         let defaults = UserDefaults(suiteName: suiteName) ?? .standard
-        if scenario.paired ?? true {
+        if scenario.paired ?? true, !relaunching {
             PairedMacStore.save(FakeMac.pairedMac, to: defaults)
         }
-        if let entries = scenario.history,
+        if !relaunching, let entries = scenario.history,
             let history = try? JSONDecoder().decode(SendHistory.self, from: JSONEncoder().encode(["entries": entries]))
         {
             SendHistoryStore.save(history, to: defaults)
         }
         let lexiconFile = URL.temporaryDirectory.appending(path: "\(suiteName)-lexicon.json")
-        try? FileManager.default.removeItem(at: lexiconFile)
+        if !relaunching {
+            try? FileManager.default.removeItem(at: lexiconFile)
+        }
         let lexiconStore = DictationLexiconStore(fileURL: lexiconFile, defaults: defaults)
         if let lexicon = scenario.lexicon {
             lexiconStore.save(lexicon)
