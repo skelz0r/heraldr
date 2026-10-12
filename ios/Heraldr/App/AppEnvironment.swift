@@ -5,6 +5,7 @@ import UserNotifications
 struct AppEnvironment {
     let defaults: UserDefaults
     let lexiconStore: DictationLexiconStore
+    let dictationJournalFile: URL
     let connect: @MainActor (PairedMac) -> (any MacTransport)?
     let pair: @MainActor (String) async throws -> PairedMac
     let requestNotifications: @MainActor () async -> Void
@@ -14,6 +15,7 @@ struct AppEnvironment {
         AppEnvironment(
             defaults: .standard,
             lexiconStore: .standard,
+            dictationJournalFile: .applicationSupportDirectory.appending(path: "dictation-journal.jsonl"),
             connect: { mac in
                 guard let key = try? DeviceKeyStore.load() else { return nil }
                 return MacLink(mac: mac, deviceKey: key, defaults: .standard)

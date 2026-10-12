@@ -96,7 +96,7 @@ final class AppModel {
     private var pollTask: Task<Void, Never>?
     private let lexiconKeeper: LexiconKeeper
     private var lexiconBackupTask: Task<Void, Never>?
-    private let dictationJournal = DictationJournal()
+    private let dictationJournal: DictationJournal
     private var refreshing = false
     private var refreshRequestedWhileRefreshing = false
 
@@ -104,6 +104,7 @@ final class AppModel {
         self.environment = environment
         history = SendHistoryStore.load(from: environment.defaults)
         lexiconKeeper = LexiconKeeper(store: environment.lexiconStore)
+        dictationJournal = DictationJournal(fileURL: environment.dictationJournalFile)
         if let mac = PairedMacStore.load(from: environment.defaults) {
             attach(mac)
         }

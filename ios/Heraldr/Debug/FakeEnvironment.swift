@@ -25,12 +25,17 @@ extension AppEnvironment {
             try? FileManager.default.removeItem(at: lexiconFile)
         }
         let lexiconStore = DictationLexiconStore(fileURL: lexiconFile, defaults: defaults)
+        let journalFile = URL.temporaryDirectory.appending(path: "\(suiteName)-dictation-journal.jsonl")
+        if !relaunching {
+            try? FileManager.default.removeItem(at: journalFile)
+        }
         if let lexicon = scenario.lexicon {
             lexiconStore.save(lexicon)
         }
         return AppEnvironment(
             defaults: defaults,
             lexiconStore: lexiconStore,
+            dictationJournalFile: journalFile,
             connect: { _ in mac },
             pair: { code in
                 let parsed: PairingCode
