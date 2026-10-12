@@ -2,3 +2,5 @@ sandbox/
 worktrees/
 build/
 ios/Heraldr.xcodeproj/
+.env.local
+ios/Signing.local.xcconfig

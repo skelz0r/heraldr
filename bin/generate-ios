@@ -18,4 +18,11 @@ for patch in "${PROJECT_DIR}"/Vendor/patches/*.patch; do
     fi
 done
 
+MAIN_CHECKOUT="$(git -C "${PROJECT_DIR}" rev-parse --path-format=absolute --git-common-dir)/.."
+for local_file in ios/Signing.local.xcconfig .env.local; do
+    if [ ! -f "${PROJECT_DIR}/${local_file}" ] && [ -f "${MAIN_CHECKOUT}/${local_file}" ]; then
+        cp "${MAIN_CHECKOUT}/${local_file}" "${PROJECT_DIR}/${local_file}"
+    fi
+done
+
 xcodegen generate --spec "${PROJECT_DIR}/ios/project.yml" --quiet

@@ -6,7 +6,7 @@ Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
 
 - `ios/project.yml` (XcodeGen) versionné, `.xcodeproj` généré et ignoré
   par git : pas de conflits de `.pbxproj` entre worktrees d'agents
-- bundle id de dev : `com.skelz0r.<nom>.dev`
+- bundle id de dev : `HERALDR_BUNDLE_ID` (`ios/Signing.local.xcconfig`)
 - signature automatique avec l'équipe perso, installation directe sur
   l'iPhone (pas de TestFlight)
 
@@ -43,14 +43,22 @@ Environnement constaté : Xcode 26.2, macOS 26.4.1, iPhone 16 Pro
 (`iphone` sur Tailscale) compatible Apple Intelligence.
 
 Push impose un App ID explicite, que le profil wildcard ne couvre pas.
-Xcode n'a pas de compte Apple sur ce Mac : `bin/run-ios-device` passe
-à `xcodebuild` la clé API App Store Connect de local_events
-(`~/.private_keys/AuthKey_KEYID12345.p8`, issuer
-`00000000-0000-0000-0000-000000000000`), qui crée App ID et profil.
+Équipe et bundle id viennent de `ios/Signing.xcconfig` (`com.example`
+et pas d'équipe par défaut), surchargés par `ios/Signing.local.xcconfig`,
+ignoré :
 
-UUID CoreDevice de l'iPhone par défaut dans `bin/run-ios-device` :
-`00000000-0000-0000-0000-000000000001`, surchargeable par argument ou
-`IOS_DEVICE_UUID`. Signature automatique avec l'équipe `ABCDE12345`.
+```
+DEVELOPMENT_TEAM = <team id>
+HERALDR_BUNDLE_ID = <bundle id>
+```
+
+`bin/run-ios-device` lit `.env.local`, ignoré : `IOS_DEVICE_UUID`
+(UUID CoreDevice de l'iPhone, `xcrun devicectl list devices`,
+surchargeable par argument) et, sans compte Apple dans Xcode, la clé API
+App Store Connect qui crée App ID et profil (`ASC_KEY_ID`,
+`ASC_KEY_ISSUER_ID`, `ASC_KEY_PATH` par défaut
+`~/.private_keys/AuthKey_<id>.p8`). `bin/generate-ios` recopie ces deux
+fichiers du checkout principal dans un worktree qui ne les a pas.
 
 `devicectl` ne voit l'iPhone qu'en USB ou sur le même LAN (Bonjour, qui
 ne traverse pas Tailscale) : ailleurs il le liste `unavailable` et
@@ -58,7 +66,7 @@ l'install échouait (« unable to locate a device matching the requested
 device identifier »). `bin/run-ios-device` confie donc l'install à
 `~/.agents/skills/ios-device-install/scripts/install-ios-app`, qui publie
 alors le build sur
-`https://<mac>.<tailnet>.ts.net/ios-ota/com.skelz0r.heraldr.dev/`, à
+`https://<mac>.<tailnet>.ts.net/ios-ota/<bundle id>/`, à
 ouvrir dans Safari sur l'iPhone. Le profil de dev contient déjà l'UDID
 de l'iPhone : pas d'archive ni d'export.
 

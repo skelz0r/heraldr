@@ -1,17 +1,19 @@
 name: Heraldr
 
 options:
-  bundleIdPrefix: com.skelz0r
   developmentLanguage: fr
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    DEVELOPMENT_TEAM: ABCDE12345
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -65,7 +67,7 @@ targets:
         aps-environment: development
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.heraldr.dev
+        PRODUCT_BUNDLE_IDENTIFIER: $(HERALDR_BUNDLE_ID)
         SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
         GCC_TREAT_WARNINGS_AS_ERRORS: YES
         SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
@@ -100,7 +102,7 @@ targets:
       - target: Heraldr
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.heraldr.dev.tests
+        PRODUCT_BUNDLE_IDENTIFIER: $(HERALDR_BUNDLE_ID).tests
         SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
         GCC_TREAT_WARNINGS_AS_ERRORS: YES
         SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
@@ -119,7 +121,7 @@ targets:
       - target: Heraldr
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.skelz0r.heraldr.dev.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: $(HERALDR_BUNDLE_ID).uitests
         SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
         GCC_TREAT_WARNINGS_AS_ERRORS: YES
         SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES

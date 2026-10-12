@@ -1,0 +1,4 @@
+DEVELOPMENT_TEAM =
+HERALDR_BUNDLE_ID = com.example.heraldr.dev
+
+#include? "Signing.local.xcconfig"

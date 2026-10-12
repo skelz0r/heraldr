@@ -5,7 +5,6 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
 PROJECT_NAME="Heraldr"
 SCHEME="Heraldr"
-DEVICE_UUID="${1:-${IOS_DEVICE_UUID:-00000000-0000-0000-0000-000000000001}}"
 INSTALLER="${HOME}/.agents/skills/ios-device-install/scripts/install-ios-app"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-device-run"
 
@@ -15,14 +14,15 @@ if [[ -f "${PROJECT_DIR}/.env.local" ]]; then
     set +a
 fi
 
-CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "")
-if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then
-    echo "Error: xcode-select points to Command Line Tools, run bin/setup-ios"
+DEVICE_UUID="${1:-${IOS_DEVICE_UUID:-}}"
+if [ -z "$DEVICE_UUID" ]; then
+    echo "Missing iPhone: pass its CoreDevice UUID as argument or set IOS_DEVICE_UUID in .env.local (xcrun devicectl list devices)"
     exit 1
 fi
 
-if [ ! -x "$INSTALLER" ]; then
-    echo "Missing ${INSTALLER}: install the ios-device-install skill from the dotfiles"
+CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "")
+if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then
+    echo "Error: xcode-select points to Command Line Tools, run bin/setup-ios"
     exit 1
 fi
 
@@ -64,11 +64,17 @@ fi
 
 "${PROJECT_DIR}/bin/generate-ios"
 
-ASC_KEY_ID="${ASC_KEY_ID:-KEYID12345}"
-ASC_KEY_ISSUER_ID="${ASC_KEY_ISSUER_ID:-00000000-0000-0000-0000-000000000000}"
-ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8}"
 AUTHENTICATION_ARGS=()
-if [ -f "$ASC_KEY_PATH" ]; then
+if [ -n "${ASC_KEY_ID:-}" ]; then
+    if [ -z "${ASC_KEY_ISSUER_ID:-}" ]; then
+        echo "ASC_KEY_ID is set without ASC_KEY_ISSUER_ID"
+        exit 1
+    fi
+    ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.private_keys/AuthKey_${ASC_KEY_ID}.p8}"
+    if [ ! -f "$ASC_KEY_PATH" ]; then
+        echo "App Store Connect key not found: ${ASC_KEY_PATH}"
+        exit 1
+    fi
     AUTHENTICATION_ARGS=(
         -authenticationKeyPath "$ASC_KEY_PATH"
         -authenticationKeyID "$ASC_KEY_ID"
@@ -98,4 +104,8 @@ if [ ! -d "$APP_BUNDLE" ]; then
     exit 1
 fi
 
-"$INSTALLER" --device "${DEVICE_UUID}" "${APP_BUNDLE}"
+if [ -x "$INSTALLER" ]; then
+    "$INSTALLER" --device "${DEVICE_UUID}" "${APP_BUNDLE}"
+else
+    xcrun devicectl device install app --device "${DEVICE_UUID}" "${APP_BUNDLE}"
+fi
