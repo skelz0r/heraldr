@@ -1,116 +1,115 @@
-# Risques et points à vérifier
+# Risks and things to check
 
-À lever par un spike avant d'écrire l'app. Résultats du spike du
-2026-10-10 (herdr 0.9.3, Claude Code 2.1.296, macOS 26.4), sur un
-workspace jetable « Spike compagnon » et son agent
-`spike-compagnon-main`.
+To settle with a spike before writing the app. Results of the
+2026-10-10 spike (herdr 0.9.3, Claude Code 2.1.296, macOS 26.4), on a
+throwaway "Spike compagnon" workspace and its
+`spike-compagnon-main` agent.
 
-1. `/clear` et Remote Control : le nom `<label>—main` et la connexion
-   Remote Control survivent-ils à un `/clear` ? Sinon, relancer
-   `/remote-control <nom>` après chaque `/clear` dans le script de
-   dispatch.
-   - Levé : après `/clear`, la boîte `/remote-control` affiche la même
-     URL `claude.ai/code/session_…` qu'avant. La connexion survit, pas
-     besoin de relancer `/remote-control`.
-   - Nouveau constat : `herdr agent prompt <agent> "/clear" --wait`
-     échoue en `agent_prompt_stalled`, car `/clear` ne fait jamais
-     passer l'agent en `working`. Le script envoie donc `/clear` sans
-     `--wait`, puis attend que `agent_session.value` (id de session
-     Claude) change, ce qui signe la fin du `/clear`.
-   - Reste à confirmer sur le téléphone : le nom affiché dans Claude
-     mobile après `/clear` (le terminal ne montre pas le nom).
-2. Nom Remote Control : le tiret cadratin et `~` passent-ils dans
-   `--remote-control` et l'affichage Claude mobile ?
-   - Côté CLI : `--remote-control "Spike compagnon—main"` est accepté,
-     herdr le quote correctement dans le pane. `~` n'est jamais passé
-     tel quel (il devient `home`). Affichage mobile à confirmer.
-3. `remoteControlAtStartup: true` dans les settings : conflit ou doublon
-   avec `--remote-control <nom>` ?
-   - Une seule session Remote Control dans le terminal. Absence de
-     doublon dans Claude mobile à confirmer.
-4. `herdr agent prompt` d'un texte multi-lignes : vérifier que le
-   bracketed paste conserve les retours à la ligne dans Claude Code.
-   - Levé : un prompt de 5 lignes, dont une vide, avec accents, tiret
-     cadratin, guillemets, apostrophe et `$HOME`, arrive intact. Claude
-     compte bien 5 lignes et recopie la ligne 4 à l'identique.
-5. Format `HERDR-PAIR:1` : couplage à une version du plugin Heeler.
-   Épingler la version testée et lancer les vecteurs de test en CI
-   locale.
-   - Plugin installé : Heeler `f98028b` (v0.1.13, plugin 0.6.0). Le
-     submodule est épinglé sur ce commit et les vecteurs sont lus
-     depuis le submodule par les tests.
-6. HeelerSSH : API publique stable ? Taille du binaire OpenSSL. Plan B :
-   Citadel si streamlocal y est supporté.
-7. Process détaché via `nohup` en exec SSH : vérifier qu'il survit à la
-   fermeture du canal sur macOS (sinon `setsid` ou `launchctl submit`).
-   - Levé : `nohup /bin/sh job.sh </dev/null >/dev/null 2>&1 &` en exec
-     SSH rend la main en 1 s et le process vit encore 15 s après la
-     fermeture du canal, sans recevoir de SIGHUP. Rediriger les trois
-     descripteurs est indispensable : sinon sshd attend leur fermeture.
-   - Nouveau constat : en exec SSH le PATH ne contient pas
-     `/opt/homebrew/bin`, donc pas `herdr`. Le script fixe son PATH.
-8. Foundation Models : qualité du nettoyage en français, limite de
-   contexte pour une longue dictée.
-9. Chemin de `herdr.sock` avec plusieurs sessions herdr nommées.
-   - Session par défaut : `~/.config/herdr/herdr.sock`, confirmé (même
-     format JSON que la CLI, une requête par connexion). Les sessions
-     nommées sont dans `~/.config/herdr/sessions/<nom>/herdr.sock`, non
-     gérées dans le MVP.
-10. Nouveau : un dossier jamais ouvert par Claude bloque le démarrage
-    sur la question « Do you trust this folder? ». `agent start` rend
-    alors `agent_not_ready` et l'agent est `blocked`. Le script ne
-    répond pas à la place de l'utilisateur : il attend que l'agent
-    devienne `idle`, la question se règle sur le Mac.
+1. `/clear` and Remote Control: do the `<label>—main` name and the
+   Remote Control connection survive a `/clear`? If not, rerun
+   `/remote-control <name>` after each `/clear` in the dispatch script.
+   - Settled: after `/clear`, the `/remote-control` box shows the same
+     `claude.ai/code/session_…` URL as before. The connection survives,
+     no need to rerun `/remote-control`.
+   - New finding: `herdr agent prompt <agent> "/clear" --wait` fails
+     with `agent_prompt_stalled`, because `/clear` never moves the
+     agent to `working`. The script therefore sends `/clear` without
+     `--wait`, then waits for `agent_session.value` (Claude session id)
+     to change, which marks the end of the `/clear`.
+   - Still to confirm on the phone: the name shown in Claude mobile
+     after `/clear` (the terminal does not show the name).
+2. Remote Control name: do the em dash and `~` go through
+   `--remote-control` and the Claude mobile display?
+   - CLI side: `--remote-control "Spike compagnon—main"` is accepted,
+     herdr quotes it correctly in the pane. `~` is never passed as is
+     (it becomes `home`). Mobile display to confirm.
+3. `remoteControlAtStartup: true` in the settings: conflict or
+   duplicate with `--remote-control <name>`?
+   - A single Remote Control session in the terminal. No duplicate in
+     Claude mobile, to confirm.
+4. `herdr agent prompt` with multi-line text: check that bracketed
+   paste keeps line breaks in Claude Code.
+   - Settled: a 5-line prompt, one of them empty, with accents, em
+     dash, quotes, apostrophe and `$HOME`, arrives intact. Claude counts
+     5 lines and copies line 4 identically.
+5. `HERDR-PAIR:1` format: coupled to a version of the Heeler plugin.
+   Pin the tested version and run the test vectors in local CI.
+   - Installed plugin: Heeler `f98028b` (v0.1.13, plugin 0.6.0). The
+     submodule is pinned to that commit and the tests read the vectors
+     from the submodule.
+6. HeelerSSH: stable public API? Size of the OpenSSL binary. Plan B:
+   Citadel if it supports streamlocal.
+7. Detached process through `nohup` in SSH exec: check that it survives
+   the channel closing on macOS (otherwise `setsid` or
+   `launchctl submit`).
+   - Settled: `nohup /bin/sh job.sh </dev/null >/dev/null 2>&1 &` in
+     SSH exec returns in 1 s and the process is still alive 15 s after
+     the channel closes, without receiving SIGHUP. Redirecting all
+     three descriptors is required: otherwise sshd waits for them to
+     close.
+   - New finding: in SSH exec the PATH does not contain
+     `/opt/homebrew/bin`, hence no `herdr`. The script sets its PATH.
+8. Foundation Models: cleanup quality in French, context limit for a
+   long dictation.
+9. Path of `herdr.sock` with several named herdr sessions.
+   - Default session: `~/.config/herdr/herdr.sock`, confirmed (same
+     JSON format as the CLI, one request per connection). Named
+     sessions live in `~/.config/herdr/sessions/<name>/herdr.sock`, not
+     handled in the MVP.
+10. New: a folder Claude has never opened blocks startup on the "Do you
+    trust this folder?" question. `agent start` then returns
+    `agent_not_ready` and the agent is `blocked`. The script does not
+    answer for the user: it waits for the agent to become `idle`, the
+    question is handled on the Mac.
 
-## Spike des notifications push
+## Push notification spike
 
-Spike du 2026-10-10 (herdr 0.9.3, Claude Code 2.1.296, Node 25), avant
-d'écrire les push des questions des agents `-main`.
+Spike of 2026-10-10 (herdr 0.9.3, Claude Code 2.1.296, Node 25),
+before writing push notifications for questions from `-main` agents.
 
-11. URL de la session Remote Control d'un agent, récupérable côté Mac ?
-    - Levé : `~/.claude/sessions/<pid>.json` porte le `sessionId` de la
-      session Claude, celui que herdr expose dans
-      `agent_session.value`, et son `bridgeSessionId`
-      (`session_01…`). L'URL est
-      `https://claude.ai/code/<bridgeSessionId>`, celle qu'affiche
-      `/remote-control`.
-    - `claude.ai/code/*` est un universal link de l'app Claude
-      (`apple-app-site-association` de claude.ai, appID
-      `Q6L2SF6YDW.com.anthropic.claude`) : Heraldr l'ouvre avec
-      `universalLinksOnly`, et se rabat sur un bouton « Ouvrir dans
-      Claude » si l'app ne le prend pas.
-    - Le texte de la question n'est pas dans le transcript
-      `~/.claude/projects/<cwd encodé>/<sessionId>.jsonl` au moment du
-      `blocked` : mesuré, une AskUserQuestion n'y apparaît qu'à la
-      réponse (24 s plus tard), et le `tool_use` d'une permission Bash
-      ou Write n'y est pas pendant la demande. Lire le dernier
-      `tool_use` donnait l'outil précédent, déjà lancé, d'où des notifs
-      « Demande d'autorisation : Bash » pour de simples questions.
-      L'écran du pane (`herdr pane read`) montre la question ou la
-      demande de permission dès le `blocked`.
-12. Passage en `blocked` sans daemon ?
-    - Levé : un plugin herdr déclare
-      `[[events]] on = "pane.agent_status_changed"` ; herdr lance un
-      process court par changement d'état avec
-      `HERDR_PLUGIN_EVENT_JSON` (`pane_id`, `workspace_id`,
-      `agent_status`). Le nom de l'agent n'y est pas : il vient de
-      `herdr agent get <pane>`, qui sert aussi à revérifier l'état après
-      le debounce. `herdr plugin link` enregistre un plugin local sans
-      build.
-13. Envoi APNs HTTP/2 depuis le Mac ?
-    - Levé : Node (déjà requis par le plugin Heeler) signe le JWT ES256
-      avec `node:crypto` (`dsaEncoding: "ieee-p1363"`) et poste avec
-      `node:http2`, sans dépendance. curl 8.7.1 du système a aussi
-      nghttp2, mais signer en ES256 en shell est pénible.
-    - La clé `.p8` APNs de local_events (`KEYID67890`, équipe
-      `ABCDE12345`) passe l'authentification pour le topic
-      `com.skelz0r.heraldr.dev` : sandbox et production répondent
-      `BadDeviceToken` à un faux token, et non `InvalidProviderToken`.
-      Une clé APNs vaut pour toutes les apps de l'équipe.
-    - Vérifié sur l'iPhone : une question AskUserQuestion de
-      `home-main` produit la notif (label, agent, question), et le tap
-      ouvre la session dans l'app Claude.
-    - `herdr plugin link` refuse `--enabled` suivi d'un chemin
-      (`unknown option`) ; le plugin lié est activé par défaut.
-    - Piège : `~/.private_keys/AuthKey_KEYID12345.p8` est une clé App
-      Store Connect API, refusée par APNs (`InvalidProviderToken`).
+11. Remote Control session URL of an agent, available on the Mac?
+    - Settled: `~/.claude/sessions/<pid>.json` holds the `sessionId` of
+      the Claude session, the one herdr exposes in
+      `agent_session.value`, and its `bridgeSessionId`
+      (`session_01…`). The URL is
+      `https://claude.ai/code/<bridgeSessionId>`, the one
+      `/remote-control` shows.
+    - `claude.ai/code/*` is a universal link of the Claude app
+      (claude.ai's `apple-app-site-association`, appID
+      `Q6L2SF6YDW.com.anthropic.claude`): Heraldr opens it with
+      `universalLinksOnly`, and falls back to an "Open in Claude"
+      button if the app does not take it.
+    - The question text is not in the transcript
+      `~/.claude/projects/<encoded cwd>/<sessionId>.jsonl` at the time
+      of `blocked`: measured, an AskUserQuestion only appears there on
+      the answer (24 s later), and the `tool_use` of a Bash or Write
+      permission is not there during the request. Reading the last
+      `tool_use` gave the previous tool, already run, hence
+      "Permission request: Bash" notifications for simple questions.
+      The pane screen (`herdr pane read`) shows the question or the
+      permission request as soon as `blocked` happens.
+12. Switch to `blocked` without a daemon?
+    - Settled: a herdr plugin declares
+      `[[events]] on = "pane.agent_status_changed"`; herdr starts a
+      short process per status change with `HERDR_PLUGIN_EVENT_JSON`
+      (`pane_id`, `workspace_id`, `agent_status`). The agent name is not
+      there: it comes from `herdr agent get <pane>`, which also serves
+      to check the status again after the debounce. `herdr plugin link`
+      registers a local plugin without a build.
+13. APNs HTTP/2 delivery from the Mac?
+    - Settled: Node (already required by the Heeler plugin) signs the
+      ES256 JWT with `node:crypto` (`dsaEncoding: "ieee-p1363"`) and
+      posts with `node:http2`, with no dependency. The system's curl
+      8.7.1 also has nghttp2, but signing ES256 in shell is painful.
+    - The APNs `.p8` key of another app of the same team
+      (`<apns key id>`, team `<team id>`) passes authentication for the
+      `<bundle id>` topic: sandbox and production answer
+      `BadDeviceToken` to a fake token, not `InvalidProviderToken`. An
+      APNs key is valid for every app of the team.
+    - Checked on the iPhone: an AskUserQuestion from `home-main`
+      produces the notification (label, agent, question), and the tap
+      opens the session in the Claude app.
+    - `herdr plugin link` rejects `--enabled` followed by a path
+      (`unknown option`); the linked plugin is enabled by default.
+    - Trap: `~/.private_keys/AuthKey_<asc key id>.p8` is an App Store
+      Connect API key, which APNs rejects (`InvalidProviderToken`).

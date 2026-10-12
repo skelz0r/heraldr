@@ -1,147 +1,147 @@
 # Design
 
-Référence du rendu de l'app Heraldr. Les valeurs vivent dans
-`ios/Heraldr/UI/Theme.swift` et `AccentColor` de l'asset catalog.
+Reference for how the Heraldr app looks. The values live in
+`ios/Heraldr/UI/Theme.swift` and in `AccentColor` in the asset catalog.
 
 ## Palette
 
-« Graphite et gueules » : tout est verre neutre, presque monochrome, et
-une seule couleur vive, le vermillon des blasons (« gueules »),
-réservée à la voix. La sélection ne prend pas de couleur, elle prend
-de la lumière.
+"Graphite et gueules" (graphite and gules): everything is neutral
+glass, almost monochrome, with a single bright color, the vermilion of
+coats of arms ("gules"), reserved for voice. Selection does not take a
+color, it takes light.
 
-| Token | Clair | Sombre | Usage |
+| Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `accent` | `#C2321A` | `#FF5A3C` | Envoyer, Arrêter, onde de dictée, flèche de la cible, liens, coches |
-| `onAccent` | `#FFFFFF` | `#FFFFFF` | texte et icônes posés sur l'accent |
-| `voiceInk` | `#C2321A` | `#FF7A5C` | micro de la goutte |
-| `voiceGlow` | `#FF5A3C` | `#FF5A3C` | lueur au fond de la goutte, halo du micro |
-| `selectedGlass` | blanc 92 % | blanc 20 % | teinte du verre de la tuile cible |
-| `restingGlass` | `#8A8D96` à 12 % | aucune | teinte des autres tuiles, pour que la cible ressorte en clair |
-| `selectedGlow` | noir 10 % | blanc 10 % | ombre de la tuile cible |
-| `onStatus` | `#FFFFFF` | `#121214` | icône posée sur une pastille d'état (notices) |
-| `macOnline` | `#1F8A4C` | `#6EDB8F` | dot du Mac en ligne, seul vert de l'app |
-| `wallBase` | `#F1F1F3` | `#0B0B0D` | fond de tous les écrans |
-| `wallBlobOne` | `#D8DAE0` | `#26282E` | tache floue, en haut à gauche |
-| `wallBlobTwo` | `#E4E7EE` | `#1A1D24` | tache floue, à droite |
-| `wallBlobThree` | `#F4D3CB` | `#3A1712` | tache floue, en bas : lueur rouge discrète sous la goutte |
+| `accent` | `#C2321A` | `#FF5A3C` | Send, Stop, dictation wave, target arrow, links, checkmarks |
+| `onAccent` | `#FFFFFF` | `#FFFFFF` | text and icons on the accent |
+| `voiceInk` | `#C2321A` | `#FF7A5C` | microphone of the drop |
+| `voiceGlow` | `#FF5A3C` | `#FF5A3C` | glow at the back of the drop, microphone halo |
+| `selectedGlass` | white 92 % | white 20 % | glass tint of the target tile |
+| `restingGlass` | `#8A8D96` at 12 % | none | tint of the other tiles, so the target stands out in light mode |
+| `selectedGlow` | black 10 % | white 10 % | shadow of the target tile |
+| `onStatus` | `#FFFFFF` | `#121214` | icon on a status dot (notices) |
+| `macOnline` | `#1F8A4C` | `#6EDB8F` | Mac online dot, the only green in the app |
+| `wallBase` | `#F1F1F3` | `#0B0B0D` | background of every screen |
+| `wallBlobOne` | `#D8DAE0` | `#26282E` | blurred blob, top left |
+| `wallBlobTwo` | `#E4E7EE` | `#1A1D24` | blurred blob, right |
+| `wallBlobThree` | `#F4D3CB` | `#3A1712` | blurred blob, bottom: faint red glow under the drop |
 
-Le texte reste celui du système (`.primary`, `.secondary`).
+Text stays the system's (`.primary`, `.secondary`).
 
-Contrastes (WCAG 2.1) :
+Contrast (WCAG 2.1):
 
-- `accent` en texte sur `wallBase` : 4,9:1 en clair, 6,3:1 en sombre
-- `onAccent` sur `accent` : 5,6:1 en clair, 3,1:1 en sombre ; en
-  sombre, le blanc n'est posé que sur du texte large (Envoyer, title3
-  gras) ou une icône, où 3:1 suffit
-- micro `voiceInk` sur `wallBase` : 4,9:1 en clair, 7,7:1 en sombre
-- `onStatus` sur les pastilles d'état : 5,2:1 au moins
+- `accent` as text on `wallBase`: 4.9:1 in light, 6.3:1 in dark
+- `onAccent` on `accent`: 5.6:1 in light, 3.1:1 in dark; in dark, white
+  only sits on large text (Send, bold title3) or an icon, where 3:1 is
+  enough
+- `voiceInk` microphone on `wallBase`: 4.9:1 in light, 7.7:1 in dark
+- `onStatus` on status dots: at least 5.2:1
 
-## Couleurs d'état
+## Status colors
 
-| État | Clair | Sombre | Sur `wallBase` (clair / sombre) | Dot |
+| Status | Light | Dark | On `wallBase` (light / dark) | Dot |
 | --- | --- | --- | --- | --- |
-| idle, inconnu | `#6A6C73` | `#D7D8DD` | 4,6 / 13,8 | anneau |
-| done | `#6A6C73` | `#D7D8DD` | 4,6 / 13,8 | pastille pleine |
-| working | `#0A63C9` | `#64C8FF` | 5,1 / 10,5 | pastille, anneau qui pulse |
-| blocked | `#8F5400` | `#FFC23D` | 5,4 / 12,2 | pastille, halo fixe |
+| idle, unknown | `#6A6C73` | `#D7D8DD` | 4.6 / 13.8 | ring |
+| done | `#6A6C73` | `#D7D8DD` | 4.6 / 13.8 | filled dot |
+| working | `#0A63C9` | `#64C8FF` | 5.1 / 10.5 | dot, pulsing ring |
+| blocked | `#8F5400` | `#FFC23D` | 5.4 / 12.2 | dot, steady halo |
 
-Le vert sort des états : idle et done mènent tous deux à « Prêt », ils
-partagent le gris « prêt » et ne diffèrent que par la forme (anneau ou
-pastille). Seuls working et blocked prennent une couleur, et rien ne
-leur fait concurrence. La couleur ne porte jamais seule l'information :
-le libellé d'état est écrit sous la cible.
+Green is out of the statuses: idle and done both lead to "Ready", they
+share the "ready" grey and only differ by shape (ring or dot). Only
+working and blocked take a color, and nothing competes with them. Color
+never carries the information alone: the status label is written under
+the target.
 
-Notices et historique : envoyé en gris « prêt », en file en bleu
-working, échec en ambre blocked.
+Notices and history: sent in "ready" grey, queued in working blue,
+failed in blocked amber.
 
-## Typographie
+## Typography
 
-SF Pro, sans police embarquée.
+SF Pro, no embedded font.
 
-| Élément | Style |
+| Element | Style |
 | --- | --- |
-| Nom de la cible | SF Pro Rounded heavy 44 pt pour tous, tracking -1 |
-| Libellé « CIBLE » | caption heavy, capitales, tracking 1,2 |
-| État de la cible | callout semibold, puis footnote secondaire |
-| Tuile workspace | 15 pt semibold, deux lignes au plus |
-| Dictée en direct | SF Pro Rounded semibold 26 pt, mots provisoires en secondaire |
-| Aperçu | 19 pt medium |
+| Target name | SF Pro Rounded heavy 44 pt for all, tracking -1 |
+| "TARGET" label | caption heavy, uppercase, tracking 1.2 |
+| Target status | callout semibold, then secondary footnote |
+| Workspace tile | 15 pt semibold, two lines at most |
+| Live dictation | SF Pro Rounded semibold 26 pt, provisional words in secondary |
+| Preview | 19 pt medium |
 
-## Tailles
+## Sizes
 
-- goutte voix : 92 pt, au centre de la barre du bas, entre deux ronds
-  de verre de 54 pt (Écrire, Coller), 16 pt d'écart ; icônes seules,
-  libellés pour VoiceOver. Avant : orbe de 104 pt en saillie sur une
-  capsule de 92 pt, détaché par un anneau de `wallBase`
-- micro de la goutte : 30 pt medium ; lueur radiale `voiceGlow` de 55 %
-  à 0, centrée sous le bas de la goutte (115 % de sa hauteur), rayon
-  72 pt
-- grille : deux colonnes, 8 pt d'écart, 16 pt de marge ; le premier
-  workspace (Home) occupe toute la largeur au-dessus
-- cible : 38 % de la hauteur de l'écran, en `safeAreaBar` du haut de
-  la grille
-- bords de la grille au défilement : effet de bord `.soft` d'iOS 26 en
-  haut et en bas ; en haut, les tuiles s'effacent aussi en fondu sur
-  les 56 derniers points de la cible, pour ne jamais passer derrière
-  son texte ; en bas, elles passent floutées sous la goutte et les
-  ronds
-- tuile : 58 pt de haut minimum, coins de 20 pt ; cible en gras, ombre
-  `selectedGlow` de rayon 13 pt décalée de 6 pt
-- dictée : Arrêter 112 pt, Annuler 64 pt
-- aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt
-- captures jointes : vignettes de 84 pt de haut au format de l'image
-  (largeur entre 0,6 et 1,4 fois la hauteur, une capture d'iPhone
-  reste en portrait), coins de 14 pt, filet de 0,5 pt à 20 % du texte
-  pour détacher une capture du verre de même teinte ;
-  croix de 20 pt en verre dans le coin, zone tactile de 40 pt
-- toute cible tactile fait au moins 44 pt
+- voice drop: 92 pt, in the middle of the bottom bar, between two 54 pt
+  glass circles (Write, Paste), 16 pt apart; icons only, labels for
+  VoiceOver. Before: a 104 pt orb sticking out of a 92 pt capsule,
+  set apart by a `wallBase` ring
+- drop microphone: 30 pt medium; `voiceGlow` radial glow from 55 % to
+  0, centered under the bottom of the drop (115 % of its height),
+  72 pt radius
+- grid: two columns, 8 pt gap, 16 pt margin; the first workspace (Home)
+  takes the full width above
+- target: 38 % of the screen height, as a `safeAreaBar` at the top of
+  the grid
+- grid edges when scrolling: iOS 26 `.soft` edge effect at the top and
+  bottom; at the top, tiles also fade out over the last 56 points of
+  the target, so they never pass behind its text; at the bottom, they
+  pass blurred under the drop and the circles
+- tile: 58 pt minimum height, 20 pt corners; target in bold,
+  `selectedGlow` shadow with a 13 pt radius offset by 6 pt
+- dictation: Stop 112 pt, Cancel 64 pt
+- preview: full-width Send, 64 pt high; Close 44 pt
+- attached screenshots: 84 pt high thumbnails in the image's aspect
+  ratio (width between 0.6 and 1.4 times the height, an iPhone
+  screenshot stays portrait), 14 pt corners, 0.5 pt hairline at 20 %
+  of the text color to set a screenshot apart from glass of the same
+  tint; 20 pt glass cross in the corner, 40 pt tap area
+- every tap target is at least 44 pt
 
 ## Liquid Glass
 
-`glassEffect` d'iOS 26, sans matériau imité.
+iOS 26 `glassEffect`, no imitation material.
 
-- verre simple `.regular` : ronds Écrire et Coller, pilule du Mac,
-  bandeau cible et texte de l'aperçu, notices
-- verre clair `.clear` : goutte voix, sans teinte ni anneau ; la couleur
-  n'est que dans la lueur au fond et le micro
-- verre teinté `selectedGlass` : tuile cible, plus dense et plus clair
-  que les autres, sans couleur (le segment choisi d'un `Picker`)
-- verre teinté `restingGlass` : autres tuiles
-- verre teinté accent : Envoyer, Arrêter ; Arrêter se distingue de la
-  voix par sa forme (carré d'arrêt sur disque plein), pas par sa
-  couleur
-- `.interactive()` sur tout ce qui se touche
-- pas de verre : le fond (`Wallpaper`, couleurs et flou), le texte
-  courant, les listes système (choix de la cible)
-- Réduire la transparence : le système rend le verre opaque ; la
-  lueur et le micro de la goutte, posés dessus, restent colorés et
-  la gardent repérable. Contraste augmenté : bordures du système
+- plain `.regular` glass: Write and Paste circles, Mac pill, target
+  banner and preview text, notices
+- clear `.clear` glass: voice drop, without tint or ring; the color is
+  only in the glow at the back and the microphone
+- `selectedGlass` tinted glass: target tile, denser and lighter than
+  the others, without color (like the selected segment of a `Picker`)
+- `restingGlass` tinted glass: other tiles
+- accent tinted glass: Send, Stop; Stop differs from voice by its shape
+  (stop square on a filled disc), not by its color
+- `.interactive()` on everything that can be touched
+- no glass: the background (`Wallpaper`, colors and blur), body text,
+  system lists (target picker)
+- Reduce Transparency: the system makes the glass opaque; the drop's
+  glow and microphone, on top of it, stay colored and keep it easy to
+  find. Increase Contrast: system borders
 
-## Icône
+## Icon
 
-Logo « Voix et voies », source unique dans `docs/branding/logo/` :
+"Voix et voies" (voice and lanes) logo, single source in
+`docs/branding/logo/`:
 
-- défaut et sombre : `5-voies-dark.svg`, recoloré pour la palette :
-  onde et voie haute `#FFFFFF`, voie du milieu `#C9CBD1`, voie basse
-  `#FF5A3C`, sur un dégradé graphite `#1A1B1F` → `#08090A`
-- teintée : `5-voies-tinted.svg`, inchangée (niveaux de gris)
-- trait épaissi de 60 à 80 px au rendu, pour rester lisible à 60 px ;
-  le tracé n'est pas modifié
+- default and dark: `5-voies-dark.svg`, recolored for the palette:
+  wave and top lane `#FFFFFF`, middle lane `#C9CBD1`, bottom lane
+  `#FF5A3C`, on a graphite gradient `#1A1B1F` → `#08090A`
+- tinted: `5-voies-tinted.svg`, unchanged (greyscale)
+- stroke thickened from 60 to 80 px at render time, to stay readable at
+  60 px; the path is not modified
 
-`bin/render-ios-icon` produit les PNG 1024 de l'AppIcon et le logo
-affiché dans l'app.
+`bin/render-ios-icon` produces the 1024 PNGs of the AppIcon and the
+logo shown in the app.
 
-## Pas un look natif standard
+## Not a standard native look
 
-- pas de `NavigationStack` ni de `List` sur l'accueil : une composition
-  pleine page
-- le fond est toujours le dégradé flou, jamais un gris système
-- la cible se lit de loin : nom en très grand, état en une phrase
-- tout ce qui se touche est dans la moitié basse, utilisable d'une main
-- le bouton voix domine, Écrire et Coller restent secondaires
-- les écrans annexes (choix de cible, transcription originale) peuvent
-  rester des feuilles système
-- une feuille se ferme en la glissant vers le bas, sans bouton Fermer :
-  la croix pleine d'accent du système pesait plus lourd que le contenu ;
-  seul l'écran plein de saisie, qui ne se glisse pas, garde le sien
+- no `NavigationStack` or `List` on the home screen: a full-page
+  composition
+- the background is always the blurred gradient, never a system grey
+- the target reads from afar: very large name, status in one sentence
+- everything that can be touched is in the bottom half, usable
+  one-handed
+- the voice button dominates, Write and Paste stay secondary
+- secondary screens (target picker, original transcription) can stay
+  system sheets
+- a sheet is dismissed by swiping it down, without a Close button: the
+  system's filled accent cross weighed more than the content; only the
+  full input screen, which cannot be swiped, keeps its own

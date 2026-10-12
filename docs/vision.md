@@ -1,89 +1,92 @@
 # Vision
 
-Le [README](../README.md) dit ce que fait Heraldr et quelles conventions
-il impose. Ici, le pourquoi.
+The [README](../README.md) says what Heraldr does and which conventions
+it imposes. This is the why.
 
-## Problème
+## Problem
 
-Une idée de tâche arrive loin du clavier : dans la rue, sur le canapé,
-en testant une feature sur le Mac. La transformer en travail d'agent
-demande d'ouvrir un terminal, de trouver le bon workspace herdr, le bon
-Claude, de faire `/clear`, de taper le prompt, puis de penser à
-`/start`. Assez de friction pour que l'idée se perde, ou que la remarque
-de QA finisse dans un coin de tête au lieu d'aller au Claude concerné.
+An idea for a task shows up away from the keyboard: in the street, on
+the couch, while testing a feature on the Mac. Turning it into agent
+work means opening a terminal, finding the right herdr workspace, the
+right Claude, running `/clear`, typing the prompt, then remembering
+`/start`. Enough friction for the idea to get lost, or for the QA
+remark to stay in the back of my head instead of reaching the Claude it
+concerns.
 
-## Compagnon du quotidien
+## Everyday companion
 
-Heraldr sert tous les jours, entre deux sessions devant le Mac ou en
-pleine QA : une idée ou une remarque arrive, elle part tout de suite au
-Claude qui doit la traiter. L'app ne montre pas de code, le travail se
-fait et se relit sur le Mac. Elle envoie, et elle prévient quand un
-`main` attend une réponse.
+Heraldr is used every day, between sessions at the Mac or in the middle
+of QA: an idea or a remark comes up, it goes straight to the Claude
+that should handle it. The app shows no code, the work is done and
+reviewed on the Mac. It sends, and it tells me when a `main` is waiting
+for an answer.
 
-La voix d'abord, parce que c'est ce qui coûte le moins quand on marche
-ou qu'on a les mains sur le Mac en pleine QA. Écrire et coller existent,
-mais le bouton voix domine l'écran.
+Voice first, because it costs the least when walking or with hands on
+the Mac in the middle of QA. Write and Paste exist, but the voice
+button dominates the screen.
 
-## Pourquoi opinionated
+## Why opinionated
 
-Comme un framework opinionated, Heraldr n'a rien à configurer : il
-suppose une seule organisation de herdr, et c'est pour ça qu'un geste
-suffit. Chaque convention a sa raison :
+Like an opinionated framework, Heraldr has nothing to configure: it
+assumes a single way of organizing herdr, and that is why one gesture
+is enough. Each convention has its reason:
 
-- un agent par projet au nom prévisible (`<slug>-main`, tab 1) : l'app
-  sait à qui parler sans rien demander, et le crée s'il manque
-- un `/clear` avant chaque demande : le `main` repart toujours d'un
-  contexte vierge, une idée ne pollue pas la suivante
-- le `main` explore et pose ses questions, mais ne code pas : il finit
-  par `/start`, qui isole chaque feature dans son worktree et son tab.
-  Le tab 1 reste disponible pour la prochaine idée
-- Home en dispatch global : à la voix, on ne veut pas choisir un projet
-  avant de parler. Home est la cible par défaut et relaie au bon `main`
-- vers un tab de worktree, l'inverse : pas de consigne ni de `/clear`
-  par défaut, parce qu'on y itère sur une feature lancée et que le
-  Claude doit garder son contexte
+- one agent per project with a predictable name (`<slug>-main`, tab 1):
+  the app knows who to talk to without asking, and creates it if
+  missing
+- a `/clear` before each request: the `main` always starts from a fresh
+  context, one idea does not pollute the next
+- the `main` explores and asks its questions, but does not code: it
+  ends with `/start`, which isolates each feature in its own worktree
+  and tab. Tab 1 stays free for the next idea
+- Home as global dispatcher: by voice, you don't want to pick a project
+  before speaking. Home is the default target and relays to the right
+  `main`
+- toward a worktree tab, the opposite: no instructions and no `/clear`
+  by default, because that is where you iterate on a feature already
+  started and the Claude must keep its context
 
-En contrepartie, Heraldr ne sert à rien à qui organise herdr
-autrement. C'est voulu : l'app est faite pour un seul utilisateur et
-son Mac.
+In return, Heraldr is useless to anyone who organizes herdr
+differently. That is intended: the app is made for a single user and
+their Mac.
 
-## Positionnement face à Heeler
+## Positioning next to Heeler
 
-[Heeler](https://github.com/ZingerLittleBee/Heeler) est un client iOS
-généraliste pour herdr : console de tous les agents, attach terminal,
-composer, uploads, diffs, push. Heraldr ne le remplace pas :
+[Heeler](https://github.com/ZingerLittleBee/Heeler) is a
+general-purpose iOS client for herdr: console for all agents, terminal
+attach, composer, uploads, diffs, push. Heraldr does not replace it:
 
-- Heeler sert à inspecter et piloter finement, quelle que soit
-  l'organisation des workspaces
-- Heraldr sert à lancer et faire avancer du travail en quelques
-  secondes, à la voix, dans une organisation imposée
+- Heeler is for inspecting and driving in depth, whatever the
+  organization of the workspaces
+- Heraldr is for starting and moving work forward in a few seconds, by
+  voice, within an imposed organization
 
-Les deux cohabitent sur le même Mac et réutilisent le même plugin herdr
-pour l'appairage : chaque app enrôle sa propre clé SSH.
+Both live on the same Mac and reuse the same herdr plugin for pairing:
+each app enrolls its own SSH key.
 
-## Ce qui reste hors de l'app
+## What stays outside the app
 
-- répondre aux questions d'un `main` : une notification prévient, la
-  réponse se fait dans l'app Claude (Remote Control) ou sur le Mac
-- suivre l'avancement des worktrees : herdr, Heeler ou l'app Claude ;
-  Heraldr ne montre que l'état des `main` et du tab ciblé
-- être prévenu par un Claude de worktree : seuls les `main` notifient
+- answering a `main`'s questions: a notification warns, the answer is
+  given in the Claude app (Remote Control) or on the Mac
+- following worktree progress: herdr, Heeler or the Claude app;
+  Heraldr only shows the status of the `main` agents and of the
+  targeted tab
+- being notified by a worktree Claude: only `main` agents notify
 
-## Principes
+## Principles
 
-- gros, lisible, utilisable d'une main en marchant : des cibles tactiles
-  généreuses, le bouton voix dominant
-- Liquid Glass (iOS 26), peu d'éléments, aucune couleur qui ne porte pas
-  d'information ([design](design.md))
-- aucune action destructrice silencieuse : jamais de `/clear` sur un
-  agent en train de travailler, jamais de repli silencieux vers une
-  autre cible
-- aucun daemon sur le Mac : SSH, l'API de herdr, un script de file et un
-  hook de notifications, que l'app installe elle-même
+- big, readable, usable one-handed while walking: generous tap
+  targets, the voice button dominant
+- Liquid Glass (iOS 26), few elements, no color that carries no
+  information ([design](design.md))
+- no silent destructive action: never a `/clear` on an agent that is
+  working, never a silent fallback to another target
+- no daemon on the Mac: SSH, herdr's API, a queue script and a
+  notification hook, which the app installs itself
 
-## Cap
+## Direction
 
-Pistes non livrées, détaillées dans la [roadmap](roadmap.md) : voir où
-en est chaque agent d'un workspace, lancer la voix sans ouvrir l'app
-(widget, bouton Action, Siri), répondre aux questions sans quitter
+Unshipped tracks, detailed in the [roadmap](roadmap.md): see where each
+agent of a workspace stands, start voice without opening the app
+(widget, Action button, Siri), answer questions without leaving
 Heraldr.

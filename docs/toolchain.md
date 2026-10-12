@@ -1,37 +1,38 @@
 # Toolchain
 
-Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
+Modeled on the `bin/*-ios` scripts of another of my iOS apps, with
+XcodeGen added.
 
-## Projet
+## Project
 
-- `ios/project.yml` (XcodeGen) versionné, `.xcodeproj` généré et ignoré
-  par git : pas de conflits de `.pbxproj` entre worktrees d'agents
-- bundle id de dev : `HERALDR_BUNDLE_ID` (`ios/Signing.local.xcconfig`)
-- signature automatique avec l'équipe perso, installation directe sur
-  l'iPhone (pas de TestFlight)
+- `ios/project.yml` (XcodeGen) is versioned, the `.xcodeproj` is
+  generated and ignored by git: no `.pbxproj` conflicts between agent
+  worktrees
+- dev bundle id: `HERALDR_BUNDLE_ID` (`ios/Signing.local.xcconfig`)
+- automatic signing with a personal team, direct install on the iPhone
+  (no TestFlight)
 
 ## Scripts
 
-| Script | Rôle |
+| Script | Role |
 | --- | --- |
-| `bin/setup-ios` | vérifie Xcode 26, xcode-select, XcodeGen, installe et vérifie les outils épinglés (shellcheck 0.11.0, SwiftLint 0.65.1, Biome 2.5.15, xcbeautify 3.2.1, AXe 1.8.0 ; swift-format vient d'Xcode), initialise le submodule Heeler |
-| `bin/generate-ios` | `xcodegen generate`, applique `Vendor/patches/*.patch` au submodule |
+| `bin/setup-ios` | checks Xcode 26, xcode-select, XcodeGen, installs and checks the pinned tools (shellcheck 0.11.0, SwiftLint 0.65.1, Biome 2.5.15, xcbeautify 3.2.1, AXe 1.8.0; swift-format ships with Xcode), initializes the Heeler submodule |
+| `bin/generate-ios` | `xcodegen generate`, applies `Vendor/patches/*.patch` to the submodule |
 | `bin/build-ios [simulator\|device]` | build |
-| `bin/run-ios` | build et lancement simulateur |
-| `bin/run-ios-device [uuid]` | build puis install sur l'iPhone par le skill global `ios-device-install` : `devicectl` si l'iPhone est joignable, sinon page d'install OTA via Tailscale (attente device busy, déverrouillage keychain CI comme local_events) |
-| `bin/run-ios-tests [suite]` | tests unitaires en simulateur (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro par défaut), sortie complète par xcbeautify, warnings compris, puis `bin/run-mac-tests` ; lit le `.xcresult` et échoue si aucun test n'a tourné ou, suite complète, sous le plancher de `ios/minimum-test-count` (à relever avec les tests ajoutés). Les tests UI n'y tournent pas |
-| `bin/lint` | shellcheck (`.shellcheckrc`), `xcrun swift-format lint --strict` (`.swift-format`), SwiftLint en CLI (`.swiftlint.yml`), Biome (`biome.json`), et deux garde-fous : `agent_status` lu seulement pour un agent, pas de section « Écarts connus » remplie dans la spec ; 2 s |
-| `bin/qa [--all\|<classe>...]` | joue les classes de `HeraldrUITests` touchées par le diff depuis `origin/main` sur le simulateur « Heraldr <worktree> » (créé au besoin, visé par udid, barre d'état figée à 9:41), contre le faux Mac, et exporte les captures clair et sombre dans `~/share/screenshots/<worktree>/`, sur 3 clones en parallèle (`QA_WORKERS`) ; 3 à 4 min pour `--all` |
-| `bin/run-mac-tests` | tests du script de dispatch (`mac/test/dispatch_test.sh`, faux herdr) et du hook de notification (`node --test mac/test/notify_hook_test.mjs`, faux APNs) |
-| `bin/local-ci [push]` | `bin/lint` puis tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse d'abord le HEAD (lease, jamais `main`), pose « Local CI » en pending sur ce commit puis en success, failure (étape en échec, HEAD ou worktree modifié pendant le run) ou error (Ctrl-C, TERM, HUP) ; sans `push`, aucun statut |
-| `bin/open-ios-xcode` | génère puis ouvre le projet |
-| `bin/render-ios-icon` | régénère AppIcon et logo depuis `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
+| `bin/run-ios` | build and launch on the simulator |
+| `bin/run-ios-device [uuid]` | build then install on the iPhone through the global `ios-device-install` skill: `devicectl` when the iPhone is reachable, otherwise an OTA install page over Tailscale (waits while the device is busy, unlocks the CI keychain) |
+| `bin/run-ios-tests [suite]` | unit tests on the simulator (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro by default), full output through xcbeautify, warnings included, then `bin/run-mac-tests`; reads the `.xcresult` and fails if no test ran or, for the full suite, below the floor in `ios/minimum-test-count` (raise it as tests are added). UI tests do not run here |
+| `bin/lint` | shellcheck (`.shellcheckrc`), `xcrun swift-format lint --strict` (`.swift-format`), SwiftLint CLI (`.swiftlint.yml`), Biome (`biome.json`), and two guards: `agent_status` read only for an agent, no filled-in "Known gaps" section in the spec; 2 s |
+| `bin/qa [--all\|<class>...]` | runs the `HeraldrUITests` classes touched by the diff since `origin/main` on the "Heraldr <worktree>" simulator (created if needed, targeted by udid, status bar frozen at 9:41), against the fake Mac, and exports light and dark screenshots to `~/share/screenshots/<worktree>/`, on 3 clones in parallel (`QA_WORKERS`); 3 to 4 min for `--all` |
+| `bin/run-mac-tests` | tests of the dispatch script (`mac/test/dispatch_test.sh`, fake herdr) and of the notification hook (`node --test mac/test/notify_hook_test.mjs`, fake APNs) |
+| `bin/local-ci [push]` | `bin/lint` then all tests, iOS skipped if the diff since `origin/main` is docs only; `push` first pushes HEAD (with lease, never `main`), sets "Local CI" to pending on that commit, then to success, failure (failing step, HEAD or worktree changed during the run) or error (Ctrl-C, TERM, HUP); without `push`, no status |
+| `bin/open-ios-xcode` | generates then opens the project |
+| `bin/render-ios-icon` | regenerates AppIcon and logo from `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
 
-`main` est protégée sur GitHub : le statut « Local CI » doit être en
-success pour merger une PR, sans exiger que la branche soit à jour
-(`strict` à false, pas de rebase ni de nouveau run quand `main` a
-bougé). Les admins ne sont pas soumis à la règle, pour garder les
-pushes directs d'outillage sur `main`. Réglage appliqué avec :
+`main` is protected on GitHub: the "Local CI" status must be success to
+merge a PR, without requiring the branch to be up to date (`strict`
+false, no rebase or new run when `main` has moved). Admins are exempt,
+to keep direct tooling pushes to `main`. Applied with:
 
 ```sh
 gh api -X PUT repos/skelz0r/heraldr/branches/main/protection --input - <<'JSON'
@@ -39,72 +40,69 @@ gh api -X PUT repos/skelz0r/heraldr/branches/main/protection --input - <<'JSON'
 JSON
 ```
 
-Environnement constaté : Xcode 26.2, macOS 26.4.1, iPhone 16 Pro
-(`iphone` sur Tailscale) compatible Apple Intelligence.
+Observed environment: Xcode 26.2, macOS 26.4.1, iPhone 16 Pro
+(reachable over Tailscale) with Apple Intelligence.
 
-Push impose un App ID explicite, que le profil wildcard ne couvre pas.
-Équipe et bundle id viennent de `ios/Signing.xcconfig` (`com.example`
-et pas d'équipe par défaut), surchargés par `ios/Signing.local.xcconfig`,
-ignoré :
+Push requires an explicit App ID, which the wildcard profile does not
+cover. Team and bundle id come from `ios/Signing.xcconfig`
+(`com.example` and no team by default), overridden by
+`ios/Signing.local.xcconfig`, ignored:
 
 ```
 DEVELOPMENT_TEAM = <team id>
 HERALDR_BUNDLE_ID = <bundle id>
 ```
 
-`bin/run-ios-device` lit `.env.local`, ignoré : `IOS_DEVICE_UUID`
-(UUID CoreDevice de l'iPhone, `xcrun devicectl list devices`,
-surchargeable par argument) et, sans compte Apple dans Xcode, la clé API
-App Store Connect qui crée App ID et profil (`ASC_KEY_ID`,
-`ASC_KEY_ISSUER_ID`, `ASC_KEY_PATH` par défaut
-`~/.private_keys/AuthKey_<id>.p8`). `bin/generate-ios` recopie ces deux
-fichiers du checkout principal dans un worktree qui ne les a pas.
+`bin/run-ios-device` reads `.env.local`, ignored: `IOS_DEVICE_UUID`
+(CoreDevice UUID of the iPhone, `xcrun devicectl list devices`, can be
+overridden by argument) and, without an Apple account in Xcode, the App
+Store Connect API key that creates the App ID and profile (`ASC_KEY_ID`,
+`ASC_KEY_ISSUER_ID`, `ASC_KEY_PATH`, by default
+`~/.private_keys/AuthKey_<id>.p8`). `bin/generate-ios` copies both files
+from the main checkout into a worktree that lacks them.
 
-`devicectl` ne voit l'iPhone qu'en USB ou sur le même LAN (Bonjour, qui
-ne traverse pas Tailscale) : ailleurs il le liste `unavailable` et
-l'install échouait (« unable to locate a device matching the requested
-device identifier »). `bin/run-ios-device` confie donc l'install à
-`~/.agents/skills/ios-device-install/scripts/install-ios-app`, qui publie
-alors le build sur
-`https://<mac>.<tailnet>.ts.net/ios-ota/<bundle id>/`, à
-ouvrir dans Safari sur l'iPhone. Le profil de dev contient déjà l'UDID
-de l'iPhone : pas d'archive ni d'export.
+`devicectl` only sees the iPhone over USB or on the same LAN (Bonjour,
+which does not cross Tailscale): elsewhere it lists it as `unavailable`
+and the install used to fail ("unable to locate a device matching the
+requested device identifier"). `bin/run-ios-device` therefore hands the
+install to `~/.agents/skills/ios-device-install/scripts/install-ios-app`,
+which then publishes the build at
+`https://<mac>.<tailnet>.ts.net/ios-ota/<bundle id>/`, to open in
+Safari on the iPhone. The dev profile already contains the iPhone's
+UDID: no archive or export.
 
-Deux écarts avec Heeler, qui compile avec Xcode 26.6 :
+Two differences with Heeler, which builds with Xcode 26.6:
 
-- le compilateur d'Xcode 26.2 lève à tort une erreur de concurrence
-  dans `SessionDriver.swift` ; `Vendor/patches/` la contourne, appliqué
-  par `bin/generate-ios`, et le submodule ignore cette modification
-- les xcframework n'ont pas de tranche simulateur x86_64, exclue du
-  build simulateur
+- the Xcode 26.2 compiler wrongly raises a concurrency error in
+  `SessionDriver.swift`; `Vendor/patches/` works around it, applied by
+  `bin/generate-ios`, and the submodule ignores that change
+- the xcframeworks have no x86_64 simulator slice, excluded from the
+  simulator build
 
-Le skill `dev-ios` couvre les builds distants sur build-mac si besoin.
+The `dev-ios` skill covers remote builds on another Mac if needed.
 
-## Hook des agents
+## Agent hook
 
-`.claude/settings.json` déclare un hook Stop : quand l'agent s'apprête
-à rendre la main, `.claude/hooks/lint-before-stop` lance `bin/lint`
-(2 s) si le worktree est sale ou la branche en avance sur
-`origin/main`, et rend le code 2 avec les erreurs sur stderr, que
-Claude Code renvoie à l'agent pour qu'il corrige avant de répondre.
-Une seule relance par tour (`stop_hook_active`) pour ne jamais boucler.
-Ni build ni tests.
+`.claude/settings.json` declares a Stop hook: when the agent is about
+to hand back, `.claude/hooks/lint-before-stop` runs `bin/lint` (2 s) if
+the worktree is dirty or the branch is ahead of `origin/main`, and
+exits with code 2 and the errors on stderr, which Claude Code sends back
+to the agent so it fixes them before answering. Only one retry per turn
+(`stop_hook_active`) so it never loops. No build, no tests.
 
-## Simulateur et captures
+## Simulator and screenshots
 
-Commandes utiles pour regarder l'app à la main, toujours par `--udid`
-ou udid, jamais `booted` (plusieurs worktrees partagent la machine) :
+Useful commands to look at the app by hand, always by `--udid` or udid,
+never `booted` (several worktrees share the machine):
 
-- lancer sur le faux Mac : `xcrun simctl launch <udid>
-  com.skelz0r.heraldr.dev -HeraldrFakeMac demo` (presets : `demo`,
-  `history`, `question`, `unpaired`, `unreachable`, `connecting`,
-  `empty`), ou `SIMCTL_CHILD_HERALDR_FAKE_MAC='<json>'` pour un
-  scénario entier
+- launch on the fake Mac: `xcrun simctl launch <udid>
+  <bundle id> -HeraldrFakeMac demo` (presets: `demo`, `history`,
+  `question`, `unpaired`, `unreachable`, `connecting`, `empty`), or
+  `SIMCTL_CHILD_HERALDR_FAKE_MAC='<json>'` for a whole scenario
 - `xcrun simctl ui <udid> appearance dark|light`, `status_bar <udid>
-  override --time 9:41`, `io <udid> screenshot <fichier>`
-- AXe : `axe describe-ui --udid <udid>`, `axe tap --id <identifier>
-  --udid <udid>`, `axe type '<texte>' --udid <udid>`
+  override --time 9:41`, `io <udid> screenshot <file>`
+- AXe: `axe describe-ui --udid <udid>`, `axe tap --id <identifier>
+  --udid <udid>`, `axe type '<text>' --udid <udid>`
 
-Un simulateur resté longtemps démarré peut ignorer le changement
-d'apparence (tout reste clair) : `xcrun simctl shutdown` puis `boot`
-le remet d'aplomb.
+A simulator left booted for a long time can ignore the appearance change
+(everything stays light): `xcrun simctl shutdown` then `boot` fixes it.

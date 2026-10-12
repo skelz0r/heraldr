@@ -1,107 +1,156 @@
 # Heraldr
 
-Compagnon de développement voice first pour herdr et Claude Code. Depuis
-l'iPhone, tu dictes une idée et le développement démarre sur le Mac ;
-pendant la QA, tu dictes ta review au Claude qui a écrit la feature.
+Heraldr is an iOS app that dispatches work to Claude Code agents running
+in herdr workspaces on a Mac. From the iPhone, you dictate an idea and
+development starts on the Mac; during QA, you dictate your review to
+the Claude that wrote the feature. The app talks to the Mac over SSH,
+with nothing running permanently on the Mac side.
 
-Ce n'est pas un client herdr généraliste. L'app ne marche que si herdr
-et Claude sont organisés d'une façon précise, la mienne : c'est un
-setup personnel, installé directement sur mon iPhone, sans
-TestFlight ni App Store. Pour piloter herdr finement depuis un
-téléphone, avec terminal, diffs et uploads, il y a
-[Heeler](https://github.com/ZingerLittleBee/Heeler) ; les deux
-cohabitent sur le même Mac.
+**Work in progress.** The project changes quickly, with no stability
+guarantees: commands, conventions and the contract with the Mac can
+break from one commit to the next.
 
-## Les conventions imposées
+This is not a general-purpose herdr client. The app only works if herdr
+and Claude are organized in one specific way, mine: it was built for my
+own use and is installed directly on my iPhone, without TestFlight or
+the App Store. To drive herdr in depth from a phone, with a terminal,
+diffs and uploads, use [Heeler](https://github.com/ZingerLittleBee/Heeler);
+both can live on the same Mac.
+
+## Required conventions
 
 ```mermaid
 flowchart LR
   phone["Heraldr<br/>iPhone"]
-  subgraph mac["herdr sur le Mac"]
-    subgraph home["workspace Home (n° 1)"]
+  subgraph mac["herdr on the Mac"]
+    subgraph home["Home workspace (no. 1)"]
       hm["tab 1<br/>home-main"]
     end
-    subgraph proj["workspace monprojet"]
-      pm["tab 1<br/>monprojet-main"]
+    subgraph proj["myproject workspace"]
+      pm["tab 1<br/>myproject-main"]
       t2["tab 2<br/>worktree feature-a<br/>Claude"]
       t3["tab 3<br/>worktree feature-b<br/>Claude"]
     end
   end
-  phone -- "idée, projet inconnu" --> hm
-  phone -- "idée" --> pm
-  phone -. "review vocale" .-> t2
-  hm -- "relais" --> pm
+  phone -- "idea, unknown project" --> hm
+  phone -- "idea" --> pm
+  phone -. "voice review" .-> t2
+  hm -- "relay" --> pm
   pm -- "/start" --> t2
   pm -- "/start" --> t3
 ```
 
-- Un workspace herdr par projet. Son tab 1 héberge un Claude nommé
-  `<slug>-main` (`monprojet-main`), créé par l'app s'il manque. Il ne
-  code pas : il reçoit chaque demande sur un contexte vierge (`/clear`),
-  explore le code, pose ses questions, puis dispatche le travail avec
-  `/start`.
-- `/start` crée un worktree et ouvre un nouveau tab avec son propre
-  Claude : chaque tab au-delà du premier est une feature en cours.
-- Le workspace numéro 1 de herdr, Home, sert de dispatch global et de
-  cible par défaut. Quand tu ne sais pas encore dans quel projet tombe
-  une idée, tu lui parles : il identifie le projet parmi les workspaces
-  ouverts, demande en cas de doute, et relaie au `<slug>-main` concerné.
-- Les Claude tournent en yolo mode (`--dangerously-skip-permissions`),
-  en Remote Control pour être joignables depuis l'app Claude.
-- Rien ne tourne en permanence sur le Mac : l'app passe par SSH, à
-  travers l'API de herdr et un script de file (`dispatch.sh`) qu'elle
-  réinstalle à chaque envoi. Un envoi vers un Claude occupé attend sur
-  le Mac qu'il ait fini, dans l'ordre.
+- One herdr workspace per project. Its tab 1 hosts a Claude named
+  `<slug>-main` (`myproject-main`), created by the app if missing. It
+  does not write code: it receives each request on a fresh context
+  (`/clear`), explores the code, asks its questions, then dispatches
+  the work with `/start`.
+- `/start` creates a worktree and opens a new tab with its own Claude:
+  every tab past the first one is a feature in progress.
+- herdr's workspace number 1, Home, is the global dispatcher and the
+  default target. When you don't know yet which project an idea belongs
+  to, you talk to it: it finds the project among the open workspaces,
+  asks when in doubt, and relays to the right `<slug>-main`.
+- The Claudes run in yolo mode (`--dangerously-skip-permissions`), with
+  Remote Control on so they can be reached from the Claude app.
+- Nothing runs permanently on the Mac: the app goes through SSH, using
+  herdr's API and a queue script (`dispatch.sh`) that it reinstalls on
+  every send. A request sent to a busy Claude waits on the Mac until it
+  is done, in order.
 
-`/start` est un skill Claude Code personnel, hors de ce dépôt.
+`/start` is a personal Claude Code skill, not part of this repository.
 
-## Deux usages
+## Two uses
 
 ```mermaid
 sequenceDiagram
-  actor toi as Toi
+  actor you as You
   participant app as Heraldr
-  participant main as monprojet-main
-  participant wt as Claude du worktree
-  toi->>app: dicte une idée
-  app->>main: /clear, demande, consigne
-  main-->>toi: notification : une question
-  toi->>main: réponse dans l'app Claude
-  main->>wt: /start : worktree et nouveau tab
-  Note over wt: développe
-  toi->>app: QA sur le Mac, dicte la review
-  app->>wt: review, contexte gardé
+  participant main as myproject-main
+  participant wt as Worktree Claude
+  you->>app: dictate an idea
+  app->>main: /clear, request, instructions
+  main-->>you: notification: a question
+  you->>main: answer in the Claude app
+  main->>wt: /start: worktree and new tab
+  Note over wt: develops
+  you->>app: QA on the Mac, dictate the review
+  app->>wt: review, context kept
 ```
 
-### Lancer une idée
+### Start an idea
 
-Gros bouton voix, tu parles, la dictée est
-transcrite et nettoyée sur l'iPhone, tu relis, tu envoies. Le
-`<slug>-main` du workspace choisi (ou Home) reçoit la demande avec une
-consigne : explorer sans rien modifier, poser ses questions, finir par
-`/start`. Quand il pose une question, une notification arrive ; la
-toucher ouvre sa session dans l'app Claude pour répondre.
+Big voice button, you speak, the dictation is transcribed and cleaned
+up on the iPhone, you proofread, you send. The `<slug>-main` of the
+chosen workspace (or Home) receives the request with instructions:
+explore without changing anything, ask questions, finish with `/start`.
+When it asks a question, a notification arrives; tapping it opens its
+session in the Claude app so you can answer.
 
-### Itérer sur une feature en cours
+### Iterate on a feature in progress
 
-Pendant que tu testes sur le Mac,
-appui long sur la tuile du workspace, « Cibler un tab de `<label>` »,
-et tu choisis le tab du worktree. Ce que tu dictes part au Claude de ce
-tab avec un simple avertissement de dictée, sans consigne et, par
-défaut, sans `/clear` : il garde le contexte de la feature et prend ta
-review comme un message de plus.
+While you test on the Mac, long-press the workspace tile, pick
+"Target a tab of `<label>`", and choose the worktree's tab. What you
+dictate goes to that tab's Claude with a short dictation notice, no
+instructions and, by default, no `/clear`: it keeps the feature's
+context and takes your review as one more message.
+
+## Requirements
+
+- An iPhone on iOS 26 (dictation cleanup uses Apple Intelligence)
+- A Mac running herdr and Claude Code, with Remote Login (SSH) enabled
+- Xcode 26 and an Apple developer team to sign the app
+
+## Setup
+
+```sh
+bin/setup-ios        # checks Xcode, installs XcodeGen and pinned lint tools, Heeler submodule
+bin/generate-ios     # generates the Xcode project from ios/project.yml
+bin/run-ios          # build and run on the simulator
+```
+
+Signing settings stay out of the repository. Create
+`ios/Signing.local.xcconfig` (ignored by git):
+
+```
+DEVELOPMENT_TEAM = <team id>
+HERALDR_BUNDLE_ID = <bundle id>
+```
+
+Push notifications need an explicit App ID, so the bundle id must be
+one your team owns. To install on the iPhone, create `.env.local`
+(ignored) with the device's CoreDevice UUID
+(`xcrun devicectl list devices`):
+
+```sh
+IOS_DEVICE_UUID=<uuid>
+# Optional, when Xcode has no Apple account: App Store Connect API key
+# used to create the App ID and provisioning profile
+ASC_KEY_ID=<key id>
+ASC_KEY_ISSUER_ID=<issuer id>
+ASC_KEY_PATH=~/.private_keys/AuthKey_<key id>.p8
+```
+
+Then `bin/run-ios-device`. See [docs/toolchain.md](docs/toolchain.md)
+for every script, and `bin/run-ios-tests`, `bin/lint` and
+`bin/local-ci` for checks.
 
 ## Documentation
 
-- [Vision : pourquoi ce setup](docs/vision.md)
-- [Spécification](docs/spec.md) : comportement normatif, contrat avec
-  le Mac
+- [Vision: why this setup](docs/vision.md)
+- [Specification](docs/spec.md): normative behavior, contract with the
+  Mac
 - [Architecture](docs/architecture.md)
 - [Toolchain](docs/toolchain.md)
 - [Design](docs/design.md)
 - [Roadmap](docs/roadmap.md)
-- [Journal des décisions](docs/decisions.md)
-- [Risques et points à vérifier](docs/risks.md)
-- [QA manuelle sur l'iPhone](QA.md)
-- Livrables de création : [nom et logo](docs/branding/), [protos
-  UI](docs/protos/)
+- [Decision log](docs/decisions.md)
+- [Risks and things to check](docs/risks.md)
+- [Manual QA on the iPhone](QA.md)
+- Creative work: [name and logo](docs/branding/)
+
+## License
+
+MIT, see [LICENSE](LICENSE). Heraldr vendors
+[Heeler](https://github.com/ZingerLittleBee/Heeler) (Apache 2.0) as a
+submodule in `Vendor/Heeler`, see [NOTICE](NOTICE).

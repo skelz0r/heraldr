@@ -1,110 +1,108 @@
-# Logo : propositions
+# Logo: proposals
 
-Symboles seuls, sans nom (le nom n'est pas encore choisi). SVG
-1024x1024 à fond plein et sans coins arrondis : iOS applique lui-même
-le masque squircle. Le motif reste dans le cercle central d'environ
-700 px pour survivre au masque et rester lisible à 60 px.
+Symbols only, without a name (the name was not chosen yet). 1024x1024
+SVGs with a full background and no rounded corners: iOS applies the
+squircle mask itself. The motif stays within the central circle of
+about 700 px to survive the mask and stay readable at 60 px.
 
-Aperçu : ouvrir `index.html` (180 et 60 px sur fond clair et sombre,
-1024 px dépliable).
+Preview: open `index.html` (180 and 60 px on light and dark
+backgrounds, 1024 px expandable).
 
-Onde et prisme ont été écartés après le premier tour. Le deuxième tour
-(plus bas) décline voix et voies et retravaille l'éventail.
+Wave and prism were dropped after the first round. The second round
+(below) develops voice and lanes and reworks the fan.
 
-## 1. Éventail (recommandé)
+File names keep their original French words: `eventail` is the fan,
+`voies` the lanes, `troupeau` the herd.
 
-`1-eventail.svg`, variantes `1-eventail-dark.svg` et
+## 1. Fan (recommended)
+
+`1-eventail.svg`, variants `1-eventail-dark.svg` and
 `1-eventail-tinted.svg`.
 
-Un disque de verre (le gros bouton voix) d'où partent trois branches
-qui s'écartent vers trois points : une intention, plusieurs worktrees.
-Les trois couleurs reprennent les états des agents de l'écran
-principal (bleu working, vert done, orange blocked), ce qui lie l'icône
-à l'UI. Le disque translucide à liseré clair est la référence Liquid
-Glass la plus directe des cinq.
+A glass disc (the big voice button) from which three branches spread
+towards three dots: one intent, several worktrees. The three colours
+match the agent states on the main screen (blue working, green done,
+orange blocked), which ties the icon to the UI. The translucent disc
+with a light rim is the most direct Liquid Glass reference of the five.
 
-Pourquoi en premier : c'est le seul qui dit à la fois le geste (le
-bouton) et l'effet (un vers plusieurs), il reste lisible à 60 px et
-ne ressemble à aucune icône système connue. Risque : proche d'un
-pictogramme de graphe ou de partage, à surveiller si le nom ne vient
-pas l'ancrer.
+Why first: it is the only one that says both the gesture (the button)
+and the effect (one to many), it stays readable at 60 px and looks like
+no known system icon. Risk: close to a graph or share pictogram, to
+watch if the name does not anchor it.
 
-## 5. Voix et voies
+## 5. Voice and lanes
 
-`5-voies.svg`, variantes `5-voies-dark.svg` et `5-voies-tinted.svg`.
+`5-voies.svg`, variants `5-voies-dark.svg` and `5-voies-tinted.svg`.
 
-Une onde de voix qui se divise en trois voies parallèles. Le jeu de
-mots voix/voies marche en français uniquement. Monochrome, donc très
-propre en mode teinté. Moins Liquid Glass que l'éventail et l'onde
-devient fine à 60 px (corrigé au deuxième tour).
+A voice wave that splits into three parallel lanes. The voix/voies
+(voice/lanes) pun only works in French. Monochrome, so very clean in
+tinted mode. Less Liquid Glass than the fan, and the wave gets thin at
+60 px (fixed in the second round).
 
-## 4. Troupeau
+## 4. Herd
 
 `4-troupeau.svg`.
 
-Un meneur cerclé de verre et cinq points en formation de vol pointée
-vers la droite : le coup de sifflet qui envoie le troupeau, clin d'oeil
-direct à herdr. Le plus chaleureux, mais la lecture « envoi » dépend de
-la formation en V, moins nette en petit.
+A glass-ringed leader and five dots in flight formation pointing
+right: the whistle that sends the herd off, a direct nod to herdr. The
+warmest, but reading it as "send" depends on the V formation, less
+clear when small.
 
-## Variantes iOS 26
+## iOS 26 variants
 
-Pour les deux premiers et pour les deux retenus de chaque famille du
-deuxième tour : `-dark` garde les couleurs du motif sur un
-fond quasi noir, `-tinted` est un motif en niveaux de gris sur noir que
-le système colorise avec la teinte choisie. Dans Icon Composer, il
-faudra séparer fond et calques du motif pour que le rendu Liquid Glass
-natif (reflets, profondeur) s'applique au lieu des dégradés dessinés
-ici.
+For the first two and for the two kept from each family in the second
+round: `-dark` keeps the motif colours on a near-black background,
+`-tinted` is a greyscale motif on black that the system colourises with
+the chosen tint. In Icon Composer, background and motif layers will
+need to be separated so the native Liquid Glass rendering (highlights,
+depth) applies instead of the gradients drawn here.
 
-## Deuxième tour
+## Second round
 
-### Voix et voies
+### Voice and lanes
 
-Trait porté de 60 à 72-80 px pour tenir à 60 et 40 px, et un court
-tronc droit entre l'onde et la séparation pour que la voix et le
-dispatch se lisent comme deux temps distincts. Les voies se séparent en
-S doux (courbes de Bézier à tangentes horizontales).
+Stroke raised from 60 to 72-80 px to hold at 60 and 40 px, and a short
+straight trunk between the wave and the split so voice and dispatch
+read as two distinct steps. The lanes split in a soft S (Bézier curves
+with horizontal tangents).
 
-- `voies-v2-a-epais.svg` (recommandé, avec `-dark` et `-tinted`) :
-  l'original épaissi, onde sinusoïdale simple, blanc sur vert d'eau.
-  Le plus lisible en petit et le plus propre en teinté.
-- `voies-v2-b-statuts.svg` (avec `-dark` et `-tinted`) : onde plus
-  parlée (amplitudes inégales), chaque voie passe du blanc à sa couleur
-  d'état ; longueurs différentes, la verte (done) va jusqu'au bout,
-  l'orange (blocked) s'arrête tôt. Fond nuit.
-- `voies-v2-c-clair.svg` : fond clair, onde encre, voies aux couleurs
-  d'état qui prennent le relais au point de séparation.
-- `voies-v2-d-quatre.svg` : quatre voies plus fines aux longueurs
-  décalées, sur dégradé orange-framboise. Plus chargé à 40 px.
-- `voies-v2-e-verre.svg` : motif en tube de verre (liseré clair,
-  cœur bleuté, ombre portée) sur bleu. Le plus Liquid Glass de la
-  famille, mais le rendu dessiné fait un peu skeuomorphe.
+- `voies-v2-a-epais.svg` (recommended, with `-dark` and `-tinted`):
+  the original made thicker, simple sine wave, white on teal. The most
+  readable when small and the cleanest when tinted.
+- `voies-v2-b-statuts.svg` (with `-dark` and `-tinted`): a more
+  speech-like wave (uneven amplitudes), each lane goes from white to its
+  state colour; different lengths, the green one (done) goes all the
+  way, the orange one (blocked) stops early. Night background.
+- `voies-v2-c-clair.svg`: light background, ink wave, lanes in state
+  colours taking over at the split point.
+- `voies-v2-d-quatre.svg`: four thinner lanes with staggered lengths,
+  on an orange-raspberry gradient. Busier at 40 px.
+- `voies-v2-e-verre.svg`: glass tube motif (light rim, bluish core,
+  drop shadow) on blue. The most Liquid Glass of the family, but the
+  drawn rendering feels a bit skeuomorphic.
 
-Écarté en cours de route : deux voies (se lit « wc »), onde à épaisseur
-croissante et trois ondes qui se désentrelacent (brouillon à la
-jonction). Limite commune à toute la famille : la partie droite peut se
-lire comme un E ou un €.
+Dropped along the way: two lanes (reads as "wc"), a wave of growing
+thickness, and three waves untangling (messy at the junction). Limit
+shared by the whole family: the right part can read as an E or a €.
 
-### Éventail
+### Fan
 
-Le disque devient un vrai bouton (micro, reflet en haut, ombre portée)
-et les branches perdent leur aspect de graphe : plus de points ronds
-au bout ni de traits d'épaisseur constante.
+The disc becomes a real button (mic, highlight on top, drop shadow) and
+the branches lose their graph look: no more round dots at the end nor
+constant-width strokes.
 
-- `eventail-v2-b-lames.svg` (recommandé, avec `-dark` et `-tinted`) :
-  trois lames de verre colorées déployées en éventail autour du bouton
-  blanc, qui se superposent par transparence. Littéralement un éventail,
-  le plus lisible à 40 px, le plus proche du rendu Liquid Glass.
-- `eventail-v2-a-comete.svg` (avec `-dark` et `-tinted`) : bouton bleu
-  au micro blanc, trois traînées effilées qui partent transparentes et
-  finissent pleines dans leur couleur d'état, comme lancées par le
-  bouton.
-- `eventail-v2-d-givre.svg` : la comète en monochrome, bouton de verre
-  dépoli et traînées blanches sur bleu vif. Le plus sobre et le plus
-  « Apple ».
-- `eventail-v2-e-givre-lames.svg` : les lames en verre dépoli blanc sur
-  violet. Élégant mais moins contrasté en petit.
-- `eventail-v2-c-aube.svg` : éventail vertical, bouton en bas et lames
-  vers le haut, sur fond clair. Plus ludique, frôle la main ou le
-  bouquet.
+- `eventail-v2-b-lames.svg` (recommended, with `-dark` and `-tinted`):
+  three coloured glass blades fanned out around the white button,
+  overlapping through transparency. Literally a fan, the most readable
+  at 40 px, the closest to Liquid Glass rendering.
+- `eventail-v2-a-comete.svg` (with `-dark` and `-tinted`): blue button
+  with a white mic, three tapered trails that start transparent and end
+  solid in their state colour, as if thrown by the button.
+- `eventail-v2-d-givre.svg`: the comet in monochrome, frosted glass
+  button and white trails on bright blue. The most restrained and the
+  most "Apple".
+- `eventail-v2-e-givre-lames.svg`: the blades in white frosted glass on
+  purple. Elegant but less contrast when small.
+- `eventail-v2-c-aube.svg`: vertical fan, button at the bottom and
+  blades going up, on a light background. More playful, borders on a
+  hand or a bouquet.

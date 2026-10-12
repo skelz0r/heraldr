@@ -1,391 +1,385 @@
 # Architecture
 
-## Vue d'ensemble
+## Overview
 
 ```text
-iPhone ──SSH (LAN ou Tailscale)──> sshd du Mac
-                                    ├─ direct-streamlocal → herdr.sock (API JSON)
-                                    └─ exec → script de dispatch détaché (file)
+iPhone ──SSH (LAN or Tailscale)──> Mac sshd
+                                    ├─ direct-streamlocal → herdr.sock (JSON API)
+                                    └─ exec → detached dispatch script (queue)
 ```
 
-Aucun daemon ni port supplémentaire sur le Mac. Même approche que Heeler
-(ADR 0011 de Heeler : libssh2 `direct-streamlocal`).
+No daemon and no extra port on the Mac. Same approach as Heeler
+(Heeler ADR 0011: libssh2 `direct-streamlocal`).
 
-## Côté Mac
+## Mac side
 
-Prérequis déjà en place :
+Prerequisites already in place:
 
-- Remote Login (sshd) actif, port 22
-- Tailscale SSH désactivé (`RunSSH: false`), indispensable car le pairing
-  Heeler repose sur une `command=` forcée d'OpenSSH
-- plugin `heeler` installé et activé
+- Remote Login (sshd) on, port 22
+- Tailscale SSH off (`RunSSH: false`), required because Heeler pairing
+  relies on an OpenSSH forced `command=`
+- `heeler` plugin installed and enabled
 - herdr 0.9.3
 
-Rien d'autre à installer pour le MVP. Les notifications (V2) ajoutent
-un prérequis :
+Nothing else to install for the MVP. Notifications (V2) add one
+prerequisite:
 
-- Node dans le PATH de herdr (déjà requis par le plugin Heeler)
-- la clé APNs `.p8` de l'équipe `ABCDE12345`, copiée telle que la
-  télécharge Apple dans `~/.config/heraldr/AuthKey_<KEYID>.p8`
-  (mode 600) : le key id vient du nom du fichier. Aujourd'hui celle de
-  local_events, `KEYID67890` ; une clé APNs vaut pour toutes les apps
-  de l'équipe
+- Node in herdr's PATH (already required by the Heeler plugin)
+- the team's APNs `.p8` key, copied as Apple downloads it to
+  `~/.config/heraldr/AuthKey_<KEYID>.p8` (mode 600): the key id comes
+  from the file name. One APNs key covers every app of the team, so
+  the key of another app of the same team works
 
-Le reste vient de l'app : bundle id (`com.skelz0r.heraldr.dev`),
-équipe, environnement APNs (sandbox en Debug, production sinon) et le
-plugin herdr lui-même.
+The rest comes from the app: bundle id (`<bundle id>`), team, APNs
+environment (sandbox in Debug, production otherwise) and the herdr
+plugin itself.
 
 ## Pairing
 
-Réutilisation telle quelle du format `HERDR-PAIR:1` du plugin Heeler
-(`plugin/README.md`, section « Pairing Code envelope (v1) », vecteurs de
-test dans `plugin/test-vectors/pairing-code-v1.json`) :
+Reuses the Heeler plugin's `HERDR-PAIR:1` format as is
+(`plugin/README.md`, section "Pairing Code envelope (v1)", test vectors
+in `plugin/test-vectors/pairing-code-v1.json`):
 
-1. sur le Mac : `herdr plugin action invoke heeler.pair`, popup avec QR
-2. le QR contient `HERDR-PAIR:1:<base64url(JSON)>` : `addrs`, `port`,
-   `user`, `fp` (empreinte SHA256 de la clé hôte, épinglée), `seed`
-   (clé Ed25519 bootstrap, usage unique, 2 min), `exp`
-3. l'app génère sa Device Key Ed25519 (privée dans le Keychain), se
-   connecte avec la clé bootstrap, écrit sa clé publique sur stdin
-4. réponse `HERDR-ENROLL:OK:<fp>`, la clé bootstrap est retirée
-5. l'app retient l'adresse qui a répondu, et essaie les autres en cas
-   d'échec (LAN puis Tailscale)
+1. on the Mac: `herdr plugin action invoke heeler.pair`, popup with a QR
+2. the QR holds `HERDR-PAIR:1:<base64url(JSON)>`: `addrs`, `port`,
+   `user`, `fp` (SHA256 fingerprint of the host key, pinned), `seed`
+   (bootstrap Ed25519 key, single use, 2 min), `exp`
+3. the app generates its Ed25519 Device Key (private part in the
+   Keychain), connects with the bootstrap key, writes its public key on
+   stdin
+4. response `HERDR-ENROLL:OK:<fp>`, the bootstrap key is removed
+5. the app remembers the address that answered, and tries the others
+   on failure (LAN then Tailscale)
 
-Les vecteurs de test Heeler deviennent des tests du parseur côté app
-(contrat public consommé).
+Heeler's test vectors become tests of the app-side parser (a consumed
+public contract).
 
-## SSH côté iOS
+## SSH on iOS
 
-Package `HeelerSSH` (libssh2 + OpenSSL, Apache-2.0). Il vit dans un
-sous-dossier du dépôt Heeler (`Packages/HeelerSSH`, binaires
-xcframework de 20 Mo) : SPM ne peut pas le référencer directement. On
-ajoute Heeler en submodule git `Vendor/Heeler`, épinglé sur un commit, et
-XcodeGen déclare le package local
-`Vendor/Heeler/Packages/HeelerSSH`. Utilisé pour :
+`HeelerSSH` package (libssh2 + OpenSSL, Apache-2.0). It lives in a
+subfolder of the Heeler repository (`Packages/HeelerSSH`, 20 MB
+xcframework binaries): SPM cannot reference it directly. Heeler is
+added as a git submodule `Vendor/Heeler`, pinned to a commit, and
+XcodeGen declares the local package
+`Vendor/Heeler/Packages/HeelerSSH`. Used for:
 
-- `direct-streamlocal` vers `herdr.sock` : requêtes JSON de l'API herdr
-  (lecture : `workspace.list`, `tab.list`, `agent.list`)
-- `exec` : lancement du script de dispatch
+- `direct-streamlocal` to `herdr.sock`: herdr API JSON requests
+  (reads: `workspace.list`, `tab.list`, `agent.list`)
+- `exec`: running the dispatch script
 
-Chemin du socket : `~/.config/herdr/herdr.sock` (à confirmer via la
-session herdr par défaut).
+Socket path: `~/.config/herdr/herdr.sock` (to be confirmed through the
+default herdr session).
 
-Ces deux usages passent par le protocole `MacTransport` (`Mac/`) :
-`run` (exec d'une commande, résultat `CommandResult` propre à l'app,
-code de sortie et sorties) et `exchangeWithHerdr` (une requête JSON
-sur `herdr.sock`). `MacLink`, l'acteur SSH qui garde la connexion et
-se reconnecte, en est la seule implémentation réelle ; `Dispatcher` et
-`HerdrClient` ne connaissent que le protocole, et rien hors de `Mac/`
-et `Pairing/` n'importe HeelerSSH. `AppModel` reçoit un
-`AppEnvironment` : les UserDefaults (historique, Mac appairé), le
-fichier du lexique, la fabrique de transport pour un Mac appairé
-(`MacLink` et la clé du Keychain en vrai), l'appairage, la demande
-d'autorisation des notifications et l'ouverture d'un lien. C'est la
-couture des tests d'`AppModel` et du faux Mac de la QA (voir *Faux
-Mac*).
+Both go through the `MacTransport` protocol (`Mac/`): `run` (exec of a
+command, app-owned `CommandResult` with exit code and outputs) and
+`exchangeWithHerdr` (one JSON request on `herdr.sock`). `MacLink`, the
+SSH actor that holds the connection and reconnects, is its only real
+implementation; `Dispatcher` and `HerdrClient` only know the protocol,
+and nothing outside `Mac/` and `Pairing/` imports HeelerSSH.
+`AppModel` receives an `AppEnvironment`: UserDefaults (history, paired
+Mac), the lexicon file, the transport factory for a paired Mac
+(`MacLink` and the Keychain key for real), pairing, the notification
+authorization request and opening a link. It is the seam for the
+`AppModel` tests and for the QA fake Mac (see *Fake Mac*).
 
 ## Dispatch
 
-L'app embarque un script shell versionné (`mac/dispatch.sh`). Chaque
-envoi fait deux exec SSH :
+The app embeds a versioned shell script (`mac/dispatch.sh`). Each send
+runs two SSH execs:
 
-1. `install` : le script est écrit sur stdin dans
-   `~/.local/state/heraldr/dispatch.sh` (toujours la version de
-   l'app installée)
-2. `enqueue <workspace_id> <label_base64>` : le script résout le
-   `-main` du workspace (ci-dessous), le prompt enveloppé arrive brut
-   sur stdin et devient un job
-   `~/.local/state/heraldr/jobs/<horodatage>-<séquence>-<aléa>/`, puis le
-   script lance son runner détaché :
+1. `install`: the script is written on stdin to
+   `~/.local/state/heraldr/dispatch.sh` (always the version of the
+   installed app)
+2. `enqueue <workspace_id> <label_base64>`: the script resolves the
+   workspace's `-main` (below), the wrapped prompt arrives raw on stdin
+   and becomes a job
+   `~/.local/state/heraldr/jobs/<timestamp>-<sequence>-<random>/`, then
+   the script starts its detached runner:
    `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
 
-Le `-main` d'un workspace est l'agent de ce workspace dont le nom
-finit par `-main` (`herdr agent list`, filtré sur `workspace_id`) : un
-workspace renommé garde le sien, même si son nom ne correspond plus au
-label. Avec plusieurs `-main`, celui nommé `<slug>-main` l'emporte ;
-sans lui, `enqueue` et `relay` refusent (code 2) plutôt que de
-choisir. Sans `-main`, le job vise `<slug>-main`, que le runner crée.
-L'app applique la même règle à `agent.list` pour l'état de la cible,
-mais ne passe plus de nom : c'est le Mac qui décide, au moment de
-l'envoi.
+A workspace's `-main` is the agent of that workspace whose name ends
+with `-main` (`herdr agent list`, filtered on `workspace_id`): a
+renamed workspace keeps its own, even when its name no longer matches
+the label. With several `-main`, the one named `<slug>-main` wins;
+without it, `enqueue` and `relay` refuse (exit code 2) rather than
+pick one. With no `-main`, the job targets `<slug>-main`, which the
+runner creates. The app applies the same rule to `agent.list` for the
+target state, but no longer passes a name: the Mac decides, at send
+time.
 
-Un job est un dossier de fichiers texte : `workspace_id`, `agent`,
-`label`, `clear`, `prompt`, `state` (`queued`, `sending`, `sent`, `failed`) et
-`error`. `dispatch.sh status` les liste en lignes tabulées pour l'app.
+A job is a folder of text files: `workspace_id`, `agent`, `label`,
+`clear`, `prompt`, `state` (`queued`, `sending`, `sent`, `failed`) and
+`error`. `dispatch.sh status` lists them as tab-separated lines for the
+app.
 
-Le runner, détaché, survit à la mise en veille du téléphone (spike 7).
-Il fixe son PATH (`/opt/homebrew/bin` absent en exec SSH), prend le
-verrou de l'agent (`mkdir` atomique, pid dedans pour reprendre un verrou
-mort) et traite les jobs de l'agent dans l'ordre de leur nom :
-l'horodatage à la seconde, puis un compteur sur 12 chiffres tenu sous
-un verrou `sequence` (un `mkdir` qui n'est jamais volé tant qu'il a
-moins d'une minute, même sans pid écrit), qui départage deux envois de
-la même seconde
-(le pid qu'il remplace se comparait comme du texte, `10000` avant
-`9999`, et repart de zéro après 99999) :
+The detached runner survives the phone going to sleep (spike 7). It
+sets its PATH (`/opt/homebrew/bin` is missing in an SSH exec), takes
+the agent lock (atomic `mkdir`, pid inside to take over a dead lock)
+and processes the agent's jobs in name order: the timestamp to the
+second, then a 12-digit counter kept under a `sequence` lock (a
+`mkdir` never stolen while it is less than a minute old, even with no
+pid written), which breaks ties between two sends in the same second
+(the pid it replaces compared as text, `10000` before `9999`, and
+wrapped to zero after 99999):
 
-1. résout le tab 1 du workspace (`herdr tab list --workspace`, numéro 1)
-2. cherche l'agent `<agent>` (`herdr agent get`)
-3. s'il manque : `herdr pane split` du premier pane du tab 1, avec le
-   cwd de ce pane, puis
+1. resolves tab 1 of the workspace (`herdr tab list --workspace`,
+   number 1)
+2. looks up agent `<agent>` (`herdr agent get`)
+3. if missing: `herdr pane split` of the first pane of tab 1, with
+   that pane's cwd, then
    `herdr agent start <agent> --kind claude --pane <pane> --
    --dangerously-skip-permissions --remote-control "<label>—main"`
-   (équivalent de `dclaude`, en gardant la détection de readiness herdr)
-4. `herdr agent wait <agent> --until idle --until done`, sans timeout :
-   c'est la file, qui attend aussi longtemps que l'agent travaille ou
-   est bloqué
-5. `herdr agent prompt <agent> "/clear"` sans `--wait` (spike 1 :
-   `--wait` échoue en `agent_prompt_stalled`), puis attente du
-   changement de `agent_session.value`
-6. `herdr agent prompt <agent> "<prompt enveloppé>" --wait --until
-   working --until blocked` : rend la main dès que herdr voit Claude
-   travailler, sans attendre la fin. Sans cette attente, herdr montre
-   encore l'agent `idle` le temps de détecter le nouveau tour, et le
-   job suivant passait son `agent wait` puis envoyait son `/clear`
-   pendant que Claude démarrait le précédent. Un `agent_prompt_stalled`
-   (rien vu en 5 s, comme pour `/clear`) compte comme envoyé, le texte
-   est parti, mais le runner attend encore jusqu'à 30 s (`agent wait
-   --until working --until blocked`) que herdr voie Claude travailler :
-   un démarrage lent n'est pas vidé par le `/clear` suivant. Un tour
-   assez court pour finir avant d'être vu coûte ces 30 s au job suivant
-7. `state` passe à `sent`, ou `failed` avec l'erreur ; les jobs `sent`
-   sont supprimés après une heure, les `failed` après un jour
+   (equivalent to `dclaude`, keeping herdr's readiness detection)
+4. `herdr agent wait <agent> --until idle --until done`, no timeout:
+   this is the queue, which waits as long as the agent is working or
+   blocked
+5. `herdr agent prompt <agent> "/clear"` without `--wait` (spike 1:
+   `--wait` fails with `agent_prompt_stalled`), then waits for
+   `agent_session.value` to change
+6. `herdr agent prompt <agent> "<wrapped prompt>" --wait --until
+   working --until blocked`: returns as soon as herdr sees Claude
+   working, without waiting for the end. Without this wait, herdr
+   still shows the agent `idle` while it detects the new turn, and the
+   next job passed its `agent wait` and sent its `/clear` while Claude
+   was starting the previous one. An `agent_prompt_stalled` (nothing
+   seen in 5 s, as with `/clear`) counts as sent, the text is gone,
+   but the runner still waits up to 30 s (`agent wait --until working
+   --until blocked`) for herdr to see Claude working: a slow start is
+   not wiped by the next `/clear`. A turn short enough to finish
+   before being seen costs those 30 s to the next job
+7. `state` becomes `sent`, or `failed` with the error; `sent` jobs are
+   deleted after an hour, `failed` ones after a day
 
-Un second envoi vers un agent occupé ne lance pas de deuxième runner :
-le verrou est pris, son job attend que le runner en place le traite.
-Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
+A second send to a busy agent does not start a second runner: the lock
+is taken, its job waits for the running runner to process it. Sends
+therefore go out in order, each preceded by its `/clear`.
 
-`enqueue-pane <workspace_id> <pane_id> <clear|keep>` vise le Claude
-d'un tab de worktree, que l'app désigne par son `pane_id` (premier
-Claude du tab dans `agent.list`) : le prompt arrive sur stdin tel que
-l'app l'a préparé (avertissement de dictée, sans consigne) et part
-tel quel. Le job garde le `pane_id` dans `agent`, et `clear` dans un
-fichier du même nom (absent des jobs d'un script plus ancien : `/clear`
-fait). La file, l'attente `idle`/`done` et l'ordre sont ceux d'un
-agent nommé, `herdr agent get|wait|prompt` acceptant un `pane_id`
-comme cible ; le verrou remplace `:` par `@`, absent des noms d'agent.
-Le runner ne crée jamais d'agent pour un pane : il échoue si le pane
-n'héberge plus de Claude (`agent` différent de `claude`), s'il est
-dans un autre workspace ou si son Claude porte un nom herdr (un
-`-main` a sa propre file, clé par nom : deux verrous pour le même
-Claude laisseraient passer deux envois à la fois). Il refait ces
-vérifications après `agent wait`, juste avant d'envoyer, le pane
-pouvant changer d'occupant pendant l'attente, puis n'envoie `/clear`
-que pour `clear`.
+`enqueue-pane <workspace_id> <pane_id> <clear|keep>` targets the
+Claude of a worktree tab, which the app designates by its `pane_id`
+(first Claude of the tab in `agent.list`): the prompt arrives on stdin
+as the app prepared it (dictation warning, no instructions) and goes
+out unchanged. The job keeps the `pane_id` in `agent`, and `clear` in
+a file of the same name (missing from jobs of an older script:
+`/clear` is sent). Queue, `idle`/`done` wait and ordering are those of
+a named agent, since `herdr agent get|wait|prompt` accept a `pane_id`
+as target; the lock replaces `:` with `@`, which never appears in
+agent names. The runner never creates an agent for a pane: it fails if
+the pane no longer hosts a Claude (`agent` other than `claude`), if it
+is in another workspace or if its Claude has a herdr name (a `-main`
+has its own queue, keyed by name: two locks for the same Claude would
+let two sends through at once). It repeats these checks after
+`agent wait`, right before sending, since the pane may change occupant
+during the wait, then sends `/clear` only for `clear`.
 
-`relay <workspace_id>` sert à l'agent de Home pour transmettre une
-demande au projet qu'elle vise : la demande brute arrive sur stdin, le
-script lit le label avec `herdr workspace get`, résout le `-main` comme
-`enqueue`, enveloppe la demande dans la consigne standard et crée un
-job comme `enqueue`. Il refuse Home (workspace numéro 1) comme cible.
-Le slug, la règle du `-main` et la consigne standard existent donc en
-double, dans `AgentName.swift` / `PromptEnvelope.swift` et dans
-`dispatch.sh`, à garder alignés. Côté shell, le slug passe par `perl`
-(décomposition canonique `Unicode::Normalize`, livré avec macOS) puis
-`tr` octet par octet, qui retire tout ce qui n'est pas ASCII : même
-résultat que le filtre sur les scalaires Unicode de Swift, un emoji à
-plusieurs points de code compris. Le script est toujours installé sur le Mac au moment du
-relais, puisque l'envoi vers Home vient de l'installer.
+`relay <workspace_id>` lets the Home agent forward a request to the
+project it targets: the raw request arrives on stdin, the script reads
+the label with `herdr workspace get`, resolves the `-main` like
+`enqueue`, wraps the request in the standard instructions and creates
+a job like `enqueue`. It refuses Home (workspace number 1) as target.
+The slug, the `-main` rule and the standard instructions therefore
+exist twice, in `AgentName.swift` / `PromptEnvelope.swift` and in
+`dispatch.sh`, to be kept aligned. On the shell side, the slug goes
+through `perl` (canonical decomposition with `Unicode::Normalize`,
+shipped with macOS) then byte-wise `tr`, which strips everything
+non-ASCII: same result as Swift's filter on Unicode scalars,
+multi-code-point emojis included. The script is always installed on
+the Mac at relay time, since the send to Home just installed it.
 
-`attach <jpg|png>` reçoit une capture jointe à une demande : l'image
-arrive brute sur stdin, est écrite dans
-`~/.local/state/heraldr/attachments/<horodatage>-<id>.<ext>` (via un
-`.tmp` renommé) et le script répond son chemin absolu. L'app fait un
-`attach` par image avant l'`enqueue`, puis cite les chemins dans la
-demande : Claude Code lit une image par son chemin avec Read, il n'y a
-ni SFTP ni pièce jointe côté herdr. Les images ne sont pas rattachées
-au job : `prune_jobs` (appelé par `run` et `status`) efface celles de
-plus d'une semaine, assez pour un envoi resté en file ou une session
-lancée plus tard par /start.
+`attach <jpg|png>` receives a screenshot attached to a request: the
+image arrives raw on stdin, is written to
+`~/.local/state/heraldr/attachments/<timestamp>-<id>.<ext>` (through a
+renamed `.tmp`) and the script answers with its absolute path. The app
+runs one `attach` per image before the `enqueue`, then cites the paths
+in the request: Claude Code reads an image by its path with Read,
+there is neither SFTP nor attachment on the herdr side. Images are not
+tied to the job: `prune_jobs` (called by `run` and `status`) deletes
+those older than a week, enough for a send left in the queue or a
+session started later by /start.
 
-## Sauvegarde du lexique de dictée
+## Dictation lexicon backup
 
 ```text
 iPhone (dictation-lexicon.json) ──exec dispatch.sh lexicon-put──> ~/.config/heraldr/lexique.json
-                                <──exec dispatch.sh lexicon-get── (après un appairage, lexique vide)
+                                <──exec dispatch.sh lexicon-get── (after pairing, empty lexicon)
 ```
 
-`LexiconKeeper` (module `Voice`) tient le lexique pour toute l'app :
-`AppModel.lexicon` le lit et le modifie, l'aperçu et les Réglages
-passent par lui. Chaque changement est écrit dans le fichier local et
-lève `lexicon-backup-needed` (UserDefaults) ; `sync` écrit le lexique
-entier sur le Mac et ne baisse le drapeau que si rien n'a changé
-pendant l'écriture. `AppModel` lance `sync` 2 s après un changement et
-après chaque rafraîchissement réussi, sur le `MacLink` déjà ouvert,
-via `Dispatcher.lexiconMirror` (`install` puis `lexicon-get` ou
+`LexiconKeeper` (`Voice` module) holds the lexicon for the whole app:
+`AppModel.lexicon` reads and modifies it, the preview and Settings go
+through it. Each change is written to the local file and raises
+`lexicon-backup-needed` (UserDefaults); `sync` writes the whole
+lexicon to the Mac and only lowers the flag if nothing changed during
+the write. `AppModel` runs `sync` 2 s after a change and after each
+successful refresh, on the already open `MacLink`, through
+`Dispatcher.lexiconMirror` (`install` then `lexicon-get` or
 `lexicon-put`).
 
-`pair` appelle `paired()` : lexique vide, `lexicon-restore-pending`
-est levé et `sync` lit le Mac avant toute écriture ; sinon le prochain
-`sync` écrase le Mac. Le drapeau survit à une relance, pour qu'une
-lecture ratée ne laisse jamais une écriture écraser la sauvegarde.
-`LexiconMirror` (deux closures) est la couture des tests, qui simulent
-le Mac sans SSH.
+`pair` calls `paired()`: empty lexicon, `lexicon-restore-pending` is
+raised and `sync` reads the Mac before any write; otherwise the next
+`sync` overwrites the Mac. The flag survives a relaunch, so that a
+failed read never lets a write overwrite the backup. `LexiconMirror`
+(two closures) is the test seam, the tests simulate the Mac without
+SSH.
 
-## Journal des dictées
+## Dictation journal
 
 ```text
-ComposeView.send ──record──> dictation-journal.jsonl (en attente, iPhone)
+ComposeView.send ──record──> dictation-journal.jsonl (pending, iPhone)
                                  │ exec dispatch.sh journal-append
                                  v
-                  ~/.config/heraldr/journal-dictees.jsonl (Mac, ajout seul)
+                  ~/.config/heraldr/journal-dictees.jsonl (Mac, append only)
 ```
 
-`TranscriptCleaner.clean` rend, avec la salve, une `CleaningTrace` :
-texte après le premier remplacement, remplacements faits par
-`DictationLexicon.replacements(in:)` avant et après le modèle, indices
-donnés et suivis ou non, jugé sur la réponse du modèle avant le second
-remplacement (seul moment où elle existe). `DictatedText` garde les
-salves et leurs révisions ; à l'envoi réussi, `AppModel.recordDictation`
-en fait une `DictationJournalEntry` (rien pour Écrire ou Coller) que
-`DictationJournal` ajoute à son fichier d'attente, puis l'envoie.
-`upload` pousse toutes les lignes en attente en un seul
-`journal-append` et ne retire que celles parties, une ligne ajoutée
-pendant l'envoi restant pour le suivant ; il est rappelé à chaque
-rafraîchissement réussi. `DictationJournalMirror` (une closure) est la
-couture des tests. Une coupure après l'écriture sur le Mac fait
-renvoyer l'entrée : `dispatch.sh` l'ignore grâce à son `id`.
+`TranscriptCleaner.clean` returns, with the burst, a `CleaningTrace`:
+text after the first replacement, replacements made by
+`DictationLexicon.replacements(in:)` before and after the model, hints
+given and whether they were followed, judged on the model's answer
+before the second replacement (the only moment it exists).
+`DictatedText` keeps the bursts and their revisions; on a successful
+send, `AppModel.recordDictation` turns them into a
+`DictationJournalEntry` (nothing for Write or Paste) that
+`DictationJournal` appends to its pending file, then uploads.
+`upload` pushes all pending lines in a single `journal-append` and
+only removes those sent, a line added during the upload staying for
+the next one; it runs again on every successful refresh.
+`DictationJournalMirror` (one closure) is the test seam. A cut after
+the write on the Mac resends the entry: `dispatch.sh` ignores it
+thanks to its `id`.
 
-Lire les chiffres : le journal est fait pour être analysé par un
-Claude sur le Mac, une ligne par envoi, en ignorant les versions
-supérieures à 1 et en dédoublonnant par `id` par prudence. Pour chaque
-salve, la comparaison qui compte est `previewed` → `edited`, mot à
-mot comme l'apprentissage (casse, accents et ponctuation en bord de
-mot ignorés) :
+Reading the numbers: the journal is meant to be analyzed by a Claude
+on the Mac, one line per send, ignoring versions above 1 and
+deduplicating by `id` to be safe. For each burst, the comparison that
+matters is `previewed` → `edited`, word by word like the learning
+(case, accents and punctuation at word edges ignored):
 
-- part des mots retouchés : mots changés de `previewed` sur ses mots,
-  par semaine ; doit baisser si le lexique aide
-- remplacement défait : un terme de `replacements` présent moins de
-  fois dans `edited` que dans `previewed`, ou remplacé par l'entendu ;
-  à rapporter par paire entendu → terme pour repérer les faux
-  positifs, notamment les variantes de deux mots apprises avec un mot
-  voisin
-- indice suivi : `applied` des `hints` ; un indice suivi puis défait
-  dans `edited` est un faux positif du modèle
-- la sortie du modèle avant le second remplacement n'est pas gardée :
-  `proposed` comparé à `replaced` montre le nettoyage et le second
-  remplacement ensemble
+- share of retouched words: words of `previewed` changed over its
+  word count, per week; should go down if the lexicon helps
+- undone replacement: a term of `replacements` found fewer times in
+  `edited` than in `previewed`, or replaced by the heard form; to
+  report per heard → term pair to spot false positives, notably
+  two-word variants learned with a neighboring word
+- followed hint: `applied` of `hints`; a hint followed then undone in
+  `edited` is a model false positive
+- the model output before the second replacement is not kept:
+  comparing `proposed` with `replaced` shows the cleanup and the
+  second replacement together
 
 ## Notifications
 
 ```text
-herdr ──pane.agent_status_changed──> plugin heraldr (node notify-hook.mjs)
+herdr ──pane.agent_status_changed──> heraldr plugin (node notify-hook.mjs)
                                       └─ HTTP/2 + JWT ES256 → APNs → iPhone
 ```
 
-Enregistrement : au premier rafraîchissement réussi de chaque
-lancement, l'app (autorisation accordée) fait un exec SSH
+Registration: on the first successful refresh of each launch, the app
+(authorization granted) runs an SSH exec
 `dispatch.sh register-push <token> <sandbox|production> <topic>
-<team_id>`, avec `mac/notify-hook.mjs` sur stdin. Le script :
+<team_id>`, with `mac/notify-hook.mjs` on stdin. The script:
 
-1. écrit le hook et un manifeste `herdr-plugin.toml` dans
-   `~/.local/state/heraldr/plugin/` (toujours la version de l'app)
-2. le lie une fois avec `herdr plugin link`, s'il n'est pas déjà dans
+1. writes the hook and a `herdr-plugin.toml` manifest to
+   `~/.local/state/heraldr/plugin/` (always the app's version)
+2. links it once with `herdr plugin link`, if it is not already in
    `herdr plugin list`
-3. retient l'appareil dans `~/.local/state/heraldr/push-device.json`
-   (un seul iPhone)
+3. remembers the device in `~/.local/state/heraldr/push-device.json`
+   (a single iPhone)
 
-Le hook, un process court par changement d'état lancé par herdr :
+The hook, a short process per state change started by herdr:
 
-1. ne fait rien si l'état reçu ne change pas le marqueur du pane
-   (`~/.local/state/heraldr/notified/<pane>`) : `blocked` déjà notifié,
-   ou autre état sans notif en cours
-2. debounce de 3 s, puis `herdr agent get <pane>` : l'état doit tenir,
-   sinon un événement plus récent s'en charge. Un état autre que
-   `blocked` qui tient efface le marqueur et réarme le pane
-3. ignore tout agent dont le nom ne finit pas par `-main`
-4. URL de session : `~/.claude/sessions/*.json` dont le `sessionId` est
+1. does nothing if the received state does not change the pane marker
+   (`~/.local/state/heraldr/notified/<pane>`): `blocked` already
+   notified, or another state with no pending notification
+2. 3 s debounce, then `herdr agent get <pane>`: the state must hold,
+   otherwise a newer event takes over. A state other than `blocked`
+   that holds clears the marker and rearms the pane
+3. ignores any agent whose name does not end with `-main`
+4. session URL: `~/.claude/sessions/*.json` whose `sessionId` is
    `agent_session.value`, `https://claude.ai/code/<bridgeSessionId>`
-5. question : lue à l'écran (`herdr pane read <pane> --source
-   recent-unwrapped`), dans la boîte entre le dernier filet `─` et
-   l'option sélectionnée `❯ 1.`. Lignes `│` : texte de
-   l'AskUserQuestion. Sinon titre de la demande de permission
-   (`Bash command` : description avant le premier filet `╌`) ou ligne
-   `Do you want to …` (fichier édité, écrasé ou créé). Pas le
-   transcript : Claude Code n'y écrit le `tool_use` en attente qu'une
-   fois la réponse donnée, le dernier `tool_use` lisible est celui de
-   l'outil déjà lancé avant
-6. JWT ES256 signé avec la `.p8`, POST
-   `/3/device/<token>` sur `api.sandbox.push.apple.com` ou
-   `api.push.apple.com`, `apns-collapse-id` = nom de l'agent
-7. 200 : marqueur posé. 410 ou `BadDeviceToken` : l'appareil est oublié
-   jusqu'au prochain lancement de l'app. Les erreurs sortent sur stderr,
-   lisibles par `herdr plugin log list --plugin heraldr`
+5. question: read from the screen (`herdr pane read <pane> --source
+   recent-unwrapped`), in the box between the last `─` rule and the
+   selected option `❯ 1.`. `│` lines: the AskUserQuestion text.
+   Otherwise the permission request title (`Bash command`: description
+   before the first `╌` rule) or the `Do you want to …` line (file
+   edited, overwritten or created). Not the transcript: Claude Code
+   only writes the pending `tool_use` there once answered, the last
+   readable `tool_use` is the one of the tool already run before
+6. ES256 JWT signed with the `.p8`, POST `/3/device/<token>` on
+   `api.sandbox.push.apple.com` or `api.push.apple.com`,
+   `apns-collapse-id` = agent name
+7. 200: marker set. 410 or `BadDeviceToken`: the device is forgotten
+   until the app's next launch. Errors go to stderr, readable with
+   `herdr plugin log list --plugin heraldr`
 
-Payload : `aps.alert` (titre = label du workspace, sous-titre = agent,
-corps = question), `workspace_id`, `agent`, `session_url`. Au tap,
-l'app cible le workspace, ouvre `session_url` en
-`universalLinksOnly`, et affiche une carte « Ouvrir dans Claude » si
-l'ouverture échoue ou que l'URL manque.
+Payload: `aps.alert` (title = workspace label, subtitle = agent, body
+= question), `workspace_id`, `agent`, `session_url`. On tap, the app
+targets the workspace, opens `session_url` with `universalLinksOnly`,
+and shows an "Open in Claude" card if opening fails or the URL is
+missing.
 
-### Réponses
+### Answers
 
 ```text
 Claude -main ──dispatch.sh answer <job_id>──> jobs/<job_id>/answer
                 └─ node plugin/notify-hook.mjs answer <job_id> → APNs → iPhone
-iPhone ──SSH read-answer <job_id>──> réponse complète (tap ou rafraîchissement)
+iPhone ──SSH read-answer <job_id>──> full answer (tap or refresh)
 ```
 
-`create_job` remplace `{{job_id}}` dans le prompt par l'id du job : la
-consigne donne ainsi à Claude la commande exacte pour répondre. Le hook,
-lancé en mode `answer`, lit `agent`, `workspace_id`, `label` et la
-première ligne de `answer` dans le dossier du job, et poste avec
-`apns-collapse-id` = id du job ; même gestion du token mort. `status`
-ajoute la colonne `answered` : l'app récupère par `read-answer` toute
-réponse d'un envoi qu'elle suit et n'a pas encore, notif ratée ou non.
-Un job `sent` répondu échappe à la purge d'une heure et part sept jours
-après sa réponse.
+`create_job` replaces `{{job_id}}` in the prompt with the job id: the
+instructions thus give Claude the exact command to answer. The hook,
+started in `answer` mode, reads `agent`, `workspace_id`, `label` and
+the first line of `answer` in the job folder, and posts with
+`apns-collapse-id` = job id; same dead-token handling. `status` adds
+the `answered` column: the app fetches through `read-answer` any
+answer to a send it follows and does not have yet, whether the
+notification was missed or not. An answered `sent` job escapes the
+one-hour purge and goes seven days after its answer.
 
-## Faux Mac
+## Fake Mac
 
-En Debug seulement (`ios/Heraldr/Debug/`, sous `#if DEBUG`), un
-double de la frontière SSH + Mac remplace `MacLink` : `FakeMac`, un
-acteur conforme à `MacTransport`, joue un scénario décrit en données
-(`FakeMacScenario`, Codable) : workspaces, tabs, agents et leurs
-états, jobs `queued`/`sent`/`failed`, réponses, historique et lexique
-de départ, échecs par commande (`enqueue`, `attach`, `tab.list`…) ou
-Mac injoignable. Il interprète les commandes que `Dispatcher` envoie à
+In Debug only (`ios/Heraldr/Debug/`, under `#if DEBUG`), a double of
+the SSH + Mac boundary replaces `MacLink`: `FakeMac`, an actor
+conforming to `MacTransport`, plays a scenario described as data
+(`FakeMacScenario`, Codable): workspaces, tabs, agents and their
+states, `queued`/`sent`/`failed` jobs, answers, starting history and
+lexicon, failures per command (`enqueue`, `attach`, `tab.list`…) or
+unreachable Mac. It interprets the commands `Dispatcher` sends to
 `dispatch.sh` (`status`, `enqueue`, `enqueue-pane`, `attach`,
-`read-answer`, `lexicon-get|put`) et répond aux requêtes herdr avec la
-forme du vrai, champs en plus compris. `enqueue` y résout le `-main`
-du workspace avec la même règle que le script, et refuse comme lui
-plusieurs `-main` dont aucun `<slug>-main`. Un envoi part `sent` vers un
-agent prêt (qui passe alors `working`), `queued` vers un agent occupé
-ou déjà en file, `failed` vers un agent d'un autre workspace ou un pane
-sans Claude, comme `dispatch.sh`.
+`read-answer`, `lexicon-get|put`) and answers herdr requests in the
+real shape, extra fields included. Its `enqueue` resolves the
+workspace's `-main` with the same rule as the script, and like it
+refuses several `-main` none of which is `<slug>-main`. A send goes
+`sent` to a ready agent (which then becomes `working`), `queued` to a
+busy or already queued agent, `failed` to an agent of another
+workspace or a pane with no Claude, like `dispatch.sh`.
 
-L'app l'active au lancement par `-HeraldrFakeMac <preset>` (`demo`,
-`unpaired`, `unreachable`, `empty`) ou par la variable
-`HERALDR_FAKE_MAC` qui porte un scénario JSON entier (tests UI).
-Dans ce mode, `AppEnvironment.fake` prend une suite UserDefaults
-dédiée, vidée au lancement, un fichier de lexique temporaire, ne
-demande pas l'autorisation des notifications (alerte système qui
-bloquerait XCUITest) et n'ouvre aucun lien. Les tests d'`AppModel`
-le construisent directement et pilotent son état entre deux
-rafraîchissements (`update`, `setJob`, `hold`/`release` pour figer un
-appel en vol).
+The app turns it on at launch with `-HeraldrFakeMac <preset>` (`demo`,
+`unpaired`, `unreachable`, `empty`) or with the `HERALDR_FAKE_MAC`
+variable carrying a whole JSON scenario (UI tests). In this mode,
+`AppEnvironment.fake` uses a dedicated UserDefaults suite, cleared at
+launch, a temporary lexicon file, does not request notification
+authorization (a system alert that would block XCUITest) and opens no
+link. `AppModel` tests build it directly and drive its state between
+two refreshes (`update`, `setJob`, `hold`/`release` to freeze a call
+in flight).
 
-## App iOS
+## iOS app
 
 - Swift 6, SwiftUI, iOS 26 minimum (Liquid Glass, SpeechAnalyzer,
   Foundation Models)
-- modules :
-  - `Pairing` : scan QR (VisionKit DataScanner), parsing `HERDR-PAIR:1`,
-    enrôlement, Keychain
-  - `HerdrClient` : requêtes JSON sur streamlocal, modèles Codable
-  - `Dispatch` : enveloppe du prompt, slug, exec du script, captures
-    jointes (réduites et converties en JPEG sur l'iPhone, posées par
-    `attach`), historique des 20 derniers envois (UserDefaults)
-  - `Voice` : SpeechAnalyzer + nettoyage Foundation Models, lexique
-    de dictée en termes et variantes (fichier JSON dans Application
-    Support, `DictationLexiconStore`) ; le vocabulaire passe
-    par `AnalysisContext.contextualStrings`, que seul
-    `DictationTranscriber` exploite aujourd'hui, pas
-    `SpeechTranscriber` : il reste fourni aux deux. Les variantes
-    sûres sont remplacées par le code autour du nettoyage
-    (`DictationLexicon.replacingKnownVariants`), le modèle passant par
-    `CleaningModel`, injectable dans les tests
-  - `Push` : autorisation, token APNs, tap sur les notifications
-  - `UI` : liste, boutons, aperçu
-- Foundation Models indisponible (Apple Intelligence off, modèle pas
-  prêt) : on garde la transcription brute et on le signale dans l'aperçu
+- modules:
+  - `Pairing`: QR scan (VisionKit DataScanner), `HERDR-PAIR:1` parsing,
+    enrollment, Keychain
+  - `HerdrClient`: JSON requests over streamlocal, Codable models
+  - `Dispatch`: prompt envelope, slug, script exec, attached
+    screenshots (downscaled and converted to JPEG on the iPhone, sent
+    by `attach`), history of the last 20 sends (UserDefaults)
+  - `Voice`: SpeechAnalyzer + Foundation Models cleanup, dictation
+    lexicon of terms and variants (JSON file in Application Support,
+    `DictationLexiconStore`); the vocabulary goes through
+    `AnalysisContext.contextualStrings`, which only
+    `DictationTranscriber` uses today, not `SpeechTranscriber`: it is
+    still given to both. Safe variants are replaced by code around
+    the cleanup (`DictationLexicon.replacingKnownVariants`), the model
+    going through `CleaningModel`, injectable in tests
+  - `Push`: authorization, APNs token, notification taps
+  - `UI`: list, buttons, preview
+- Foundation Models unavailable (Apple Intelligence off, model not
+  ready): the raw transcript is kept and the preview says so

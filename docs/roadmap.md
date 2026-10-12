@@ -1,57 +1,58 @@
 # Roadmap
 
-## V1 : MVP
+## V1: MVP
 
-Voir [spec.md](spec.md).
+See [spec.md](spec.md).
 
-## V2 : être prévenu quand un workspace a besoin de moi
+## V2: be told when a workspace needs me
 
-Objectif : savoir sans regarder qu'un agent attend, et savoir lequel et
-pourquoi.
+Goal: know without looking that an agent is waiting, and know which one
+and why.
 
-Livré, en version resserrée :
+Shipped, in a narrower form:
 
-- push notification quand un agent `<slug>-main` passe `blocked`
-  (question AskUserQuestion ou demande de permission), et seulement
-  eux : les Claude des worktrees lancés par `/start` sont ignorés
-- contenu : label du workspace, nom de l'agent, texte de la question
-- tap sur la notif : ouvre directement la session Remote Control de
-  l'agent dans l'app Claude, sinon Heraldr sur le workspace avec un
-  bouton « Ouvrir dans Claude »
-- envoi APNs direct depuis le Mac par un plugin herdr, sans relay ni
-  daemon (voir [architecture](architecture.md), Notifications)
+- push notification when a `<slug>-main` agent switches to `blocked`
+  (AskUserQuestion question or permission request), and only those:
+  worktree Claudes started by `/start` are ignored
+- content: workspace label, agent name, question text
+- tap on the notification: opens the agent's Remote Control session
+  directly in the Claude app, otherwise Heraldr on the workspace with
+  an "Open in Claude" button
+- APNs delivery straight from the Mac through a herdr plugin, with no
+  relay or daemon (see [architecture](architecture.md), Notifications)
 
-Écartés pour l'instant :
+Set aside for now:
 
-- notif de fin de tâche (`done`)
-- tab (worktree) et agents hors `-main`
-- pastille de compteur sur la ligne du workspace et sur l'icône
-- relay Cloudflare Worker à la Heeler, payload chiffré AES-256-GCM et
-  Notification Service Extension : le payload transite en clair par
-  APNs (label, nom d'agent, texte de la question)
+- task completion notification (`done`)
+- tabs (worktrees) and agents other than `-main`
+- counter badge on the workspace row and on the icon
+- Heeler-style Cloudflare Worker relay, AES-256-GCM encrypted payload
+  and Notification Service Extension: the payload goes through APNs in
+  clear (label, agent name, question text)
 
-Question ouverte : répondre aux questions directement depuis la notif ou
-l'app (lecture de l'écran de l'agent puis `send-keys`) ou continuer à
-renvoyer vers Claude mobile.
+Open question: answer questions directly from the notification or the
+app (reading the agent's screen then `send-keys`), or keep sending the
+user to Claude mobile.
 
-## V3 : voir où en est chaque agent
+## V3: see where each agent stands
 
-- écran de détail d'un workspace : un dot par agent (Claude main, shell,
-  agents des worktrees), groupés par tab
-- label du tab = nom du worktree, dernier état, depuis quand
-- flux live via `events.subscribe` sur streamlocal plutôt que du polling
-- éventuellement Live Activity pour un dispatch en cours
+- workspace detail screen: one dot per agent (main Claude, shell,
+  worktree agents), grouped by tab
+- tab label = worktree name, last status, since when
+- live stream through `events.subscribe` over streamlocal rather than
+  polling
+- maybe a Live Activity for a dispatch in progress
 
-## Idées non priorisées
+## Unprioritized ideas
 
-- passer à Xcode 26.6 (ou 27) : celui de Heeler, qui retirerait le
-  patch de `SessionDriver.swift` ; à faire dans une branche dédiée,
-  avec `bin/local-ci` et `bin/qa --all`
-- multi-machines (plusieurs QR)
-- widget et action du bouton Action pour lancer directement la voix
-- raccourci Siri « dispatch dans acme »
-- script d'analyse du journal des dictées (`mac/dictation-report.mjs`) :
-  part de mots retouchés par semaine, remplacements défaits par paire
-  entendu → terme, indices suivis, selon la recette de
-  `docs/architecture.md` ; à écrire après quelques semaines de dictées
-  réelles dans `~/.config/heraldr/journal-dictees.jsonl`
+- move to Xcode 26.6 (or 27): Heeler's, which would remove the
+  `SessionDriver.swift` patch; in a dedicated branch, with
+  `bin/local-ci` and `bin/qa --all`
+- multiple machines (several QR codes)
+- widget and Action button action to start voice directly
+- Siri shortcut "dispatch to acme"
+- dictation log analysis script (`mac/dictation-report.mjs`): share of
+  edited words per week, undone replacements per misheard → term pair,
+  hints followed, following the recipe in `docs/architecture.md`; to
+  write after a few weeks of real dictations in
+  `~/.config/heraldr/journal-dictees.jsonl`
