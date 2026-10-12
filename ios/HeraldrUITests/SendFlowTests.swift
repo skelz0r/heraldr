@@ -78,6 +78,24 @@ final class SendFlowTests: XCTestCase {
         XCTAssertTrue(element("compose.clear", in: app).exists)
     }
 
+    func testEchecAnnonceVersUnAgentDUnAutreWorkspace() {
+        let scenario = """
+            {"workspaces":[{"id":"wA","number":1,"label":"~"},{"id":"wS","number":2,"label":"Acme"}],
+             "agents":[{"name":"acme-main","kind":"claude","paneId":"wZ:p1","workspaceId":"wZ","tabId":"wZ:t1","status":"idle"}]}
+            """
+        let app = launch("custom", environment: ["HERALDR_FAKE_MAC": scenario])
+        element("tile.wS", in: app).tap()
+        element("home.write", in: app).tap()
+        element("compose.text", in: app).typeText("Mauvaise cible")
+        element("compose.send", in: app).tap()
+
+        let notice = element("notice", in: app)
+        waitFor(notice)
+        XCTAssertTrue(notice.label.contains("Échec de l'envoi vers Acme"), notice.label)
+        XCTAssertTrue(notice.label.contains("l'agent acme-main appartient au workspace wZ"))
+        capture("notice-echec", in: app)
+    }
+
     func testEnvoiRefuseRestaffiche() {
         let scenario = """
             {"workspaces":[{"id":"wA","number":1,"label":"~"}],

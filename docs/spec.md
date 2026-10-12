@@ -483,7 +483,7 @@ envoi vers un tab suit §6.3.
 5. un agent du même nom dans un autre workspace n'est jamais visé :
    l'envoi échoue
 
-Notice après l'envoi (5 s, fermée au tap) :
+Notice après l'envoi (5 s, fermée au tap ; une notice qui en remplace une autre reste à son tour 5 s) :
 
 | Agent au moment de l'envoi | Notice |
 | --- | --- |

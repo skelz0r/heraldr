@@ -43,7 +43,7 @@ struct HomeView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .onTapGesture { model.notice = nil }
                     .task(id: notice.id) {
-                        try? await Task.sleep(for: .seconds(5))
+                        guard (try? await Task.sleep(for: .seconds(5))) != nil, model.notice?.id == notice.id else { return }
                         withAnimation { model.notice = nil }
                     }
             }
