@@ -38,7 +38,7 @@ struct HistoryView: View {
     private func row(for entry: SentRequest) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text(entry.workspaceLabel).font(.subheadline.weight(.bold))
+                Text(entry.targetLabel).font(.subheadline.weight(.bold))
                 Text(entry.createdAt, format: .relative(presentation: .named))
                     .font(.footnote)
                     .foregroundStyle(.secondary)

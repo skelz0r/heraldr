@@ -43,6 +43,11 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
 - [ ] Envoyer à Home une demande qui vise un projet ouvert : Home la
   relaie, l'envoi s'affiche sur la ligne du projet et c'est son `-main`
   qui lance `/start`.
+- [ ] Appui long sur un workspace avec une feature en cours : le menu
+  liste ses tabs qui ont un Claude ; en choisir un, la cible devient
+  `<label> — <tab>`. Envoyer un retour sans cocher « Envoyer /clear
+  avant » : le Claude du tab reçoit le texte seul, contexte gardé.
+  Un tap sur la tuile revient sur `main`.
 - [ ] Faire poser une question AskUserQuestion à un `-main` : la notif
   arrive avec label, agent et question ; le tap ouvre la session dans
   l'app Claude, app en arrière-plan comme app tuée.

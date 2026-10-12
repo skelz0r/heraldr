@@ -78,6 +78,7 @@ extension AppModel.TargetState {
     var headline: String {
         switch self {
         case .missing: "Pas encore d'agent"
+        case .tabWithoutClaude: "Plus de Claude dans ce tab"
         case .sending: "Envoi en cours…"
         case .agent(.idle, _), .agent(.done, _): "Prêt"
         case .agent(.working, true): "Travaille sur ta demande"
@@ -87,11 +88,15 @@ extension AppModel.TargetState {
         }
     }
 
-    func nextSend(to workspace: Workspace) -> String {
+    func nextSend(to target: Target, clearingContext: Bool = false) -> String {
         switch self {
-        case .missing: "Un envoi lancera Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: workspace.label))."
+        case .missing: "Un envoi lancera Claude dans le tab 1, nommé \(AgentName.forWorkspace(label: target.workspace.label))."
+        case .tabWithoutClaude: "Un envoi échouera : relance Claude dans ce tab sur le Mac."
         case .sending: "Un nouvel envoi partira juste après."
-        case .agent(.idle, _), .agent(.done, _): "Un envoi vide son contexte puis transmet la demande."
+        case .agent(.idle, _), .agent(.done, _):
+            target.tab == nil || clearingContext
+                ? "Un envoi vide son contexte puis transmet la demande."
+                : "Un envoi transmet la demande telle quelle, sans vider son contexte."
         case .agent(.working, _): "Un nouvel envoi attendra la fin de son travail."
         case .agent(.blocked, _): "Un nouvel envoi attendra que tu lui aies répondu."
         case .agent(.unknown, _): "Un nouvel envoi attendra qu'il soit prêt."

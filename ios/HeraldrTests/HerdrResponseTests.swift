@@ -55,4 +55,19 @@ struct HerdrResponseTests {
         #expect(ordered.map(\.id) == ["wA", "w8", "w9"])
         #expect(ordered.first?.isHome == true)
     }
+
+    @Test("la liste des tabs de herdr se lit ; le tab 1 s'affiche main quel que soit son label")
+    func tabList() throws {
+        let tabs = try decode([Tab].self, """
+            [
+              {"tab_id":"wB:t1","workspace_id":"wB","number":1,"label":"1","focused":false,"pane_count":4,"agent_status":"idle"},
+              {"tab_id":"wB:tC","workspace_id":"wB","number":4,"label":"login-2fa","focused":true,"pane_count":2,"agent_status":"working"},
+              {"tab_id":"wB:tD","workspace_id":"wB","number":5,"label":"","pane_count":1}
+            ]
+            """)
+
+        #expect(tabs.map(\.displayName) == ["main", "login-2fa", "tab 5"])
+        #expect(Target(Workspace(id: "wB", number: 3, label: "acme"), tab: tabs[1]).label == "acme — login-2fa")
+        #expect(Target(Workspace(id: "wB", number: 3, label: "acme")).label == "acme — main")
+    }
 }

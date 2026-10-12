@@ -22,6 +22,8 @@ struct ComposeView: View {
     @State private var text = ""
     @State private var origin: Origin = .written
     @State private var workspaceId: String = ""
+    @State private var tabId: String?
+    @State private var clearsContext = false
     @State private var dictation = Dictation()
     @State private var lexicon = DictationLexiconStore.load()
     @State private var dictationError: String?
@@ -32,8 +34,19 @@ struct ComposeView: View {
     @State private var showingRaw = false
     @FocusState private var editorFocused: Bool
 
-    private var target: Workspace? {
-        model.workspaces.first { $0.id == workspaceId }
+    private var target: Target? {
+        guard let workspace = model.workspaces.first(where: { $0.id == workspaceId }) else { return nil }
+        let target = model.target(in: workspace, tabId: tabId)
+        return tabVanished(from: target) ? nil : target
+    }
+
+    private var targetVanished: Bool {
+        guard let workspace = model.workspaces.first(where: { $0.id == workspaceId }) else { return false }
+        return tabVanished(from: model.target(in: workspace, tabId: tabId))
+    }
+
+    private func tabVanished(from target: Target) -> Bool {
+        tabId != nil && target.tab == nil
     }
 
     private var keepsScreenAwake: Bool {
@@ -56,9 +69,10 @@ struct ComposeView: View {
         }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .sheet(isPresented: $choosingTarget) {
-            TargetPicker(selectedId: $workspaceId)
+            TargetPicker(workspaceId: $workspaceId, tabId: $tabId)
                 .presentationDetents([.medium, .large])
         }
+        .onChange(of: tabId) { clearsContext = false }
         .sheet(isPresented: $showingRaw) {
             RawTranscriptSheet(origin: origin)
                 .presentationDetents([.medium])
@@ -67,6 +81,7 @@ struct ComposeView: View {
 
     private func configure() {
         workspaceId = request.workspaceId
+        tabId = request.tabId
         switch request.source {
         case .voice:
             stage = .recording
@@ -188,7 +203,7 @@ struct ComposeView: View {
             Button { choosingTarget = true } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.right").font(.title3.weight(.heavy)).foregroundStyle(Color.heraldrAccent)
-                    Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1)
+                    Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer()
                     if let target {
                         StatusDot(status: model.targetState(for: target).dotStatus)
@@ -203,7 +218,7 @@ struct ComposeView: View {
 
             if let target {
                 let state = model.targetState(for: target)
-                Label("\(state.headline). \(state.nextSend(to: target))", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
+                Label("\(state.headline). \(state.nextSend(to: target, clearingContext: clearsContext))", systemImage: state.acceptsImmediately ? "checkmark.circle" : "clock")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(state.acceptsImmediately ? Color.secondary : AgentStatus.working.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,6 +252,22 @@ struct ComposeView: View {
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .capsule)
                 .disabled(sending)
+            }
+
+            if target?.tab != nil {
+                Button { clearsContext.toggle() } label: {
+                    Label("Envoyer /clear avant", systemImage: clearsContext ? "checkmark.square.fill" : "square")
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(clearsContext ? .isSelected : [])
+            }
+
+            if targetVanished {
+                Text("Ce tab n'existe plus : choisis une autre cible.").font(.footnote).foregroundStyle(AgentStatus.blocked.color)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if let sendError {
@@ -347,7 +378,7 @@ struct ComposeView: View {
         lexicon.learn(sent: text, origin: origin)
         DictationLexiconStore.save(lexicon)
         do {
-            try await model.send(text, to: target)
+            try await model.send(text, to: target, clearingContext: target.tab != nil && clearsContext)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             dismiss()
         } catch {
@@ -379,33 +410,46 @@ struct LevelWave: View {
 }
 
 struct TargetPicker: View {
-    @Binding var selectedId: String
+    @Binding var workspaceId: String
+    @Binding var tabId: String?
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List(model.workspaces) { workspace in
-                Button {
-                    selectedId = workspace.id
-                    dismiss()
-                } label: {
-                    HStack(spacing: 12) {
-                        StatusDot(status: model.targetState(for: workspace).dotStatus)
-                        Text(workspace.label).font(.body.weight(.semibold))
-                        Spacer()
-                        if !model.pendingJobs(for: workspace).isEmpty { WaitBadge(compact: true) }
-                        if workspace.id == selectedId {
-                            Image(systemName: "checkmark").foregroundStyle(Color.heraldrAccent)
-                        }
+                Section {
+                    row(Target(workspace), title: workspace.label, isQueued: !model.pendingJobs(for: workspace).isEmpty)
+                    ForEach(model.claudeTabs(of: workspace)) { tab in
+                        row(Target(workspace, tab: tab), title: tab.displayName, isQueued: !model.pendingJobs(for: tab).isEmpty)
+                            .padding(.leading, 22)
                     }
-                    .frame(minHeight: 44)
                 }
-                .tint(.primary)
             }
             .navigationTitle("Changer de cible")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private func row(_ target: Target, title: String, isQueued: Bool) -> some View {
+        Button {
+            workspaceId = target.workspace.id
+            tabId = target.tab?.id
+            dismiss()
+        } label: {
+            HStack(spacing: 12) {
+                StatusDot(status: model.targetState(for: target).dotStatus)
+                Text(title).font(.body.weight(target.tab == nil ? .semibold : .regular))
+                Spacer()
+                if isQueued { WaitBadge(compact: true) }
+                if target.workspace.id == workspaceId && target.tab?.id == tabId {
+                    Image(systemName: "checkmark").foregroundStyle(Color.heraldrAccent)
+                }
+            }
+            .frame(minHeight: 44)
+        }
+        .tint(.primary)
+        .accessibilityLabel(target.label)
     }
 }
 
