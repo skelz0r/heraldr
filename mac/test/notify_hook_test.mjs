@@ -41,11 +41,45 @@ function removeAgent() {
   rmSync(join(world, "herdr", "agent.json"), { force: true });
 }
 
-function askQuestion(question) {
-  const toolUse = { type: "tool_use", name: "AskUserQuestion", input: { questions: [{ question, header: "Choix" }] } };
+function showScreen(...lines) {
+  writeFileSync(join(world, "herdr", "screen.txt"), `${lines.join("\n")}\n`);
+}
+
+function showDialog(...lines) {
+  showScreen("⏺ Bash(git status)", "  ⎿  On branch main", "", "─".repeat(80), ...lines, " Esc to cancel · Tab to amend");
+}
+
+function showQuestion(question) {
+  showScreen(
+    "⏺ Bash(git status)",
+    "─".repeat(80),
+    "←  ☐ Base  ✔ Submit  →",
+    "",
+    `│ ${question}`,
+    "",
+    "❯ 1. Postgres",
+    "     Robuste et déjà en place.",
+    "  2. SQLite",
+    "  3. Type something.",
+    "─".repeat(80),
+    "  4. Chat about this",
+    "",
+    "Enter to select · Tab/Arrow keys to navigate · Esc to cancel",
+  );
+}
+
+function lastToolAlreadyRun() {
+  const toolUse = { type: "tool_use", id: "toolu_1", name: "Bash", input: { command: "git status", description: "Show working tree status" } };
+  const toolResult = { type: "tool_result", tool_use_id: "toolu_1", content: "On branch main" };
   writeFileSync(
     join(world, "home", ".claude", "projects", "-Users-me-work-acme", `${sessionId}.jsonl`),
-    `${JSON.stringify({ type: "user", message: { content: "fais X" } })}\n${JSON.stringify({ type: "assistant", message: { content: [toolUse] } })}\n`,
+    [
+      { type: "user", message: { content: "fais X" } },
+      { type: "assistant", message: { content: [toolUse] } },
+      { type: "user", message: { content: [toolResult] } },
+    ]
+      .map((entry) => JSON.stringify(entry))
+      .join("\n") + "\n",
   );
 }
 
@@ -95,6 +129,7 @@ beforeEach(() => {
     `#!/bin/sh
 case "$1 $2" in
   "agent get") cat "${join(world, "herdr", "agent.json")}" 2>/dev/null || exit 1 ;;
+  "pane read") cat "${join(world, "herdr", "screen.txt")}" 2>/dev/null || exit 1 ;;
   "workspace get") echo '{"result":{"workspace":{"label":"acme_app"}}}' ;;
   *) exit 1 ;;
 esac
@@ -122,7 +157,7 @@ esac
 describe("notification d'un agent -main qui pose une question", () => {
   it("prévient l'iPhone avec le workspace, l'agent, la question et le lien de la session Remote Control", async () => {
     setAgent();
-    askQuestion("Quelle base de données utiliser ?");
+    showQuestion("Quelle base de données utiliser ?");
 
     const { code, stderr } = await runHook("blocked");
 
@@ -139,6 +174,69 @@ describe("notification d'un agent -main qui pose une question", () => {
     assert.equal(push.body.session_url, "https://claude.ai/code/session_01ABCDEFGHIJKLMNOPQRSTUV");
     assert.equal(push.body.workspace_id, "w1");
     assert.equal(push.body.agent, "acme_app-main");
+  });
+
+  it("lit la question à l'écran, le transcript n'ayant encore que l'outil lancé avant elle", async () => {
+    setAgent();
+    lastToolAlreadyRun();
+    showQuestion("On garde le cache ou on le vide ?");
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "On garde le cache ou on le vide ?");
+  });
+
+  it("décrit la commande qu'un Claude demande la permission de lancer", async () => {
+    setAgent();
+    lastToolAlreadyRun();
+    showDialog(
+      " Bash command",
+      " Tip: auto mode handles these prompts for you",
+      " Supprime les fichiers temporaires",
+      "╌".repeat(80),
+      " rm -rf tmp/cache",
+      "╌".repeat(80),
+      " Do you want to proceed?",
+      " ❯ 1. Yes",
+      "   2. No",
+    );
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "Veut lancer : Supprime les fichiers temporaires");
+  });
+
+  it("ne montre pas la commande brute quand elle n'a pas de description", async () => {
+    setAgent();
+    showDialog(" Bash command", "╌".repeat(80), " rm -rf tmp/cache", "╌".repeat(80), " Do you want to proceed?", " ❯ 1. Yes", "   2. No");
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "Veut lancer une commande");
+  });
+
+  for (const [title, question, body] of [
+    ["Edit file", "Do you want to make this edit to AppModel.swift?", "Veut modifier : AppModel.swift"],
+    ["Overwrite file", "Do you want to overwrite spec.md?", "Veut modifier : spec.md"],
+    ["Create file", "Do you want to create notes.md?", "Veut créer : notes.md"],
+  ]) {
+    it(`nomme le fichier visé par une permission « ${title} »`, async () => {
+      setAgent();
+      showDialog(` ${title}`, " docs/notes.md", "╌".repeat(80), "  1 +bonjour", "╌".repeat(80), ` ${question}`, " ❯ 1. Yes", "   2. No");
+
+      await runHook("blocked");
+
+      assert.equal(pushes[0].body.aps.alert.body, body);
+    });
+  }
+
+  it("se rabat sur le titre de la demande pour un autre outil", async () => {
+    setAgent();
+    showDialog(" Fetch", " https://example.com", " Do you want to allow Claude to fetch this content?", " ❯ 1. Yes", "   2. No");
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "Demande d'autorisation : Fetch");
   });
 
   it("ignore les agents qui ne sont pas des -main, comme les Claude des worktrees", async () => {

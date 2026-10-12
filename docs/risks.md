@@ -79,11 +79,15 @@ d'écrire les push des questions des agents `-main`.
       `Q6L2SF6YDW.com.anthropic.claude`) : Heraldr l'ouvre avec
       `universalLinksOnly`, et se rabat sur un bouton « Ouvrir dans
       Claude » si l'app ne le prend pas.
-    - Le texte de la question est dans le transcript
-      `~/.claude/projects/<cwd encodé>/<sessionId>.jsonl` : dernier
-      `tool_use` `AskUserQuestion` d'un message `assistant`,
-      `input.questions[0].question`. Pour une permission, le dernier
-      `tool_use` donne le nom de l'outil.
+    - Le texte de la question n'est pas dans le transcript
+      `~/.claude/projects/<cwd encodé>/<sessionId>.jsonl` au moment du
+      `blocked` : mesuré, une AskUserQuestion n'y apparaît qu'à la
+      réponse (24 s plus tard), et le `tool_use` d'une permission Bash
+      ou Write n'y est pas pendant la demande. Lire le dernier
+      `tool_use` donnait l'outil précédent, déjà lancé, d'où des notifs
+      « Demande d'autorisation : Bash » pour de simples questions.
+      L'écran du pane (`herdr pane read`) montre la question ou la
+      demande de permission dès le `blocked`.
 12. Passage en `blocked` sans daemon ?
     - Levé : un plugin herdr déclare
       `[[events]] on = "pane.agent_status_changed"` ; herdr lance un
