@@ -64,4 +64,13 @@ struct PushContractTests {
 
         #expect(tap == .question(try #require(QuestionNotification(userInfo: ["workspace_id": "wE", "agent": "video-studio-main"]))))
     }
+
+    @Test(
+        "un payload sans workspace_id ou sans agent est ignoré au tap",
+        arguments: [
+            ["agent": "video-studio-main"], ["workspace_id": "wE"], ["kind": "answer", "workspace_id": "w1"],
+        ])
+    func incompletePayload(userInfo: [String: String]) {
+        #expect(NotificationTap(userInfo: userInfo) == nil)
+    }
 }
