@@ -636,17 +636,15 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 ### 6.4 Nommage
 
 - agent herdr : `slug(label)-main`
-  - slug : un label `~` donne `home`, quel que soit le workspace ;
-    sinon `A-Z` passent en minuscules, tout point de code Unicode hors
-    `[a-z0-9_-]` devient `-` (un emoji composé, drapeau ou teinte de
-    peau, ou une lettre suivie d'un accent combinant en donnent
-    plusieurs), `w-` devant s'il ne commence pas par une lettre,
-    tronqué à 27 caractères
-  - exemples : `home-main`, `acme_app-main`,
-    `herdr-ios-companion-main`, `w-2025-notes-main`,
-    `w--quipe----main` pour `Équipe 🇫🇷` ; vecteurs
-    partagés par l'app et `dispatch.sh` dans
-    `mac/test/agent-names.tsv`
+  - slug : accents retirés (décomposition canonique), puis tout
+    caractère hors `[a-z0-9_- ]` après mise en minuscules retiré
+    (emojis compris), espaces en bord supprimées et les autres
+    changées en `-`, `w-` devant s'il ne commence pas par une lettre,
+    tronqué à 27 caractères, `~` devient `home`
+  - exemples : `home-main` (`~`, `🏠 Home`), `heraldr-main`
+    (`📯 Heraldr`), `video-studio-main` (`Vidéo studio`),
+    `acme_app-main`, `w-2025-notes-main` ; vecteurs partagés par
+    l'app et `dispatch.sh` dans `mac/test/agent-names.tsv`
   - contrainte herdr : `[a-z][a-z0-9_-]{0,31}`, unique parmi les agents
     vivants
 - session Claude (Remote Control, visible dans Claude mobile) :

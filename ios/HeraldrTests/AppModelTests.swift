@@ -77,7 +77,7 @@ struct SendNoticeTests {
         try await session.model.send("Ajoute un sous-titre", to: Target(session.workspace("wM")))
 
         #expect(session.model.notice?.title == "Envoyé à Vidéo studio")
-        #expect(session.model.notice?.detail == "Le Mac lance Claude dans le tab 1, nommé vid-o-studio-main, puis lui transmet la demande.")
+        #expect(session.model.notice?.detail == "Le Mac lance Claude dans le tab 1, nommé video-studio-main, puis lui transmet la demande.")
     }
 
     @Test("vers un agent qui travaille, qui est bloqué ou qui a déjà un envoi en file : en file")

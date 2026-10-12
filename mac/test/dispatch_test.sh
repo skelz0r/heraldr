@@ -235,7 +235,7 @@ relay w5 "
 "
 wait_until 15 '[ "$(job_states)" = "sent " ]'
 check "l'agent du projet est créé dans son workspace, nommé comme le fait l'app" "$(cat "$FAKE_HERDR_WORLD/starts")" "--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Vidéo studio—main"
-check "il reçoit /clear puis la demande sans ses blancs autour, comme dans l'app, enveloppée et finie par /start" "$(prompts_of vid-o-studio-main)" "idle|/clear
+check "il reçoit /clear puis la demande sans ses blancs autour, comme dans l'app, enveloppée et finie par /start" "$(prompts_of video-studio-main)" "idle|/clear
 idle|Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
 
 Ajoute un sous-titre
@@ -245,7 +245,7 @@ Consignes :
 - si la demande est ambiguë, pose tes questions avec AskUserQuestion
 - si c'est une simple question, sans travail à faire : réponds sans /start avec \`/bin/sh \"\$HOME/.local/state/heraldr/dispatch.sh\" answer $(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1)\`, sur l'entrée standard un résumé d'une phrase, une ligne vide puis la réponse complète en markdown
 - sinon, termine obligatoirement en dispatchant le travail avec /start"
-check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	vid-o-studio-main"
+check "l'envoi apparaît dans le workspace du projet" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f2,3)" "w5	video-studio-main"
 teardown_world
 
 echo "une réponse reste lisible une semaine, au-delà de l'heure des autres envois"
