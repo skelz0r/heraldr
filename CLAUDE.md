@@ -167,9 +167,10 @@ change.
 
 - Commits, PR, docs et descriptions de tests en français
 - Pousser une branche avec `$PWD/bin/local-ci push` plutôt que
-  `git push` : il valide le HEAD exact, pousse avec lease vers la
-  branche du même nom et pose le statut « Local CI » ; jamais sur
-  `main`
+  `git push` : il pousse le HEAD avec lease vers la branche du même
+  nom, pose le statut « Local CI » en pending, lance les contrôles
+  puis le passe en success, failure (étape qui a cassé) ou error
+  (interruption) ; jamais sur `main`
 - `bin/local-ci` saute les tests iOS quand tout le diff depuis le
   merge-base avec `origin/main` est de la doc (`docs/`, `.claude/`,
   `*.md` hors `ios/` et `mac/`) ; un worktree sale ou un diff vide

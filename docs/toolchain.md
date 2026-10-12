@@ -21,9 +21,21 @@ Inspirée de `local_events/bin/*-ios`, avec XcodeGen en plus.
 | `bin/run-ios-device [uuid]` | build puis install sur l'iPhone par le skill global `ios-device-install` : `devicectl` si l'iPhone est joignable, sinon page d'install OTA via Tailscale (attente device busy, déverrouillage keychain CI comme local_events) |
 | `bin/run-ios-tests [suite]` | tests unitaires en simulateur (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro par défaut), puis `bin/run-mac-tests` |
 | `bin/run-mac-tests` | tests du script de dispatch (`mac/test/dispatch_test.sh`, faux herdr) et du hook de notification (`node --test mac/test/notify_hook_test.mjs`, faux APNs) |
-| `bin/local-ci [push]` | tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse le HEAD validé et pose le statut « Local CI » |
+| `bin/local-ci [push]` | tous les tests, iOS sauté si le diff depuis `origin/main` n'est que de la doc ; `push` pousse d'abord le HEAD (lease, jamais `main`), pose « Local CI » en pending sur ce commit puis en success, failure (étape en échec, HEAD ou worktree modifié pendant le run) ou error (Ctrl-C, TERM, HUP) ; sans `push`, aucun statut |
 | `bin/open-ios-xcode` | génère puis ouvre le projet |
 | `bin/render-ios-icon` | régénère AppIcon et logo depuis `docs/branding/logo/5-voies-*.svg` (rsvg-convert) |
+
+`main` est protégée sur GitHub : le statut « Local CI » doit être en
+success pour merger une PR, sans exiger que la branche soit à jour
+(`strict` à false, pas de rebase ni de nouveau run quand `main` a
+bougé). Les admins ne sont pas soumis à la règle, pour garder les
+pushes directs d'outillage sur `main`. Réglage appliqué avec :
+
+```sh
+gh api -X PUT repos/skelz0r/heraldr/branches/main/protection --input - <<'JSON'
+{"required_status_checks":{"strict":false,"checks":[{"context":"Local CI"}]},"enforce_admins":false,"required_pull_request_reviews":null,"restrictions":null}
+JSON
+```
 
 Environnement constaté : Xcode 26.2, macOS 26.4.1, iPhone 16 Pro
 (`iphone` sur Tailscale) compatible Apple Intelligence.
