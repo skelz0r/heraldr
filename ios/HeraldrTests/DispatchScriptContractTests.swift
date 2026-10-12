@@ -57,4 +57,29 @@ struct DispatchScriptContractTests {
             Le bouton est trop petit
             """)
     }
+
+    @Test("les captures jointes sont citées par leur chemin sur le Mac, après le texte, vers un main comme vers un tab")
+    func attachmentsCitedByPath() {
+        let project = Workspace(id: "w5", number: 5, label: "Video studio")
+        let paths = ["/Users/moi/.local/state/heraldr/attachments/a.jpg", "/Users/moi/.local/state/heraldr/attachments/b.jpg"]
+        let cited = """
+            Le bouton déborde
+
+            Captures d'écran jointes, à lire avec Read :
+            - /Users/moi/.local/state/heraldr/attachments/a.jpg
+            - /Users/moi/.local/state/heraldr/attachments/b.jpg
+            """
+
+        #expect(PromptEnvelope.wrap("Le bouton déborde\n", attachments: paths, for: project) == PromptEnvelope.wrap(cited, for: project))
+        #expect(PromptEnvelope.forTab("Le bouton déborde", attachments: paths).hasSuffix(cited))
+    }
+
+    @Test("Home relaie les chemins des captures jointes avec la demande")
+    func homeRelaysAttachments() {
+        let home = Workspace(id: "wA", number: 1, label: "Home")
+        let prompt = PromptEnvelope.wrap("x", attachments: ["/tmp/a.jpg"], for: home)
+
+        #expect(prompt.contains("- /tmp/a.jpg"))
+        #expect(prompt.contains("suivie des chemins des captures jointes"))
+    }
 }

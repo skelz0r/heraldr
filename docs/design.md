@@ -90,6 +90,11 @@ SF Pro, sans police embarquée.
   `selectedGlow` de rayon 13 pt décalée de 6 pt
 - dictée : Arrêter 112 pt, Annuler 64 pt
 - aperçu : Envoyer pleine largeur, 64 pt de haut ; Fermer 44 pt
+- captures jointes : vignettes de 84 pt de haut au format de l'image
+  (largeur entre 0,6 et 1,4 fois la hauteur, une capture d'iPhone
+  reste en portrait), coins de 14 pt, filet de 0,5 pt à 20 % du texte
+  pour détacher une capture du verre de même teinte ;
+  croix de 20 pt en verre dans le coin, zone tactile de 40 pt
 - toute cible tactile fait au moins 44 pt
 
 ## Liquid Glass

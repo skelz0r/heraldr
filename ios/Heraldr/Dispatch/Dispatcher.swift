@@ -56,18 +56,26 @@ struct Dispatcher: Sendable {
         guard result.exitStatus == 0 else { throw failure(result) }
     }
 
-    func send(_ text: String, to workspace: Workspace) async throws -> String {
+    func upload(_ image: Data) async throws -> String {
+        let result = try await link.run("/bin/sh \(Self.script) attach jpg", input: image)
+        guard result.exitStatus == 0 else { throw failure(result) }
+        return String(decoding: result.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func send(_ text: String, attachments: [String] = [], to workspace: Workspace) async throws -> String {
         let agent = AgentName.forWorkspace(label: workspace.label)
         let label = Data(workspace.label.utf8).base64EncodedString()
         return try await enqueue(
             "enqueue \(quoted(workspace.id)) \(quoted(agent)) \(quoted(label))",
-            prompt: PromptEnvelope.wrap(text, for: workspace))
+            prompt: PromptEnvelope.wrap(text, attachments: attachments, for: workspace))
     }
 
-    func send(_ text: String, toPane paneId: String, in workspace: Workspace, clearingContext: Bool) async throws -> String {
+    func send(
+        _ text: String, attachments: [String] = [], toPane paneId: String, in workspace: Workspace, clearingContext: Bool
+    ) async throws -> String {
         try await enqueue(
             "enqueue-pane \(quoted(workspace.id)) \(quoted(paneId)) \(clearingContext ? "clear" : "keep")",
-            prompt: PromptEnvelope.forTab(text))
+            prompt: PromptEnvelope.forTab(text, attachments: attachments))
     }
 
     private func enqueue(_ arguments: String, prompt: String) async throws -> String {
@@ -83,7 +91,7 @@ struct Dispatcher: Sendable {
         return DispatchJob.parse(statusOutput: String(decoding: result.stdout, as: UTF8.self))
     }
 
-    private func installScript() async throws {
+    func installScript() async throws {
         let incoming = "\(Self.stateDirectory)/incoming-$$.sh"
         let command = "mkdir -p \(Self.stateDirectory) && cat > \(incoming) && /bin/sh \(incoming) install < \(incoming); rc=$?; rm -f \(incoming); exit $rc"
         let result = try await link.run(command, input: Self.bundledScript)

@@ -40,6 +40,11 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
   suite » puis « Annuler » : retour à l'aperçu, texte intact.
 - [ ] Coller une demande depuis le presse-papier, puis avec un
   presse-papier vide : notice « Presse-papier vide ».
+- [ ] Joindre deux captures depuis l'aperçu, en retirer une, envoyer
+  à un projet : le `-main` reçoit la demande avec le chemin de la
+  capture et la décrit. Faire une capture, « Copier et supprimer »,
+  puis Coller : l'aperçu s'ouvre avec la vignette. Renvoyer depuis
+  l'historique : « 1 capture jointe », le même chemin repart.
 - [ ] Envoyer à Home une demande qui vise un projet ouvert : Home la
   relaie, l'envoi s'affiche sur la ligne du projet et c'est son `-main`
   qui lance `/start`.

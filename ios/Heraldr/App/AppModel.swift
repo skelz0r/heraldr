@@ -242,19 +242,31 @@ final class AppModel {
         }
     }
 
-    func send(_ text: String, to target: Target, clearingContext: Bool = false) async throws {
+    func send(
+        _ text: String, images: [Data] = [], uploaded: [String] = [], to target: Target, clearingContext: Bool = false
+    ) async throws {
         let workspace = target.workspace
         let entryId = history.record(text, to: workspace, tab: target.tab, clearingContext: clearingContext)
+        history.attach(entryId, paths: uploaded)
         let state = targetState(for: target)
         do {
             guard let link else { throw MacLinkError.unreachable("aucun Mac appairé") }
             let dispatcher = Dispatcher(link: link)
-            let jobId: String
-            if let tab = target.tab {
+            let paneId = try target.tab.map { tab in
                 guard let paneId = tab.firstClaude(in: agents)?.paneId else { throw TargetError.noClaude(target) }
-                jobId = try await dispatcher.send(text, toPane: paneId, in: workspace, clearingContext: clearingContext)
+                return paneId
+            }
+            var attachments = uploaded
+            if !images.isEmpty { try await dispatcher.installScript() }
+            for image in images {
+                attachments.append(try await dispatcher.upload(image))
+                history.attach(entryId, paths: attachments)
+            }
+            let jobId = if let paneId {
+                try await dispatcher.send(
+                    text, attachments: attachments, toPane: paneId, in: workspace, clearingContext: clearingContext)
             } else {
-                jobId = try await dispatcher.send(text, to: workspace)
+                try await dispatcher.send(text, attachments: attachments, to: workspace)
             }
             history.accept(entryId, jobId: jobId)
         } catch {
@@ -297,7 +309,8 @@ final class AppModel {
         }
         let target = target(in: workspace, tabId: entry.tabId)
         do {
-            try await send(entry.text, to: target, clearingContext: entry.clearsContext ?? false)
+            try await send(
+                entry.text, uploaded: entry.attachments ?? [], to: target, clearingContext: entry.clearsContext ?? false)
         } catch {
             notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(entry.targetLabel)", detail: error.localizedDescription)
         }

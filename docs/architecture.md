@@ -214,8 +214,9 @@ l'ouverture échoue ou que l'URL manque.
   - `Pairing` : scan QR (VisionKit DataScanner), parsing `HERDR-PAIR:1`,
     enrôlement, Keychain
   - `HerdrClient` : requêtes JSON sur streamlocal, modèles Codable
-  - `Dispatch` : enveloppe du prompt, slug, exec du script, historique
-    des 20 derniers envois (UserDefaults)
+  - `Dispatch` : enveloppe du prompt, slug, exec du script, captures
+    jointes (réduites et converties en JPEG sur l'iPhone, posées par
+    `attach`), historique des 20 derniers envois (UserDefaults)
   - `Voice` : SpeechAnalyzer + nettoyage Foundation Models, lexique
     des corrections de dictée (UserDefaults) ; le vocabulaire passe
     par `AnalysisContext.contextualStrings`, que seul

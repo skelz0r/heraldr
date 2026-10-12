@@ -141,8 +141,10 @@ d'état de l'aperçu (§5) et les notices après envoi (§6).
 
 Écrire, voix (goutte), Coller, désactivés sans cible. Écrire et
 Coller n'affichent que leur icône, libellée pour VoiceOver. Coller
-avec un presse-papier vide : notice d'échec « Presse-papier vide »,
-« Copie d'abord le texte à envoyer. »
+reprend le texte et les images du presse-papier (trois au plus, comme
+dans l'aperçu, §5.2). Presse-papier sans texte ni image : notice
+d'échec « Presse-papier vide », « Copie d'abord le texte ou la capture
+à envoyer. »
 
 ### 4.4 Historique
 
@@ -157,16 +159,19 @@ liste les envois gardés (§6), du plus récent au plus ancien :
   fois envoyé, rouge en échec. Couleurs propres à l'historique,
   distinctes de celles des états d'agent. VoiceOver lit l'état
   (Envoi…, En file, Envoyé, Échec)
-- le texte, sur quatre lignes au plus ; la raison sous un envoi en
-  échec, dans le rouge de « Échec »
+- le texte, sur quatre lignes au plus ; « 1 capture jointe » ou
+  « <n> captures jointes » en secondaire dessous quand l'envoi en
+  avait ; la raison sous un envoi en échec, dans le rouge de « Échec »
 - deux actions en icônes seules, grises et sans fond, dans l'en-tête
   de l'entrée juste avant la pastille ; VoiceOver lit leur nom
-- « Copier » met le texte dans le presse-papier, puis affiche
+- « Copier » met le texte dans le presse-papier, sans les captures, puis affiche
   « Copié » deux secondes : l'icône devient une coche dans la couleur
   d'accent
 - « Renvoyer » ferme la feuille et renvoie le texte tel quel au
   workspace d'origine, ou au tab d'origine avec le même choix de
-  `/clear`, sans passer par l'aperçu : c'est un nouvel envoi (§6), avec
+  `/clear`, avec les chemins des captures déjà posées sur le Mac (sans
+  les renvoyer : passé une semaine, le Mac les a effacées et Claude ne
+  les trouvera plus), sans passer par l'aperçu : c'est un nouvel envoi (§6), avec
   sa notice et sa propre entrée. Échecs, en notice :
   - workspace ou tab d'origine absent de herdr : « <label> n'existe
     plus » (`<label> — <tab>` pour un tab),
@@ -280,12 +285,28 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   avec la raison de la dernière ; « Voir l'original » dès qu'une salve
   a été nettoyée, il montre la transcription brute de chaque salve,
   séparées par un trait
+- les captures jointes, sous le texte dans le même cadre : vignettes
+  au format de l'image, aux coins arrondis, dans l'ordre d'ajout, chacune
+  avec une croix « Retirer la capture <n> » ; rien quand il n'y en a
+  pas
+- « Joindre des captures », bouton à icône seule entre l'origine et
+  « Dicter la suite », ouvre le sélecteur de photos du système (images
+  seulement, sans demande d'accès à la photothèque) ; trois captures
+  au plus par demande, le bouton est désactivé une fois les trois
+  jointes. Chaque image est réduite à 1568 px sur son plus grand côté
+  et convertie en JPEG ; pendant ce temps, une vignette d'attente tient
+  sa place dans l'ordre de sélection et « Envoyer » est désactivé, pour
+  qu'aucune capture ne manque à l'envoi. Sa croix la retire, seule
+  issue quand une photo iCloud ne se télécharge pas ; les autres
+  captures ne l'attendent pas. Image illisible : « Une
+  image n'a pas pu être lue. » au-dessus d'« Envoyer »
 - « Dicter » (texte vide) ou « Dicter la suite » ouvre l'écran de
   dictée (§5.1), quelle que soit l'origine ; la salve nettoyée s'ajoute
   à la fin du texte, après un retour à la ligne, sans toucher au texte
   déjà là, corrigé ou non
 - « Envoyer », désactivé tant que le texte est vide ou pendant
-  l'envoi ; vers un tab sans Claude, l'envoi échoue avant le Mac :
+  l'envoi, même avec des captures : une image seule ne dit pas quoi
+  en faire ; vers un tab sans Claude, l'envoi échoue avant le Mac :
   « Plus de Claude dans <label> — <tab> : relance-le sur le Mac. » ; en cas d'échec, l'erreur s'affiche au-dessus et l'aperçu
   reste ouvert ; en cas de succès il se ferme
 - apprentissage des corrections, sans rien afficher : quand on tape
@@ -339,10 +360,26 @@ Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
 vers <label> » (`<label> — <tab>` pour un tab) avec sa raison, une
 seule fois.
 
+Avec des captures, l'app les pose d'abord sur le Mac (`attach`, §8.2),
+une par une, puis crée le job ; la demande les cite par leur chemin
+après le texte :
+
+```text
+<texte>
+
+Captures d'écran jointes, à lire avec Read :
+- <chemin sur le Mac>
+```
+
+Ce bloc fait partie de `<texte>` dans les consignes (§6.1 à §6.3). Une
+capture refusée par le Mac fait échouer l'envoi avant la création du
+job ; les captures déjà posées restent dans l'historique et repartent
+avec « Renvoyer ».
+
 Chaque envoi est enregistré sur l'iPhone dès qu'on tape Envoyer, avant
 la connexion au Mac : le texte tel que saisi (sans la consigne), le
-workspace, le tab et le choix de `/clear` pour un envoi vers un tab, et
-la date. Son statut :
+workspace, le tab et le choix de `/clear` pour un envoi vers un tab, la
+date, et les chemins des captures une fois posées sur le Mac. Son statut :
 
 | Moment | Statut |
 | --- | --- |
@@ -392,8 +429,9 @@ Consignes :
 - si un projet est visé, relaie-lui la demande puis arrête-toi, sans
   /start : `/bin/sh "$HOME/.local/state/heraldr/dispatch.sh" relay
   <workspace_id>` avec sur l'entrée standard la demande d'origine,
-  corrigée des erreurs de transcription évidentes et complétée des
-  réponses à tes questions
+  corrigée des erreurs de transcription évidentes, complétée des
+  réponses à tes questions et suivie des chemins des captures jointes
+  s'il y en a
 - si aucun projet ouvert n'est concerné : explore ce qu'il faut pour
   comprendre la demande, pose tes questions avec AskUserQuestion si
   elle est ambiguë et termine obligatoirement en dispatchant le

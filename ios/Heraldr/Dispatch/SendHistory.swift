@@ -15,6 +15,7 @@ struct SentRequest: Codable, Identifiable, Equatable, Sendable {
     var tabId: String?
     var tabLabel: String?
     var clearsContext: Bool?
+    var attachments: [String]?
     let createdAt: Date
     var status: Status
     var jobId: String?
@@ -40,6 +41,10 @@ struct SendHistory: Codable, Equatable, Sendable {
             createdAt: date, status: .sending)
         entries = Array(([entry] + entries).prefix(Self.capacity))
         return entry.id
+    }
+
+    mutating func attach(_ id: SentRequest.ID, paths: [String]) {
+        update(id) { $0.attachments = paths.isEmpty ? nil : paths }
     }
 
     mutating func accept(_ id: SentRequest.ID, jobId: String) {
