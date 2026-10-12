@@ -410,8 +410,16 @@ workspace inconnu est refusé.
 Cible : le premier Claude du tab choisi (§4.2), désigné par son
 `pane_id`, sans nom herdr (les Claude lancés par /start n'en ont pas).
 
-1. le texte part brut : ni consigne standard (§6.1), ni consigne de
-   Home (§6.2), réservées au `main`
+1. le texte part précédé du seul avertissement de dictée, sans
+   consigne standard (§6.1) ni consigne de Home (§6.2), réservées au
+   `main` :
+
+   ```text
+   Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale :
+   attention aux erreurs de transcription).
+
+   <texte>
+   ```
 2. `/clear` avant le texte seulement si « Envoyer /clear avant » est
    coché
 3. Claude `working` ou `blocked` : même file que pour le `main`,

@@ -67,7 +67,7 @@ struct Dispatcher: Sendable {
     func send(_ text: String, toPane paneId: String, in workspace: Workspace, clearingContext: Bool) async throws -> String {
         try await enqueue(
             "enqueue-pane \(quoted(workspace.id)) \(quoted(paneId)) \(clearingContext ? "clear" : "keep")",
-            prompt: text.trimmingCharacters(in: .whitespacesAndNewlines))
+            prompt: PromptEnvelope.forTab(text))
     }
 
     private func enqueue(_ arguments: String, prompt: String) async throws -> String {

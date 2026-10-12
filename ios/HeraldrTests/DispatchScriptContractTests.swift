@@ -48,4 +48,13 @@ struct DispatchScriptContractTests {
         #expect(PromptEnvelope.wrap("x", for: home).contains("dispatch.sh\" relay"))
         #expect(!PromptEnvelope.wrap("x", for: project).contains("relay"))
     }
+
+    @Test("un envoi vers un tab prévient d'une dictée possible, sans consigne ni /start")
+    func tabEnvelope() {
+        #expect(PromptEnvelope.forTab("  Le bouton est trop petit\n") == """
+            Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : attention aux erreurs de transcription).
+
+            Le bouton est trop petit
+            """)
+    }
 }

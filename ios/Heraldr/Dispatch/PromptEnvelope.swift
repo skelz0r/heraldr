@@ -5,6 +5,15 @@ enum PromptEnvelope {
         workspace.isHome ? home(text) : standard(text)
     }
 
+    static func forTab(_ text: String) -> String {
+        """
+        Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : \
+        attention aux erreurs de transcription).
+
+        \(text.trimmingCharacters(in: .whitespacesAndNewlines))
+        """
+    }
+
     private static func standard(_ text: String) -> String {
         """
         Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale : \

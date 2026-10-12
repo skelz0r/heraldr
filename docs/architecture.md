@@ -117,8 +117,9 @@ Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
 
 `enqueue-pane <workspace_id> <pane_id> <clear|keep>` vise le Claude
 d'un tab de worktree, que l'app désigne par son `pane_id` (premier
-Claude du tab dans `agent.list`) : le texte brut arrive sur stdin, sans
-consigne. Le job garde le `pane_id` dans `agent`, et `clear` dans un
+Claude du tab dans `agent.list`) : le prompt arrive sur stdin tel que
+l'app l'a préparé (avertissement de dictée, sans consigne) et part
+tel quel. Le job garde le `pane_id` dans `agent`, et `clear` dans un
 fichier du même nom (absent des jobs d'un script plus ancien : `/clear`
 fait). La file, l'attente `idle`/`done` et l'ordre sont ceux d'un
 agent nommé, `herdr agent get|wait|prompt` acceptant un `pane_id`
