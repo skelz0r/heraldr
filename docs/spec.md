@@ -658,7 +658,8 @@ s'ils sont ouverts.
 
 L'app ne parle au Mac que par SSH, et ce contrat change en même temps
 des deux côtés : le script est réinstallé par l'app avant chaque
-`enqueue`, `register-push`, `lexicon-get` et `lexicon-put`, le hook
+`enqueue`, `register-push`, `lexicon-get`, `lexicon-put` et
+`journal-append`, le hook
 avec `register-push`. `status`
 lit le script déjà installé, qui peut venir d'une version précédente
 de l'app : sa sortie reste lisible par l'app plus récente.
@@ -692,6 +693,7 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
 | `lexicon-get` | rien | la sauvegarde du lexique telle qu'écrite, rien sans sauvegarde (code 0) |
 | `lexicon-put` | le lexique (JSON de §5.2) | rien ; code 2 pour une entrée sans `version` entière lisible, sauvegarde précédente intacte |
+| `journal-append` | entrées du journal des dictées, une ligne JSON chacune | rien ; code 2 pour une entrée vide, qui n'est pas un objet JSON, sans `version` entière ou sans `id` en `[A-Za-z0-9-]{1,64}`, journal intact et rien ajouté de l'envoi ; code 1 quand le journal ne peut pas être écrit ou reste pris par un autre ajout plus de 10 s |
 
 - `agent` : nom de l'agent, ou `pane_id` pour un envoi vers un tab
   (une app plus ancienne le compte dans le workspace)
@@ -715,6 +717,13 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 - le lexique est sauvegardé dans `~/.config/heraldr/lexique.json`,
   écrit dans un fichier temporaire puis renommé ; le script n'en lit
   que `version` et le rend octet pour octet
+- le journal des dictées s'ajoute à `~/.config/heraldr/journal-dictees.jsonl`,
+  dans l'ordre reçu, ligne pour ligne ; une entrée dont l'`id` est déjà
+  dans le journal est ignorée, pour qu'un envoi répété après une
+  coupure ne la double pas. Les entrées retenues sont ajoutées à la
+  fin, sans réécrire l'existant, un ajout à la fois (verrou), après un
+  retour à la ligne si la dernière ligne n'en a pas. Il n'est ni lu
+  par l'app ni purgé : on le vide à la main
 
 ### 8.3 Payload des notifications
 

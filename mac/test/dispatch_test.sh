@@ -348,6 +348,46 @@ code 2"
 check "la sauvegarde précédente reste intacte, sans fichier temporaire" "$(lexicon get; ls "$HERALDR_CONFIG_DIR")" '{"version":1,"terms":[]}lexique.json'
 teardown_world
 
+echo "le journal des dictées s'ajoute sur le Mac, sans doublon ni entrée abîmée"
+setup_world
+journal_append() {
+  /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" journal-append
+}
+journal="$HERALDR_CONFIG_DIR/journal-dictees.jsonl"
+first='{"id":"A1","salves":[{"edited":"Lance Acme.","proposed":"Lance Acme.","raw":"lance ack me"}],"sent":"Lance Acme.","version":1}'
+second='{"id":"B2","salves":[],"sent":"Ouvre la PR.","version":1}'
+check "sans journal, le premier envoi le crée" "$(printf '%s\n' "$first" | journal_append; echo "code $?"; cat "$journal")" "code 0
+$first"
+check "un envoi suivant s'ajoute à la fin, une entrée déjà reçue n'est pas doublée" "$(printf '%s\n%s\n' "$first" "$second" | journal_append; echo "code $?"; cat "$journal")" "code 0
+$first
+$second"
+check "une entrée tronquée refuse tout l'envoi" "$(printf '%s\n{"id":"C3","version":1,"se\n' '{"id":"D4","version":1}' | journal_append 2>&1; echo "code $?")" "journal illisible
+code 2"
+check "une entrée sans version entière est refusée" "$(printf '{"id":"C3","version":"1"}\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+code 2"
+check "une entrée sans id lisible est refusée" "$(printf '{"id":"a b","version":1}\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+code 2"
+check "un envoi vide est refusé" "$(journal_append < /dev/null 2>&1; echo "code $?")" "journal illisible
+code 2"
+check "une entrée dont l'id porte un retour à la ligne est refusée" "$(printf '{"id":"A1\\n.*","version":1}\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+code 2"
+check "une entrée qui n'est pas du JSON est refusée" "$(printf '<plist version="1.0"><dict><key>version</key><integer>1</integer><key>id</key><string>X1</string></dict></plist>\n' | journal_append 2>&1; echo "code $?")" "journal illisible
+code 2"
+check "le journal reste intact, sans fichier temporaire" "$(cat "$journal"; ls "$HERALDR_CONFIG_DIR")" "$first
+$second
+journal-dictees.jsonl"
+printf '%s' "$first" > "$journal"
+printf '%s\n' "$second" | journal_append
+check "un journal sans retour final reste une ligne par entrée" "$(cat "$journal")" "$first
+$second"
+rm "$journal"
+for n in 1 2 3 4 5 6 7 8; do
+  printf '{"id":"P%s","version":1}\n' "$n" | journal_append &
+done
+wait
+check "des ajouts simultanés gardent toutes les entrées" "$(sort "$journal" | tr -d '\n')" '{"id":"P1","version":1}{"id":"P2","version":1}{"id":"P3","version":1}{"id":"P4","version":1}{"id":"P5","version":1}{"id":"P6","version":1}{"id":"P7","version":1}{"id":"P8","version":1}'
+teardown_world
+
 if [ $failures -gt 0 ]; then
   echo "$failures échec(s)"
   exit 1

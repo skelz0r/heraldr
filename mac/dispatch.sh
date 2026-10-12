@@ -12,6 +12,8 @@ SCRIPT_PATH="$STATE_DIR/dispatch.sh"
 PLUGIN_DIR="$STATE_DIR/plugin"
 PUSH_DEVICE_PATH="$STATE_DIR/push-device.json"
 LEXICON_PATH="${HERALDR_CONFIG_DIR:-$HOME/.config/heraldr}/lexique.json"
+JOURNAL_PATH="${HERALDR_CONFIG_DIR:-$HOME/.config/heraldr}/journal-dictees.jsonl"
+JOURNAL_LOCK="journal.dictees"
 SENT_RETENTION_MINUTES=60
 FAILED_RETENTION_MINUTES=1440
 ATTACHMENT_RETENTION_MINUTES=10080
@@ -25,7 +27,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <agent> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put | journal-append" >&2
   exit 2
 }
 
@@ -411,6 +413,55 @@ store_lexicon() {
   mv "$temporary" "$LEXICON_PATH" || { rm -f "$temporary"; exit 1; }
 }
 
+reject_journal() {
+  rm -f "$incoming" "$entry" "$fresh"
+  release_lock "$JOURNAL_LOCK"
+  echo "journal illisible" >&2
+  exit 2
+}
+
+fail_journal() {
+  rm -f "$incoming" "$entry" "$fresh"
+  release_lock "$JOURNAL_LOCK"
+  exit 1
+}
+
+append_journal() {
+  mkdir -p "$(dirname "$JOURNAL_PATH")"
+  incoming="$JOURNAL_PATH.in.$$"
+  entry="$JOURNAL_PATH.entry.$$"
+  fresh="$JOURNAL_PATH.new.$$"
+  cat > "$incoming"
+  attempts=0
+  until acquire_lock "$JOURNAL_LOCK"; do
+    attempts=$((attempts + 1))
+    [ $attempts -lt 50 ] || { rm -f "$incoming"; echo "journal occupé" >&2; exit 1; }
+    sleep 0.2
+  done
+  [ -s "$incoming" ] || reject_journal
+  touch "$JOURNAL_PATH" && : > "$fresh" || fail_journal
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in "{"*) ;; *) reject_journal ;; esac
+    printf '%s' "$line" > "$entry" || fail_journal
+    plutil -type version -expect integer "$entry" > /dev/null 2>&1 || reject_journal
+    id="$(plutil -extract id raw -expect string -o - "$entry" 2>/dev/null)"
+    case "$id" in "" | *[!A-Za-z0-9-]*) reject_journal ;; esac
+    [ ${#id} -le 64 ] || reject_journal
+    grep -Eq "\"id\" *: *\"$id\"" "$JOURNAL_PATH" "$fresh"
+    case $? in
+      0) ;;
+      1) printf '%s\n' "$line" >> "$fresh" || fail_journal ;;
+      *) fail_journal ;;
+    esac
+  done < "$incoming"
+  if [ -s "$JOURNAL_PATH" ] && [ "$(tail -c 1 "$JOURNAL_PATH" | od -An -c | tr -d ' ')" != '\n' ]; then
+    printf '\n' >> "$JOURNAL_PATH" || fail_journal
+  fi
+  cat "$fresh" >> "$JOURNAL_PATH" || fail_journal
+  rm -f "$incoming" "$entry" "$fresh"
+  release_lock "$JOURNAL_LOCK"
+}
+
 [ $# -ge 1 ] || fail_usage
 command="$1"
 shift
@@ -427,5 +478,6 @@ case "$command" in
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;
   lexicon-get) [ $# -eq 0 ] || fail_usage; print_lexicon ;;
   lexicon-put) [ $# -eq 0 ] || fail_usage; store_lexicon ;;
+  journal-append) [ $# -eq 0 ] || fail_usage; append_journal ;;
   *) fail_usage ;;
 esac
