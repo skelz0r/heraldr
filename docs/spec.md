@@ -498,7 +498,12 @@ contexte. »
 
 Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
 vers <label> » (`<label> — <tab>` pour un tab) avec sa raison, une
-seule fois.
+seule fois. Suivi : gardé dans l'historique sans être déjà en échec
+(même s'il échoue avant le rafraîchissement qui suit l'envoi, ou
+pendant que l'app était fermée), ou vu sur le Mac au rafraîchissement
+précédent (un relais de Home). Plusieurs échecs découverts au même
+rafraîchissement donnent une seule notice, « Échec de <n> envois »,
+avec une ligne « <label> : <raison> » par envoi.
 
 Avec des captures, l'app les pose d'abord sur le Mac (`attach`, §8.2),
 une par une, puis crée le job ; la demande les cite par leur chemin
@@ -784,9 +789,6 @@ question.
 
 ## 9. Écarts connus
 
-- E2 : quand deux envois suivis passent `failed` entre deux
-  rafraîchissements, seul le premier est annoncé ; le second ne l'est
-  jamais.
 
 ## 10. Hors périmètre
 

@@ -416,15 +416,23 @@ final class AppModel {
     }
 
     private func announceFailures(previous: [DispatchJob], current: [DispatchJob], workspaces: [Workspace]) {
-        let known = Set(previous.filter { $0.state == .failed }.map(\.id))
-        let tracked = Set(previous.map(\.id))
-        guard let failed = current.first(where: { $0.state == .failed && !known.contains($0.id) && tracked.contains($0.id) }) else {
+        let awaitedInHistory = Set(history.entries.filter { $0.status != .failed }.compactMap(\.jobId))
+        let knownFailures = Set(previous.filter { $0.state == .failed }.map(\.id)).subtracting(awaitedInHistory)
+        let tracked = Set(previous.map(\.id)).union(awaitedInHistory)
+        let failures = current.filter { $0.state == .failed && !knownFailures.contains($0.id) && tracked.contains($0.id) }
+        guard let first = failures.first else { return }
+        func label(of job: DispatchJob) -> String {
+            history.entry(forJob: job.id)?.targetLabel
+                ?? workspaces.first { $0.id == job.workspaceId }?.label
+                ?? job.workspaceId
+        }
+        guard failures.count > 1 else {
+            notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(label(of: first))", detail: first.error ?? "erreur inconnue")
             return
         }
-        let label = history.entries.first { $0.jobId == failed.id }?.targetLabel
-            ?? workspaces.first { $0.id == failed.workspaceId }?.label
-            ?? failed.workspaceId
-        notice = Notice(kind: .failed, title: "Échec de l'envoi vers \(label)", detail: failed.error ?? "erreur inconnue")
+        notice = Notice(
+            kind: .failed, title: "Échec de \(failures.count) envois",
+            detail: failures.map { "\(label(of: $0)) : \($0.error ?? "erreur inconnue")" }.joined(separator: "\n"))
     }
 
     private func schedulePolling() {

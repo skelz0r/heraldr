@@ -45,6 +45,12 @@ actor FakeMac: MacTransport {
         let subcommand = arguments.first ?? "install"
         try await pass(subcommand)
         commands.append(([subcommand] + arguments.dropFirst()).joined(separator: " "))
+        let result = respond(to: subcommand, arguments: arguments, input: input)
+        try await pass("\(subcommand):done")
+        return result
+    }
+
+    private func respond(to subcommand: String, arguments: [String], input: Data) -> CommandResult {
         if let failure = scenario.failures?[subcommand] {
             return CommandResult(exitStatus: 1, stdout: Data(), stderr: Data(failure.utf8))
         }

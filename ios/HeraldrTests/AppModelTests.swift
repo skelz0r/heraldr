@@ -129,10 +129,54 @@ struct SendFailureTests {
         #expect(entry.error == "Commande refusée par le Mac (1) : invalid agent name: x")
     }
 
+    @Test("un envoi qui échoue sur le Mac avant le rafraîchissement suivant est annoncé")
+    func failsBeforeNextRefresh() async throws {
+        let session = await Session(world(agents: [main("acme-main", in: "wM", "idle")]))
+
+        try await session.model.send("Mauvaise cible", to: Target(session.workspace("wS")))
+
+        #expect(session.model.notice?.kind == .failed)
+        #expect(session.model.notice?.title == "Échec de l'envoi vers Acme")
+        #expect(session.model.notice?.detail == "l'agent acme-main appartient au workspace wM")
+    }
+
+    @Test("un envoi vu en échec par un autre rafraîchissement avant que le Mac ait rendu son id est quand même annoncé")
+    func failureSeenBeforeJobId() async throws {
+        let session = await Session(world(agents: [main("acme-main", in: "wM", "idle")]))
+        await session.mac.hold("enqueue:done")
+        let acme = try session.workspace("wS")
+        let sending = Task { try await session.model.send("Mauvaise cible", to: Target(acme)) }
+        while !(await session.mac.isWaiting(at: "enqueue:done")) { await Task.yield() }
+        await session.model.refresh()
+        await session.mac.release("enqueue:done")
+
+        try await sending.value
+
+        #expect(session.model.notice?.title == "Échec de l'envoi vers Acme")
+        #expect(session.model.notice?.detail == "l'agent acme-main appartient au workspace wM")
+    }
+
+    @Test("deux envois suivis qui échouent entre deux rafraîchissements sont annoncés tous les deux")
+    func twoFailures() async throws {
+        let session = await Session(world(agents: [main("acme-main", in: "wS", "working"), main("home-main", in: "wA", "working")]))
+        try await session.model.send("Premier", to: Target(session.workspace("wS")))
+        try await session.model.send("Second", to: Target(session.workspace("wA")))
+        let jobs = await session.mac.scenario.jobs ?? []
+
+        for job in jobs {
+            await session.mac.setJob(job.id, state: "failed", error: "agent wait: agent_not_found")
+        }
+        await session.model.refresh()
+
+        #expect(session.model.notice?.title == "Échec de 2 envois")
+        #expect(session.model.notice?.detail == "Acme : agent wait: agent_not_found\n~ : agent wait: agent_not_found")
+    }
+
     @Test("un échec déjà annoncé ne l'est plus au rafraîchissement suivant")
     func announcedOnce() async throws {
         let session = await Session(world(agents: [main("acme-main", in: "wM", "idle")]))
         try await session.model.send("Mauvaise cible", to: Target(session.workspace("wS")))
+        #expect(session.model.notice?.kind == .failed)
         session.model.notice = nil
 
         await session.model.refresh()
