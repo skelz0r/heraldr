@@ -19,9 +19,10 @@ FAILED_RETENTION_MINUTES=1440
 ATTACHMENT_RETENTION_MINUTES=10080
 ATTACHMENT_MAX_BYTES=20000000
 ANSWERED_RETENTION_MINUTES=10080
-CLEAR_TIMEOUT_SECONDS=20
+CLEAR_TIMEOUT_SECONDS="${HERALDR_CLEAR_TIMEOUT_SECONDS:-20}"
 PROMPT_START_TIMEOUT_MS=10000
 STALLED_PROMPT_GRACE_MS=30000
+SEQUENCE_LOCK_STALE_MINUTES=1
 START_TIMEOUT_MS=60000
 
 json_value() {
@@ -108,7 +109,7 @@ create_job() {
   valid_queue_target "$agent" || { echo "invalid agent name: $agent" >&2; exit 2; }
   [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
 
-  job_id="$(date -u +%Y%m%d%H%M%S)-$$-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
+  job_id="$(date -u +%Y%m%d%H%M%S)-$(next_sequence)-$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
   job_dir="$JOBS_DIR/$job_id"
   mkdir -p "$job_dir.tmp"
   sed "s/{{job_id}}/$job_id/g" > "$job_dir.tmp/prompt"
@@ -141,6 +142,18 @@ store_attachment() {
   fi
   mv "$attachment.tmp" "$attachment" || { rm -f "$attachment.tmp"; echo "attachment write failed" >&2; exit 1; }
   echo "$attachment"
+}
+
+next_sequence() {
+  mkdir -p "$LOCKS_DIR"
+  until mkdir "$LOCKS_DIR/sequence" 2>/dev/null; do
+    [ -n "$(find "$LOCKS_DIR/sequence" -maxdepth 0 -mmin +"$SEQUENCE_LOCK_STALE_MINUTES" 2>/dev/null)" ] && rmdir "$LOCKS_DIR/sequence" 2>/dev/null
+    sleep 0.05
+  done
+  sequence=$(( $(cat "$STATE_DIR/sequence" 2>/dev/null || echo 0) + 1 ))
+  printf '%s' "$sequence" > "$STATE_DIR/sequence"
+  rmdir "$LOCKS_DIR/sequence"
+  printf '%012d' "$sequence"
 }
 
 set_state() {

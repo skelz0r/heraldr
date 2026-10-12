@@ -288,6 +288,91 @@ idle|Suivante"
 unset FAKE_HERDR_DETECTION_DELAY
 teardown_world
 
+echo "six envois de la même seconde partent dans l'ordre d'arrivée"
+setup_world
+add_agent wB:pG wB working
+echo 0.3 > "$FAKE_HERDR_WORLD/agents/wB:pG/turn_seconds"
+for request in un deux trois quatre cinq six; do
+  enqueue_pane wB wB:pG keep "$request"
+done
+set_status wB:pG idle
+wait_until 40 '[ "$(job_states)" = "sent sent sent sent sent sent " ]'
+check "les six sont partis" "$(job_states)" "sent sent sent sent sent sent "
+check "ordre d'arrivée conservé" "$(prompts_of wB:pG | cut -d '|' -f2 | tr '\n' ' ')" "un deux trois quatre cinq six "
+teardown_world
+
+echo "un envoi attend le compteur tenu par un autre envoi, même avant que celui-ci ait noté son pid"
+setup_world
+mkdir -p "$HERALDR_STATE_DIR/locks/sequence"
+printf 'x' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue-pane wB wB:pG keep > /dev/null 2>&1 &
+sleep 1
+check "aucun envoi créé tant que le compteur est pris" "$(job_states)" ""
+rmdir "$HERALDR_STATE_DIR/locks/sequence"
+wait_until 10 '[ -n "$(job_states)" ]'
+check "l'envoi est créé dès que le compteur est rendu" "$(job_states | wc -w | tr -d ' ')" "1"
+teardown_world
+
+echo "un nom d'agent invalide ou une demande vide ne créent aucun envoi"
+setup_world
+check "nom d'agent hors convention herdr refusé" "$(echo x | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 'Home-Main' "$(printf '~' | base64)" 2>&1; echo $?)" "invalid agent name: Home-Main
+2"
+check "demande vide refusée" "$(printf '' | /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" enqueue w1 home-main "$(printf '~' | base64)" 2>&1; echo $?)" "empty prompt
+2"
+check "aucun envoi créé" "$(job_states)" ""
+teardown_world
+
+echo "un Claude qui ne démarre pas fait échouer l'envoi avec la raison de herdr"
+setup_world
+echo pane_not_ready > "$FAKE_HERDR_WORLD/start_error"
+enqueue w1 home-main '~' "Demande à froid"
+wait_until 10 '[ "$(job_states)" = "failed " ]'
+check "échec annoncé avec la raison de herdr" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4)|$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "failed|agent start: {\"error\":{\"code\":\"pane_not_ready"
+teardown_world
+
+echo "un /clear sans effet fait échouer l'envoi, sans envoyer la demande dans l'ancien contexte"
+setup_world
+export HERALDR_CLEAR_TIMEOUT_SECONDS=2
+add_agent home-main w1 idle
+touch "$FAKE_HERDR_WORLD/agents/home-main/ignores_clear"
+enqueue w1 home-main '~' "Contexte propre exigé"
+wait_until 10 '[ "$(job_states)" = "failed " ]'
+check "seul le /clear est parti" "$(prompts_of home-main)" "idle|/clear"
+check "la raison dit que le contexte n'a pas été vidé" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5)" "/clear sans nouvelle session après 2s"
+unset HERALDR_CLEAR_TIMEOUT_SECONDS
+teardown_world
+
+echo "la file d'un agent reprend après un runner mort qui tenait son verrou"
+setup_world
+add_agent home-main w1 idle
+dead_pid="$(sh -c 'echo $$')"
+mkdir -p "$HERALDR_STATE_DIR/locks/home-main"
+echo "$dead_pid" > "$HERALDR_STATE_DIR/locks/home-main/pid"
+enqueue w1 home-main '~' "Après le crash"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "la demande part" "$(prompts_of home-main | tail -n 1)" "idle|Après le crash"
+teardown_world
+
+echo "les envois partis sont oubliés après une heure, les échecs après un jour"
+setup_world
+add_agent wB:pG wB idle
+echo 0.1 > "$FAKE_HERDR_WORLD/agents/wB:pG/turn_seconds"
+for request in récent ancien; do enqueue_pane wB wB:pG keep "$request"; done
+for request in récent ancien; do enqueue_pane wB wB:pZ keep "$request"; done
+wait_until 20 '[ "$(job_states | tr " " "\n" | sort | tr "\n" " ")" = " failed failed sent sent " ]'
+age_job() {
+  for job in "$HERALDR_STATE_DIR"/jobs/*; do
+    if [ "$(cat "$job/agent")" = "$1" ] && grep -qx "$2" "$job/prompt"; then
+      touch -t "$(date -v-"$3" +%Y%m%d%H%M)" "$job/state"
+    fi
+  done
+}
+age_job wB:pG récent 59M
+age_job wB:pG ancien 61M
+age_job wB:pZ récent 23H
+age_job wB:pZ ancien 25H
+check "restent l'envoi de 59 min et l'échec de 23 h" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3,4 | sort | tr '\t\n' ' |')" "wB:pG sent|wB:pZ failed|"
+teardown_world
+
 echo "un relais vers Home ou un workspace inconnu est refusé"
 setup_world
 add_workspace w1 1 'Home'

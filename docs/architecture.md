@@ -80,7 +80,7 @@ envoi fait deux exec SSH :
    l'app installée)
 2. `enqueue <workspace_id> <agent> <label_base64>` : le prompt enveloppé
    arrive brut sur stdin et devient un job
-   `~/.local/state/heraldr/jobs/<horodatage>-<id>/`, puis le
+   `~/.local/state/heraldr/jobs/<horodatage>-<séquence>-<aléa>/`, puis le
    script lance son runner détaché :
    `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
 
@@ -91,7 +91,13 @@ Un job est un dossier de fichiers texte : `workspace_id`, `agent`,
 Le runner, détaché, survit à la mise en veille du téléphone (spike 7).
 Il fixe son PATH (`/opt/homebrew/bin` absent en exec SSH), prend le
 verrou de l'agent (`mkdir` atomique, pid dedans pour reprendre un verrou
-mort) et traite les jobs de l'agent dans l'ordre d'horodatage :
+mort) et traite les jobs de l'agent dans l'ordre de leur nom :
+l'horodatage à la seconde, puis un compteur sur 12 chiffres tenu sous
+un verrou `sequence` (un `mkdir` qui n'est jamais volé tant qu'il a
+moins d'une minute, même sans pid écrit), qui départage deux envois de
+la même seconde
+(le pid qu'il remplace se comparait comme du texte, `10000` avant
+`9999`, et repart de zéro après 99999) :
 
 1. résout le tab 1 du workspace (`herdr tab list --workspace`, numéro 1)
 2. cherche l'agent `<agent>` (`herdr agent get`)
