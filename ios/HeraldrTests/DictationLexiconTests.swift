@@ -94,6 +94,30 @@ struct DictationLexiconTests {
         #expect(summary(lexicon) == ["Acme ← ak me ← ack me"])
     }
 
+    @Test("revenir dans l'aperçu sur un remplacement fait par le code oublie la variante, sans apprendre l'inverse")
+    func revertedReplacementForgetsVariant() {
+        var lexicon = DictationLexicon()
+        lexicon.define("Acme", heard: ["ack me", "ak me"])
+
+        lexicon.learn(
+            sent: "Ouvre le tableau de bord de ack me demain matin.",
+            origin: dictated("Ouvre le tableau de bord de Acme demain matin."))
+
+        #expect(summary(lexicon) == ["Acme ← ak me"])
+    }
+
+    @Test("revenir sur le remplacement d'un seul mot oublie aussi la variante, malgré le mot voisin retenu")
+    func revertedSingleWordReplacementForgetsVariant() {
+        var lexicon = DictationLexicon()
+        lexicon.define("GitHub", heard: ["guithub", "guide hub"])
+
+        lexicon.learn(
+            sent: "Ouvre le guithub demain matin.",
+            origin: dictated("Ouvre le GitHub demain matin."))
+
+        #expect(summary(lexicon) == ["GitHub ← guide hub"])
+    }
+
     @Test("au-delà de 200 termes, les moins récents sont oubliés")
     func oldestTermsAreForgotten() {
         var lexicon = DictationLexicon()

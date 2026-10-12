@@ -222,8 +222,10 @@ l'ouverture échoue ou que l'URL manque.
     Support, `DictationLexiconStore`) ; le vocabulaire passe
     par `AnalysisContext.contextualStrings`, que seul
     `DictationTranscriber` exploite aujourd'hui, pas
-    `SpeechTranscriber` : il reste fourni aux deux, le nettoyage
-    porte l'essentiel de la correction
+    `SpeechTranscriber` : il reste fourni aux deux. Les variantes
+    sûres sont remplacées par le code autour du nettoyage
+    (`DictationLexicon.replacingKnownVariants`), le modèle passant par
+    `CleaningModel`, injectable dans les tests
   - `Push` : autorisation, token APNs, tap sur les notifications
   - `UI` : liste, boutons, aperçu
 - Foundation Models indisponible (Apple Intelligence off, modèle pas

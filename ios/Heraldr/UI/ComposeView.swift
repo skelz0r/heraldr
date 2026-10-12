@@ -395,7 +395,7 @@ struct ComposeView: View {
                 } else {
                     Label("Dictée nettoyée", systemImage: "sparkles")
                 }
-                if dictated.salves.contains(where: \.isCleaned) {
+                if dictated.salves.contains(where: { $0.isCleaned || $0.text != $0.raw }) {
                     Button("Voir l'original") { showingRaw = true }.foregroundStyle(Color.heraldrAccent)
                 }
             }
@@ -600,7 +600,7 @@ private extension CleanedTranscript {
 private extension [CleanedTranscript] {
     var lastRawReason: String? {
         reversed().lazy.compactMap { salve -> String? in
-            if case .raw(_, let reason) = salve { reason } else { nil }
+            if case .raw(_, _, let reason) = salve { reason } else { nil }
         }.first
     }
 }

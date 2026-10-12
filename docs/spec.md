@@ -194,7 +194,10 @@ lexique de dictée (§5.2), « Lexique de dictée » :
 
 - une ligne par terme, dans l'ordre du lexique, les plus récents
   d'abord : le terme, et dessous ses variantes entendues séparées par
-  des virgules ; en pied, « Les plus récents d'abord. »
+  des virgules ; en pied, « Les plus récents d'abord. Une variante
+  saisie ici, ou de plusieurs mots, est remplacée par son terme dans
+  chaque dictée ; une variante apprise d'un seul mot est seulement
+  signalée au nettoyage. »
 - balayer une ligne supprime le terme et ses variantes
   (« Supprimer ») ; pas de « Tout vider »
 - taper une ligne ouvre « Modifier le terme », le bouton « + »
@@ -260,11 +263,27 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   Apple Intelligence »), que la dictée est trop longue, ou que le
   résultat fait 40 % ou moins, ou 130 % ou plus, de la longueur brute
   (« nettoyage écarté : il s'éloignait trop de la dictée »)
-- le lexique (§5.2) sert à la dictée suivante : les 100 termes les
-  plus récents sont fournis à la transcription comme vocabulaire
-  contextuel, et les 20 premières variantes, « entendu → terme », sont
-  ajoutées à la consigne du nettoyage, à appliquer quand le contexte
-  s'y prête ; aucun remplacement automatique dans le texte
+- le lexique (§5.2) sert à la dictée suivante :
+  - les 100 termes les plus récents sont fournis à la transcription
+    comme vocabulaire contextuel
+  - remplacement par le code, avant le nettoyage puis sur son résultat,
+    et aussi quand la transcription brute est gardée : chaque variante
+    saisie, chaque variante de deux mots ou plus, et le terme lui-même
+    s'il est saisi ou fait deux mots ou plus, devient le terme, écrit
+    avec sa casse. Mots entiers seulement (séparés par des espaces, la
+    ponctuation en bord de mot ne compte pas), sans tenir compte de la
+    casse ni des accents ; les mots d'une variante ne sont séparés que
+    par des espaces ; la variante la plus longue passe d'abord et un
+    mot déjà remplacé ne l'est pas deux fois
+  - une variante apprise d'un seul mot n'est jamais remplacée : quand
+    elle apparaît dans la transcription, elle est signalée à la
+    consigne du nettoyage (« « <entendu> » veut peut-être dire
+    « <terme> » », à remplacer seulement si la phrase n'a pas de sens
+    autrement), 3 au plus, les plus souvent corrigées puis les plus
+    récentes ; sans variante présente, la consigne est inchangée
+  - « Voir l'original » montre la transcription avant tout remplacement,
+    et apparaît aussi pour une transcription brute que le remplacement
+    a modifiée
 - le nettoyage ne porte que sur la salve qui vient d'être dictée,
   jamais sur le texte déjà dans l'aperçu
 
@@ -333,7 +352,11 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   compte de la casse ni des accents, il garde son orthographe d'origine) ;
   un entendu n'appartient qu'à un terme : déjà connu, il passe au
   dernier terme voulu et remonte en tête, avec son compteur augmenté
-  s'il garde le même terme. Un terme appris qui n'a plus de variante
+  s'il garde le même terme. Remettre dans l'aperçu une variante à la
+  place de son terme (« Acme » → « ack me ») retire cette
+  variante du terme au lieu d'apprendre l'inverse, y compris quand le
+  mot voisin a été retenu (« GitHub demain » → « guithub demain »). Un terme appris qui
+  n'a plus de variante
   disparaît ; au-delà de 200 termes, les moins récents sont oubliés.
   Le lexique se consulte et se corrige dans les Réglages (§4.5)
 - le lexique est gardé sur l'iPhone, dans un fichier JSON versionné

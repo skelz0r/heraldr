@@ -28,7 +28,7 @@ struct LexiconView: View {
                             }
                         }
                     } footer: {
-                        Text("Les plus récents d'abord.")
+                        Text("Les plus récents d'abord. Une variante saisie ici, ou de plusieurs mots, est remplacée par son terme dans chaque dictée ; une variante apprise d'un seul mot est seulement signalée au nettoyage.")
                     }
                 }
             }

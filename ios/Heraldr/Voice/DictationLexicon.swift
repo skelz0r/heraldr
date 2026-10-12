@@ -31,6 +31,7 @@ struct DictationLexicon: Codable, Equatable, Sendable {
     static let vocabularySize = 100
     static let maxWords = 3
     static let maxChangedShare = 0.5
+    static let hintedVariants = 3
 
     private(set) var terms: [DictationTerm] = []
 
@@ -40,8 +41,54 @@ struct DictationLexicon: Codable, Equatable, Sendable {
         terms.prefix(Self.vocabularySize).map(\.text)
     }
 
-    var promptLines: [String] {
-        terms.flatMap { term in term.variants.map { "\($0.heard) → \(term.text)" } }.prefix(20).map(\.self)
+    func replacingKnownVariants(in text: String) -> String {
+        let tokens = Self.tokens(in: text)
+        var consumed = Array(repeating: false, count: tokens.count)
+        var replacements: [(range: Range<String.Index>, term: String)] = []
+        for (heard, term) in sureVariants {
+            var start = 0
+            while start + heard.count <= tokens.count {
+                let window = start..<start + heard.count
+                let matches = window.allSatisfy { !consumed[$0] && tokens[$0].key == heard[$0 - start] }
+                    && window.dropLast().allSatisfy { text[tokens[$0].range.upperBound..<tokens[$0 + 1].range.lowerBound].allSatisfy(\.isWhitespace) }
+                guard matches else {
+                    start += 1
+                    continue
+                }
+                replacements.append((tokens[window.lowerBound].range.lowerBound..<tokens[window.upperBound - 1].range.upperBound, term))
+                window.forEach { consumed[$0] = true }
+                start = window.upperBound
+            }
+        }
+        var replaced = ""
+        var cursor = text.startIndex
+        for replacement in replacements.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+            replaced += text[cursor..<replacement.range.lowerBound] + replacement.term
+            cursor = replacement.range.upperBound
+        }
+        return replaced + text[cursor...]
+    }
+
+    func hints(for text: String) -> [(heard: String, term: String)] {
+        let present = Set(Self.tokens(in: text).map(\.key))
+        return terms
+            .flatMap { term in term.variants.map { (variant: $0, term: term.text) } }
+            .filter { !Self.isReplaced($0.variant) && present.contains(Self.key($0.variant.heard)) }
+            .sorted { ($0.variant.count, $0.variant.updatedAt) > ($1.variant.count, $1.variant.updatedAt) }
+            .prefix(Self.hintedVariants)
+            .map { ($0.variant.heard, $0.term) }
+    }
+
+    private var sureVariants: [(heard: [String], term: String)] {
+        terms.flatMap { term -> [(heard: [String], term: String)] in
+            let own = term.source == .typed || Self.words(term.text).count > 1 ? [term.text] : []
+            return (own + term.variants.filter(Self.isReplaced).map(\.heard)).map { (heard: Self.words($0).map(Self.key), term: term.text) }
+        }
+        .sorted { ($0.heard.count, $0.heard.joined().count) > ($1.heard.count, $1.heard.joined().count) }
+    }
+
+    static func isReplaced(_ variant: DictationVariant) -> Bool {
+        variant.source == .typed || words(variant.heard).count > 1
     }
 
     mutating func learn(sent: String, origin: ComposeView.Origin, at date: Date = .now) {
@@ -92,6 +139,11 @@ struct DictationLexicon: Codable, Equatable, Sendable {
     }
 
     private mutating func remember(heard: String, as meant: String, at date: Date) {
+        if let (reverted, variant) = revertedReplacement(heard: heard, meant: meant) {
+            terms[reverted].variants.removeAll { Self.key($0.heard) == variant }
+            if terms[reverted].variants.isEmpty && terms[reverted].source == .learned { terms.remove(at: reverted) }
+            return
+        }
         var variant = DictationVariant(heard: heard, source: .learned, count: 1, updatedAt: date)
         if let known = terms.first(where: { $0.id == Self.key(meant) })?.variants.first(where: { Self.key($0.heard) == Self.key(heard) }) {
             variant.count = known.count + 1
@@ -101,6 +153,20 @@ struct DictationLexicon: Codable, Equatable, Sendable {
             ?? DictationTerm(text: meant, source: .learned, variants: [], updatedAt: date)
         let others = term.variants.filter { Self.key($0.heard) != Self.key(heard) }
         place(DictationTerm(text: term.text, source: term.source, variants: [variant] + others, updatedAt: date))
+    }
+
+    private func revertedReplacement(heard: String, meant: String) -> (term: Int, variant: String)? {
+        let heardWords = Self.words(heard).map(Self.key)
+        let meantWords = Self.words(meant).map(Self.key)
+        var candidates = [(heardWords, meantWords)]
+        if heardWords.first == meantWords.first { candidates.append((Array(heardWords.dropFirst()), Array(meantWords.dropFirst()))) }
+        if heardWords.last == meantWords.last { candidates.append((Array(heardWords.dropLast()), Array(meantWords.dropLast()))) }
+        for (term, variant) in candidates.map({ ($0.0.joined(separator: " "), $0.1.joined(separator: " ")) }) where !term.isEmpty && !variant.isEmpty {
+            if let index = terms.firstIndex(where: { $0.id == term && $0.variants.contains { Self.key($0.heard) == variant } }) {
+                return (index, variant)
+            }
+        }
+        return nil
     }
 
     private mutating func place(_ term: DictationTerm) {
@@ -153,6 +219,30 @@ struct DictationLexicon: Codable, Equatable, Sendable {
         text.split(whereSeparator: \.isWhitespace)
             .map { $0.trimmingCharacters(in: edgePunctuation) }
             .filter { !$0.isEmpty }
+    }
+
+    private static func tokens(in text: String) -> [(key: String, range: Range<String.Index>)] {
+        var tokens: [(key: String, range: Range<String.Index>)] = []
+        var start = text.startIndex
+        while start < text.endIndex {
+            guard !text[start].isWhitespace else {
+                start = text.index(after: start)
+                continue
+            }
+            var end = start
+            while end < text.endIndex, !text[end].isWhitespace { end = text.index(after: end) }
+            var lower = start
+            var upper = end
+            while lower < upper, isEdgePunctuation(text[lower]) { lower = text.index(after: lower) }
+            while lower < upper, isEdgePunctuation(text[text.index(before: upper)]) { upper = text.index(before: upper) }
+            if lower < upper { tokens.append((key(String(text[lower..<upper])), lower..<upper)) }
+            start = end
+        }
+        return tokens
+    }
+
+    private static func isEdgePunctuation(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy(edgePunctuation.contains)
     }
 
     static func key(_ text: String) -> String {
