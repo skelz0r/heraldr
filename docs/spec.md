@@ -129,10 +129,14 @@ Bouton rond à droite de la pilule du Mac, « Historique des envois »
 pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») qui
 liste les envois gardés (§6), du plus récent au plus ancien :
 
-- label du workspace, date relative, statut (Envoi…, En file, Envoyé,
-  Échec)
+- label du workspace, date relative, statut : une pastille seule de
+  10 pt à la couleur de l'état, sans texte, fond ni icône ; jaune
+  pleine qui pulse pendant l'envoi, jaune creuse en file, verte une
+  fois envoyé, rouge en échec. Couleurs propres à l'historique,
+  distinctes de celles des états d'agent. VoiceOver lit l'état
+  (Envoi…, En file, Envoyé, Échec)
 - le texte, sur quatre lignes au plus ; la raison sous un envoi en
-  échec
+  échec, dans le rouge de « Échec »
 - « Copier » met le texte dans le presse-papier, puis affiche
   « Copié » deux secondes
 - « Renvoyer » ferme la feuille et renvoie le texte tel quel au
