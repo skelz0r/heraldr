@@ -74,11 +74,13 @@ Le skill `dev-ios` couvre les builds distants sur build-mac si besoin.
 
 ## Hook des agents
 
-`.claude/settings.json` déclare un hook PostToolUse : après chaque
-édition, `.claude/hooks/lint-edited-file` lint le seul fichier touché
-selon son type (swift-format et SwiftLint, Biome, shellcheck) et rend
-le code 2 avec les erreurs sur stderr, que Claude Code renvoie à
-l'agent pour correction immédiate. Ni build ni tests.
+`.claude/settings.json` déclare un hook Stop : quand l'agent s'apprête
+à rendre la main, `.claude/hooks/lint-before-stop` lance `bin/lint`
+(2 s) si le worktree est sale ou la branche en avance sur
+`origin/main`, et rend le code 2 avec les erreurs sur stderr, que
+Claude Code renvoie à l'agent pour qu'il corrige avant de répondre.
+Une seule relance par tour (`stop_hook_active`) pour ne jamais boucler.
+Ni build ni tests.
 
 ## Simulateur et captures
 

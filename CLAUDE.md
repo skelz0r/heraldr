@@ -143,8 +143,8 @@ c'est le test ou le code qui a tort, ne jamais l'adapter en silence.
 Fin d'itération : `$PWD/bin/run-ios-tests` (ou `bin/run-mac-tests` si
 seuls les scripts Mac ont changé), `$PWD/bin/qa` si l'UI ou l'app ont
 changé (voir *QA*), puis `docs/spec.md` à jour. Le lint tourne seul :
-le hook du projet (`.claude/settings.json`) lint chaque fichier édité,
-et `bin/local-ci` lance `bin/lint`.
+le hook Stop du projet (`.claude/settings.json`) lance `bin/lint` avant
+de rendre la main, et `bin/local-ci` aussi.
 
 Plusieurs worktrees qui lancent leurs tests en même temps sur le même
 simulateur se font planter : `bin/qa` crée et vise par son udid un

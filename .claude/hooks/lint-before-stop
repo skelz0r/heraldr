@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
+[ "$(plutil -extract stop_hook_active raw -o - - 2>/dev/null)" = "true" ] && exit 0
+
+if [ -z "$(git status --porcelain 2>/dev/null)" ] && [ -z "$(git rev-list origin/main..HEAD 2>/dev/null)" ]; then
+    exit 0
+fi
+
+if ! output="$(./bin/lint 2>&1)"; then
+    printf 'bin/lint failed, fix it before handing back (exceptions only in .swiftlint.yml, .shellcheckrc or biome.json):\n%s\n' "$output" >&2
+    exit 2
+fi
