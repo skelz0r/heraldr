@@ -54,6 +54,15 @@ struct HomeView: View {
             HistoryView()
                 .presentationDetents([.medium, .large])
         }
+        .onChange(of: model.presentedAnswer?.id) { _, id in
+            guard id != nil else { return }
+            showingHistory = false
+            showingSettings = false
+        }
+        .sheet(item: Binding(get: { model.presentedAnswer }, set: { model.presentedAnswer = $0 })) { presented in
+            AnswerSheet(presented: presented)
+                .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
                 .presentationDetents([.medium, .large])

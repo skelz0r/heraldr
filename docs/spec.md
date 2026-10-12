@@ -149,8 +149,13 @@ d'échec « Presse-papier vide », « Copie d'abord le texte ou la capture
 ### 4.4 Historique
 
 Bouton rond à droite de la pilule du Mac, « Historique des envois »
-pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») qui
-liste les envois gardés (§6), du plus récent au plus ancien :
+pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») à deux
+segments en tête, « Tâches » (ouvert par défaut) et « Questions ».
+
+« Tâches » liste les envois gardés (§6) sans réponse, du plus récent
+au plus ancien. Une question reste là tant que sa réponse n'est pas
+arrivée : l'app ne sait qu'une demande était une simple question qu'en
+recevant la réponse (§6.5).
 
 - label du workspace (`<label> — <tab>` pour un envoi vers un tab),
   date relative, statut : une pastille seule de
@@ -182,6 +187,18 @@ liste les envois gardés (§6), du plus récent au plus ancien :
 - balayer une entrée la supprime (« Supprimer »)
 - sans envoi : « Aucun envoi », « Les 20 derniers envois s'afficheront
   ici. »
+
+« Questions » liste les envois qui ont reçu une réponse, du plus récent
+au plus ancien :
+
+- label du workspace, date relative de la réponse
+- la question, en secondaire sur deux lignes au plus, puis le résumé
+  de la réponse sur trois lignes au plus
+- tap : la réponse complète (§6.5) dans la même feuille, retour par la
+  flèche, « Copier » en haut à droite
+- balayer une entrée la supprime (« Supprimer »)
+- sans réponse : « Aucune question », « Les réponses aux 20 dernières
+  questions s'afficheront ici. »
 
 ### 4.5 Réglages
 
@@ -469,7 +486,9 @@ date, et les chemins des captures une fois posées sur le Mac. Son statut :
 | encore « Envoi… » au lancement de l'app (crash pendant l'envoi) | Échec, « Envoi interrompu avant la réponse du Mac. » |
 
 Un job purgé par le Mac laisse l'envoi à son dernier statut. Seuls les
-20 envois les plus récents sont gardés.
+20 envois sans réponse les plus récents sont gardés, et à part les 20
+questions répondues les plus récentes : une réponse fait passer son
+envoi des uns aux autres.
 
 ### 6.1 Consigne standard
 
@@ -575,6 +594,33 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
 - session Claude (Remote Control, visible dans Claude mobile) :
   `<label>—main`, `~` devient `home`
 
+### 6.5 Réponse à une simple question
+
+C'est le `-main` qui décide, d'après la consigne (§6.1, §6.2), qu'une
+demande est une simple question : l'app ne propose aucun choix.
+
+1. il explore sans rien modifier, sans /start, et remet sa réponse par
+   `dispatch.sh answer <job_id>` : première ligne le résumé, puis la
+   réponse complète en markdown
+2. le Mac garde la réponse avec le job et pousse une notif (§7)
+3. l'envoi passe dans « Questions » (§4.4) dès que l'app la récupère :
+   au tap sur la notif, ou au rafraîchissement qui voit le job répondu
+   dans `status`, notif ratée comprise
+4. un relais de Home (§6.2) crée un job que l'app ne suit pas : si le
+   `-main` du projet y répond quand même, la notif ouvre la réponse,
+   que l'historique ne garde pas
+5. un envoi vers un tab (§6.3) n'a pas de consigne, donc pas de réponse
+   de ce type
+
+Feuille de réponse, ouverte du bas, fermable (« Fermer »), moitié puis
+plein écran : titre = label de l'envoi, la question en secondaire, le
+résumé en titre, puis la réponse complète (markdown : titres, listes,
+blocs de code, gras, italique, code et liens en ligne), sélectionnable.
+« Copier » copie la réponse complète. Pendant qu'elle arrive du Mac, le
+résumé de la notif s'affiche seul avec un indicateur ; Mac injoignable :
+« Réponse complète indisponible : <raison> » sous le résumé. La feuille
+ferme l'historique et les réglages s'ils sont ouverts.
+
 ## 7. Notifications
 
 - autorisation demandée au premier rafraîchissement réussi, une fois
@@ -595,6 +641,11 @@ Cible : le premier Claude du tab choisi (§4.2), désigné par son
   - autre permission : « Demande d'autorisation : <titre de la
     demande> »
   - rien de reconnu : « Attend une réponse »
+- une notif part quand un `-main` remet sa réponse à une simple
+  question (§6.5) : titre = label de l'envoi, sous-titre « Réponse »,
+  corps = résumé, tronqué à 178 caractères (« … ») ; tap : la feuille
+  de réponse, jamais l'app Claude. Sans iPhone enregistré, la réponse
+  est gardée sans notif
 - notif reçue app ouverte : bannière, liste et son
 - tap : le workspace de l'agent devient la cible, puis la session
   s'ouvre dans l'app Claude. Si le lien manque ou que l'app Claude ne
@@ -689,5 +740,6 @@ question.
 
 - réponse aux questions de l'agent depuis l'app
 - notif de fin de tâche
+- réponse à une simple question envoyée vers un tab
 - détail par agent
 - multi-machines, sessions herdr nommées

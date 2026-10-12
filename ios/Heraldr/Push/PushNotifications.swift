@@ -39,6 +39,39 @@ struct QuestionNotification: Sendable, Equatable {
     }
 }
 
+struct AnswerNotification: Sendable, Equatable {
+    let jobId: String
+    let workspaceId: String
+    let summary: String
+
+    init?(userInfo: [AnyHashable: Any]) {
+        guard
+            userInfo["kind"] as? String == "answer",
+            let jobId = userInfo["job_id"] as? String,
+            let workspaceId = userInfo["workspace_id"] as? String
+        else { return nil }
+        self.jobId = jobId
+        self.workspaceId = workspaceId
+        let alert = (userInfo["aps"] as? [String: Any])?["alert"] as? [String: Any]
+        summary = alert?["body"] as? String ?? ""
+    }
+}
+
+enum NotificationTap: Sendable, Equatable {
+    case question(QuestionNotification)
+    case answer(AnswerNotification)
+
+    init?(userInfo: [AnyHashable: Any]) {
+        if let answer = AnswerNotification(userInfo: userInfo) {
+            self = .answer(answer)
+        } else if let question = QuestionNotification(userInfo: userInfo) {
+            self = .question(question)
+        } else {
+            return nil
+        }
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     weak var model: AppModel? {
@@ -46,7 +79,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     private var pendingDevice: PushDevice?
-    private var pendingTap: QuestionNotification?
+    private var pendingTap: NotificationTap?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
@@ -67,14 +100,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping @Sendable () -> Void) {
-        let tap = QuestionNotification(userInfo: response.notification.request.content.userInfo)
+        let tap = NotificationTap(userInfo: response.notification.request.content.userInfo)
         Task { @MainActor in
             if let tap { received(tap) }
             completionHandler()
         }
     }
 
-    private func received(_ tap: QuestionNotification) {
+    private func received(_ tap: NotificationTap) {
         pendingTap = tap
         deliverPending()
     }
@@ -87,7 +120,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         if let tap = pendingTap {
             pendingTap = nil
-            Task { await model.open(tap) }
+            switch tap {
+            case .question(let question): Task { await model.open(question) }
+            case .answer(let answer): Task { await model.open(answer) }
+            }
         }
     }
 }

@@ -97,6 +97,49 @@ struct SendHistoryTests {
         #expect(history.entries.first?.status == .queued)
     }
 
+    @Test("un envoi auquel le -main répond passe des tâches aux questions, avec sa réponse")
+    func answeredSendBecomesAQuestion() throws {
+        var history = SendHistory()
+        let id = history.record("comment marche le cache ?", to: workspace)
+        history.accept(id, jobId: "job-1")
+        _ = history.record("corrige le cache", to: workspace)
+
+        history.receive(Answer(summary: "Vidé au déploiement.", body: "Détail."), forJob: "job-1")
+
+        #expect(history.tasks.map(\.text) == ["corrige le cache"])
+        #expect(history.questions.map(\.text) == ["comment marche le cache ?"])
+        #expect(history.questions.first?.answer?.summary == "Vidé au déploiement.")
+    }
+
+    @Test("seules les 20 dernières questions sont gardées, sans faire de place aux dépens des tâches")
+    func keepsOnlyTheTwentyLatestQuestions() {
+        var history = SendHistory()
+        _ = history.record("tâche", to: workspace)
+        for index in 1...25 {
+            let id = history.record("question \(index)", to: workspace)
+            history.accept(id, jobId: "job-\(index)")
+            history.receive(Answer(summary: "réponse \(index)", body: ""), forJob: "job-\(index)")
+        }
+
+        #expect(history.questions.count == 20)
+        #expect(history.questions.first?.text == "question 25")
+        #expect(history.questions.last?.text == "question 6")
+        #expect(history.tasks.map(\.text) == ["tâche"])
+    }
+
+    @Test("seuls les envois répondus et pas encore récupérés sont à demander au Mac")
+    func answersToFetch() {
+        var history = SendHistory()
+        for jobId in ["job-1", "job-2", "job-3"] {
+            history.accept(history.record(jobId, to: workspace), jobId: jobId)
+        }
+        history.receive(Answer(summary: "déjà là", body: ""), forJob: "job-1")
+        var answered = [job("job-1", .sent), job("job-2", .sent), job("job-3", .sent), job("job-relais", .sent)]
+        for index in [0, 1, 3] { answered[index].answered = true }
+
+        #expect(history.jobsAwaitingAnswer(in: answered) == ["job-2"])
+    }
+
     private func job(_ id: String, _ state: DispatchJob.State, error: String? = nil) -> DispatchJob {
         DispatchJob(id: id, workspaceId: "w1", agent: "heraldr-main", state: state, error: error)
     }

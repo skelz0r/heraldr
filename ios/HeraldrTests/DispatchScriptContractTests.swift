@@ -19,6 +19,22 @@ struct DispatchScriptContractTests {
         #expect(jobs.map(\.isPending) == [true, false])
     }
 
+    @Test("un envoi auquel le -main a répondu est signalé par status, un script plus ancien sans cette colonne reste lisible")
+    func answeredColumn() {
+        let jobs = DispatchJob.parse(statusOutput: "a\tw1\thome-main\tsent\t\tanswered\nb\tw1\thome-main\tsent\t\t\nc\tw1\thome-main\tsent\t\n")
+
+        #expect(jobs.map(\.answered) == [true, false, false])
+    }
+
+    @Test("la sortie de read-answer donne le résumé, puis la réponse complète en markdown")
+    func readAnswer() throws {
+        let answer = try #require(Answer(scriptOutput: "Le cache est vidé à chaque déploiement.\n\n## Détail\n\nLe job `purge` tourne après `deploy`.\n"))
+
+        #expect(answer.summary == "Le cache est vidé à chaque déploiement.")
+        #expect(answer.body == "## Détail\n\nLe job `purge` tourne après `deploy`.")
+        #expect(Answer(scriptOutput: "\nsans résumé") == nil)
+    }
+
     @Test("un état inconnu d'un script plus récent est ignoré sans masquer les autres envois")
     func unknownState() {
         let jobs = DispatchJob.parse(statusOutput: "a\tw1\thome-main\tcancelled\t\nb\tw1\thome-main\tsending\t\n")
