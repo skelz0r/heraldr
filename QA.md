@@ -29,6 +29,9 @@ dérouler les cases concernées sur le vrai iPhone, avec le vrai Mac.
   « en attente », la demande part quand il a fini.
 - [ ] Dicter plus longtemps que le verrouillage automatique : l'écran
   reste allumé ; après l'arrêt, il se verrouille au délai habituel.
+- [ ] Avec Spotify en lecture, dicter puis arrêter : la musique se
+  coupe pendant l'écoute et reprend seule à l'arrêt, sans erreur dans
+  Spotify ; idem avec « Annuler ».
 - [ ] Dicter une demande avec des hésitations : « Dictée nettoyée »,
   « Voir l'original » montre la transcription brute.
 - [ ] Dicter « on push la branche », corriger en « git push » dans

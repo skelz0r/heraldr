@@ -72,8 +72,7 @@ final class Dictation {
     func stop() async -> String {
         guard phase == .recording else { return transcript }
         phase = .finishing
-        engine?.inputNode.removeTap(onBus: 0)
-        engine?.stop()
+        releaseMicrophone()
         feeder?.finish()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
         await resultsTask?.value
@@ -83,8 +82,7 @@ final class Dictation {
     }
 
     func cancel() async {
-        engine?.inputNode.removeTap(onBus: 0)
-        engine?.stop()
+        releaseMicrophone()
         feeder?.finish()
         await analyzer?.cancelAndFinishNow()
         resultsTask?.cancel()
@@ -116,7 +114,7 @@ final class Dictation {
 
         try Self.step("Configuration de la session audio") {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            try session.setCategory(.record, mode: .measurement)
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         }
 
@@ -172,9 +170,15 @@ final class Dictation {
         }
     }
 
-    private func teardown() {
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    private func releaseMicrophone() {
+        engine?.inputNode.removeTap(onBus: 0)
+        engine?.stop()
         engine = nil
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func teardown() {
+        releaseMicrophone()
         feeder = nil
         analyzer = nil
         resultsTask = nil
