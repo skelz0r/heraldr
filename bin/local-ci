@@ -10,11 +10,18 @@ BEHAVIOUR_PATHS=(ios/Heraldr mac/dispatch.sh mac/notify-hook.mjs)
 
 step_durations=""
 ios_tests_skipped=false
+current_step=""
+repository=""
+revision=""
+ci_started_at=""
+final_status_posted=true
+interrupted=false
 
 run_check() {
     local name="$1"
     local started_at="$SECONDS"
 
+    current_step="$name"
     printf '\n=== %s ===\n' "$name"
     shift
     "$@"
@@ -100,12 +107,47 @@ ensure_clean_worktree() {
     fi
 }
 
+elapsed_seconds() {
+    printf '%s' "$(( $(date +%s) - ci_started_at ))"
+}
+
+post_status() {
+    gh api "repos/$repository/statuses/$revision" \
+        -f state="$1" \
+        -f context="Local CI" \
+        -f description="$2" \
+        --silent
+}
+
+post_final_status() {
+    final_status_posted=true
+    post_status "$1" "$2"
+}
+
+fail_run() {
+    printf '%s\n' "$1" >&2
+    post_final_status failure "$1"
+    exit 1
+}
+
+interrupt_run() {
+    interrupted=true
+    exit "$1"
+}
+
+report_unfinished_run() {
+    [[ "$final_status_posted" == true ]] && return
+
+    if [[ "$interrupted" == true ]]; then
+        post_final_status error "Interrupted during ${current_step:-local CI} after $(elapsed_seconds)s"
+    else
+        post_final_status failure "${current_step:-Local CI} failed after $(elapsed_seconds)s"
+    fi
+}
+
 push_after_local_ci() {
     local branch
-    local repository
     local remote_revision
-    local revision
-    local started_at
     local description
 
     branch="$(git branch --show-current)"
@@ -114,33 +156,35 @@ push_after_local_ci() {
     repository="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
     remote_revision="$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)"
     revision="$(git rev-parse HEAD)"
-    started_at="$(date +%s)"
-
-    run_local_ci
-    ensure_clean_worktree
-
-    if [[ "$(git rev-parse HEAD)" != "$revision" ]]; then
-        printf 'HEAD changed while local CI was running\n' >&2
-        return 1
-    fi
-
-    description="All checks passed locally in $(( $(date +%s) - started_at ))s"
-
-    if [[ "$ios_tests_skipped" == true ]]; then
-        description+=" (iOS skipped: docs only)"
-    fi
 
     git push \
         --force-with-lease="refs/heads/$branch:$remote_revision" \
         --set-upstream origin \
         "$revision:refs/heads/$branch"
-    gh api "repos/$repository/statuses/$revision" \
-        -f state=success \
-        -f context="Local CI" \
-        -f description="$description" \
-        --silent
 
-    printf 'Pushed %s after successful local CI\n' "$branch"
+    ci_started_at="$(date +%s)"
+    final_status_posted=false
+    trap report_unfinished_run EXIT
+    trap 'interrupt_run 130' INT
+    trap 'interrupt_run 143' TERM
+    trap 'interrupt_run 129' HUP
+    post_status pending "Running locally"
+
+    run_local_ci
+    current_step=""
+
+    worktree_is_clean || fail_run "Worktree modified while local CI was running"
+    [[ "$(git rev-parse HEAD)" == "$revision" ]] || fail_run "HEAD changed while local CI was running"
+
+    description="All checks passed locally in $(elapsed_seconds)s"
+
+    if [[ "$ios_tests_skipped" == true ]]; then
+        description+=" (iOS skipped: docs only)"
+    fi
+
+    post_final_status success "$description"
+
+    printf 'Pushed %s and passed local CI\n' "$branch"
 }
 
 usage() {
