@@ -9,7 +9,7 @@ RESULT_BUNDLE="${DERIVED_DATA}/qa.xcresult"
 ATTACHMENTS="${DERIVED_DATA}/attachments"
 SCREENSHOTS="${HOME}/share/screenshots/${WORKTREE}"
 BASE_BRANCH="origin/main"
-ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests)
+ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacAndVoiceTests)
 
 usage() {
     cat <<EOF
@@ -27,8 +27,10 @@ EOF
 flows_for_path() {
     case "$1" in
         ios/Heraldr/UI/Home* | ios/Heraldr/UI/Components.swift | ios/Heraldr/UI/Theme.swift | ios/Heraldr/Herdr/* | ios/Heraldr/Mac/*)
-            echo HomeScreenTests ;;
-        ios/Heraldr/UI/Compose* | ios/Heraldr/Dispatch/* | ios/Heraldr/Voice/*)
+            printf '%s\n' HomeScreenTests MacAndVoiceTests ;;
+        ios/Heraldr/Voice/*)
+            printf '%s\n' SendFlowTests MacAndVoiceTests ;;
+        ios/Heraldr/UI/Compose* | ios/Heraldr/Dispatch/*)
             echo SendFlowTests ;;
         ios/Heraldr/UI/* | ios/Heraldr/Pairing/*)
             echo SheetsTests ;;
