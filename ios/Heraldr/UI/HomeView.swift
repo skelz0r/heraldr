@@ -11,6 +11,7 @@ struct ComposeRequest: Identifiable {
     let id = UUID()
     let source: Source
     let workspaceId: String
+    let tabId: String?
 }
 
 struct HomeView: View {
@@ -76,17 +77,22 @@ struct HomeView: View {
                 }
             }
             Spacer(minLength: 12)
-            if let target = model.selectedWorkspace {
+            if let target = model.selectedTarget {
                 Text("CIBLE")
                     .font(.caption.weight(.heavy))
                     .tracking(1.2)
                     .foregroundStyle(.secondary)
-                Text(target.label)
+                Text(target.workspace.label)
                     .font(.system(size: 44, weight: .heavy, design: .rounded))
                     .tracking(-1)
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
                     .padding(.top, 6)
+                    .contentTransition(.opacity)
+                Text(target.tabName)
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                     .contentTransition(.opacity)
                 let state = model.targetState(for: target)
                 VStack(alignment: .leading, spacing: 4) {
@@ -222,11 +228,28 @@ struct HomeView: View {
             workspace: workspace,
             status: model.targetState(for: workspace).dotStatus,
             isSelected: workspace.id == model.selectedWorkspace?.id,
+            targetedTab: workspace.id == model.selectedWorkspace?.id ? model.selectedTarget?.tab : nil,
             isQueued: !model.pendingJobs(for: workspace).isEmpty
         ) {
-            withAnimation(.snappy) { model.selectedWorkspaceId = workspace.id }
-            UISelectionFeedbackGenerator().selectionChanged()
+            select(workspace)
         }
+        .contextMenu {
+            Section("Cibler un tab de \(workspace.label)") {
+                Button(Tab.mainName) { select(workspace) }
+                let tabs = model.claudeTabs(of: workspace)
+                ForEach(tabs) { tab in
+                    Button(tab.displayName) { select(workspace, tab: tab) }
+                }
+                if tabs.isEmpty {
+                    Text("Aucun Claude dans les autres tabs")
+                }
+            }
+        }
+    }
+
+    private func select(_ workspace: Workspace, tab: Tab? = nil) {
+        withAnimation(.snappy) { model.select(workspace, tab: tab) }
+        UISelectionFeedbackGenerator().selectionChanged()
     }
 
     private var actionBar: some View {
@@ -252,8 +275,8 @@ struct HomeView: View {
     }
 
     private func open(_ source: ComposeRequest.Source) {
-        guard let target = model.selectedWorkspace else { return }
-        compose = ComposeRequest(source: source, workspaceId: target.id)
+        guard let target = model.selectedTarget else { return }
+        compose = ComposeRequest(source: source, workspaceId: target.workspace.id, tabId: target.tab?.id)
     }
 
     private func paste() {
@@ -269,6 +292,7 @@ struct WorkspaceTile: View {
     let workspace: Workspace
     let status: AgentStatus
     let isSelected: Bool
+    let targetedTab: Tab?
     let isQueued: Bool
     let action: () -> Void
 
@@ -281,6 +305,12 @@ struct WorkspaceTile: View {
                         .font(.system(size: 15, weight: isSelected ? .bold : .semibold))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                    if let targetedTab {
+                        Text(targetedTab.displayName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                     if isQueued { WaitBadge(compact: true) }
                 }
                 Spacer(minLength: 0)

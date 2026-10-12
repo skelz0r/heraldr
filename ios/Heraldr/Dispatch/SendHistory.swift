@@ -12,10 +12,17 @@ struct SentRequest: Codable, Identifiable, Equatable, Sendable {
     let text: String
     let workspaceId: String
     let workspaceLabel: String
+    var tabId: String?
+    var tabLabel: String?
+    var clearsContext: Bool?
     let createdAt: Date
     var status: Status
     var jobId: String?
     var error: String?
+
+    var targetLabel: String {
+        tabLabel.map { "\(workspaceLabel) — \($0)" } ?? workspaceLabel
+    }
 }
 
 struct SendHistory: Codable, Equatable, Sendable {
@@ -24,9 +31,12 @@ struct SendHistory: Codable, Equatable, Sendable {
 
     private(set) var entries: [SentRequest] = []
 
-    mutating func record(_ text: String, to workspace: Workspace, at date: Date = .now) -> SentRequest.ID {
+    mutating func record(
+        _ text: String, to workspace: Workspace, tab: Tab? = nil, clearingContext: Bool = false, at date: Date = .now
+    ) -> SentRequest.ID {
         let entry = SentRequest(
             id: UUID(), text: text, workspaceId: workspace.id, workspaceLabel: workspace.label,
+            tabId: tab?.id, tabLabel: tab?.displayName, clearsContext: tab.map { _ in clearingContext },
             createdAt: date, status: .sending)
         entries = Array(([entry] + entries).prefix(Self.capacity))
         return entry.id

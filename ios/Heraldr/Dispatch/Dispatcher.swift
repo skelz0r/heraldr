@@ -57,11 +57,22 @@ struct Dispatcher: Sendable {
     }
 
     func send(_ text: String, to workspace: Workspace) async throws -> String {
-        try await installScript()
         let agent = AgentName.forWorkspace(label: workspace.label)
         let label = Data(workspace.label.utf8).base64EncodedString()
-        let command = "/bin/sh \(Self.script) enqueue \(quoted(workspace.id)) \(quoted(agent)) \(quoted(label))"
-        let result = try await link.run(command, input: Data(PromptEnvelope.wrap(text, for: workspace).utf8))
+        return try await enqueue(
+            "enqueue \(quoted(workspace.id)) \(quoted(agent)) \(quoted(label))",
+            prompt: PromptEnvelope.wrap(text, for: workspace))
+    }
+
+    func send(_ text: String, toPane paneId: String, in workspace: Workspace, clearingContext: Bool) async throws -> String {
+        try await enqueue(
+            "enqueue-pane \(quoted(workspace.id)) \(quoted(paneId)) \(clearingContext ? "clear" : "keep")",
+            prompt: PromptEnvelope.forTab(text))
+    }
+
+    private func enqueue(_ arguments: String, prompt: String) async throws -> String {
+        try await installScript()
+        let result = try await link.run("/bin/sh \(Self.script) \(arguments)", input: Data(prompt.utf8))
         guard result.exitStatus == 0 else { throw failure(result) }
         return String(decoding: result.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
     }

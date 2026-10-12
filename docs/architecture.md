@@ -85,7 +85,7 @@ envoi fait deux exec SSH :
    `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
 
 Un job est un dossier de fichiers texte : `workspace_id`, `agent`,
-`label`, `prompt`, `state` (`queued`, `sending`, `sent`, `failed`) et
+`label`, `clear`, `prompt`, `state` (`queued`, `sending`, `sent`, `failed`) et
 `error`. `dispatch.sh status` les liste en lignes tabulées pour l'app.
 
 Le runner, détaché, survit à la mise en veille du téléphone (spike 7).
@@ -114,6 +114,24 @@ mort) et traite les jobs de l'agent dans l'ordre d'horodatage :
 Un second envoi vers un agent occupé ne lance pas de deuxième runner :
 le verrou est pris, son job attend que le runner en place le traite.
 Les envois partent donc dans l'ordre, chacun précédé de son `/clear`.
+
+`enqueue-pane <workspace_id> <pane_id> <clear|keep>` vise le Claude
+d'un tab de worktree, que l'app désigne par son `pane_id` (premier
+Claude du tab dans `agent.list`) : le prompt arrive sur stdin tel que
+l'app l'a préparé (avertissement de dictée, sans consigne) et part
+tel quel. Le job garde le `pane_id` dans `agent`, et `clear` dans un
+fichier du même nom (absent des jobs d'un script plus ancien : `/clear`
+fait). La file, l'attente `idle`/`done` et l'ordre sont ceux d'un
+agent nommé, `herdr agent get|wait|prompt` acceptant un `pane_id`
+comme cible ; le verrou remplace `:` par `@`, absent des noms d'agent.
+Le runner ne crée jamais d'agent pour un pane : il échoue si le pane
+n'héberge plus de Claude (`agent` différent de `claude`), s'il est
+dans un autre workspace ou si son Claude porte un nom herdr (un
+`-main` a sa propre file, clé par nom : deux verrous pour le même
+Claude laisseraient passer deux envois à la fois). Il refait ces
+vérifications après `agent wait`, juste avant d'envoyer, le pane
+pouvant changer d'occupant pendant l'attente, puis n'envoie `/clear`
+que pour `clear`.
 
 `relay <workspace_id>` sert à l'agent de Home pour transmettre une
 demande au projet qu'elle vise : la demande brute arrive sur stdin, le

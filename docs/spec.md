@@ -48,7 +48,7 @@ autres restent en secours (LAN puis Tailscale).
 
 ## 3. Connexion au Mac
 
-- au lancement, la cible est toujours Home
+- au lancement, la cible est toujours Home (son `main`)
 - tant que la première liste n'est pas arrivée : « Connexion au Mac… »
 - Mac injoignable avant la première liste : « Mac injoignable », le
   détail, bouton « Réessayer ». Une fois une liste arrivée, l'app garde
@@ -67,8 +67,9 @@ autres restent en secours (LAN puis Tailscale).
     clé reste autorisée sur le Mac tant qu'elle n'est pas retirée de
     `~/.ssh/authorized_keys`
 - rafraîchissement : au retour au premier plan, en pull-to-refresh,
-  après chaque envoi, puis toutes les 5 s tant qu'un envoi est en file
-  ou qu'un agent nommé travaille ; arrêté en arrière-plan
+  après chaque envoi, puis toutes les 5 s tant qu'un envoi est en file,
+  qu'un agent nommé travaille ou que le Claude du tab ciblé (§4.2)
+  travaille ; arrêté en arrière-plan
 
 ## 4. Écran principal
 
@@ -79,21 +80,31 @@ la cible, en bas une goutte voix d'environ 92 pt entre deux ronds
 
 ### 4.1 Cible
 
-« CIBLE », puis le label (même taille pour tous les workspaces), puis
-l'état de son
-agent `<slug>-main` et ce que fera le prochain envoi :
+« CIBLE », puis le label (même taille pour tous les workspaces), en
+dessous en plus petit et en secondaire `main`, ou le nom du tab quand
+un tab est ciblé (§4.2), puis l'état de son agent `<slug>-main` et ce
+que fera le prochain envoi :
 
 | État | Titre | Prochain envoi |
 | --- | --- | --- |
 | aucun agent `<slug>-main` dans ce workspace | Pas encore d'agent | Un envoi lancera Claude dans le tab 1, nommé `<slug>-main`. |
-| envoi en file ou en cours vers ce workspace | Envoi en cours… | Un nouvel envoi partira juste après. |
+| envoi en file ou en cours vers cet agent | Envoi en cours… | Un nouvel envoi partira juste après. |
 | `idle` ou `done` | Prêt | Un envoi vide son contexte puis transmet la demande. |
 | `working`, envoi de l'app depuis moins d'une heure | Travaille sur ta demande | Un nouvel envoi attendra la fin de son travail. |
 | `working` | Travaille | Un nouvel envoi attendra la fin de son travail. |
 | `blocked` | Te pose une question : réponds dans Claude mobile | Un nouvel envoi attendra que tu lui aies répondu. |
 | état inconnu de herdr | État inconnu | Un nouvel envoi attendra qu'il soit prêt. |
 
-Un agent du même nom dans un autre workspace ne compte pas.
+Un agent du même nom dans un autre workspace ne compte pas. Un envoi
+vers un tab du workspace n'occupe pas son `<slug>-main`.
+
+Cible tab : l'état est celui du premier Claude du tab (ordre de
+`agent.list`), mêmes lignes sauf :
+
+| État | Titre | Prochain envoi |
+| --- | --- | --- |
+| plus aucun Claude dans le tab | Plus de Claude dans ce tab | Un envoi échouera : relance Claude dans ce tab sur le Mac. |
+| `idle` ou `done` | Prêt | Un envoi transmet la demande telle quelle, sans vider son contexte. (avec « Envoyer /clear avant » coché dans l'aperçu : Un envoi vide son contexte puis transmet la demande.) |
 
 Le nom `<slug>-main` n'est affiché que tant que l'agent n'existe
 pas : ailleurs, l'app dit « Claude ». Même règle pour la ligne
@@ -111,10 +122,20 @@ d'état de l'aperçu (§5) et les notices après envoi (§6).
   - bleu animé : working, ou envoi en file ou en cours
   - ambre avec halo : blocked
 - badge « en attente » quand un envoi vers ce workspace est en file ou
-  en cours
-- tap : le workspace devient la cible (verre plus clair, nom en gras,
-  sans couleur). C'est le seul sens de « focus » : rien ne bouge sur
-  le Mac
+  en cours, vers son `main` ou l'un de ses tabs
+- tap : le `main` du workspace devient la cible (verre plus clair, nom
+  en gras, sans couleur), même si un de ses tabs était ciblé. C'est le
+  seul sens de « focus » : rien ne bouge sur le Mac
+- appui long : menu « Cibler un tab de <label> », avec « main » puis
+  les tabs du workspace hors tab 1 qui contiennent au moins un Claude
+  sans nom herdr,
+  dans l'ordre herdr (`number`), nommés par leur label herdr (« tab
+  <n> » sans label) ; sans tel tab : « Aucun Claude dans les autres
+  tabs ». Choisir un tab en fait la cible ; la tuile cible affiche son
+  nom sous le label, sa pastille reste celle du `<slug>-main`
+- le tab ciblé n'est pas gardé : il le reste jusqu'au prochain tap,
+  au relancement (retour sur Home) ou à la disparition du tab dans
+  herdr (retour sur le `main` du workspace)
 
 ### 4.3 Boutons
 
@@ -129,7 +150,8 @@ Bouton rond à droite de la pilule du Mac, « Historique des envois »
 pour VoiceOver. Il ouvre une feuille « Historique » (« Fermer ») qui
 liste les envois gardés (§6), du plus récent au plus ancien :
 
-- label du workspace, date relative, statut : une pastille seule de
+- label du workspace (`<label> — <tab>` pour un envoi vers un tab),
+  date relative, statut : une pastille seule de
   10 pt à la couleur de l'état, sans texte, fond ni icône ; jaune
   pleine qui pulse pendant l'envoi, jaune creuse en file, verte une
   fois envoyé, rouge en échec. Couleurs propres à l'historique,
@@ -143,9 +165,11 @@ liste les envois gardés (§6), du plus récent au plus ancien :
   « Copié » deux secondes : l'icône devient une coche dans la couleur
   d'accent
 - « Renvoyer » ferme la feuille et renvoie le texte tel quel au
-  workspace d'origine, sans passer par l'aperçu : c'est un nouvel envoi
-  (§6), avec sa notice et sa propre entrée. Échecs, en notice :
-  - workspace d'origine absent de herdr : « <label> n'existe plus »,
+  workspace d'origine, ou au tab d'origine avec le même choix de
+  `/clear`, sans passer par l'aperçu : c'est un nouvel envoi (§6), avec
+  sa notice et sa propre entrée. Échecs, en notice :
+  - workspace ou tab d'origine absent de herdr : « <label> n'existe
+    plus » (`<label> — <tab>` pour un tab),
     « Copie le texte depuis l'historique pour l'envoyer ailleurs. »
   - workspaces pas encore chargés : « Mac injoignable », « Renvoie la
     demande une fois les workspaces chargés. »
@@ -236,10 +260,17 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 ### 5.2 Aperçu
 
 - en tête « Aperçu » et « Fermer »
-- la cible (« → label »), avec son dot, modifiable par « Changer de
-  cible » (liste des workspaces, dot comme dans la grille, badge « en
-  attente »)
+- la cible (« → `<label> — main` » ou « → `<label> — <tab>` »), avec
+  son dot, modifiable par « Changer de cible » : une section par
+  workspace, son `main` (dot comme dans la grille, badge « en
+  attente ») puis, en retrait, ses tabs ciblables (§4.2) avec le dot
+  et le badge de leur Claude
 - l'état de la cible et le prochain envoi (§4.1)
+- cible tab seulement : case « Envoyer /clear avant », décochée à
+  l'ouverture et à chaque changement de tab
+- tab ciblé disparu de herdr pendant l'aperçu : « Ce tab n'existe
+  plus : choisis une autre cible. », « Envoyer » désactivé ; jamais de
+  repli silencieux sur le `main`
 - le texte, éditable, placeholder « Que doit faire l'agent ? » ;
   clavier ouvert pour Écrire, pré-rempli pour Coller et la dictée
 - l'origine : « Écrit », « Collé », « Dictée nettoyée », ou
@@ -254,7 +285,8 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   à la fin du texte, après un retour à la ligne, sans toucher au texte
   déjà là, corrigé ou non
 - « Envoyer », désactivé tant que le texte est vide ou pendant
-  l'envoi ; en cas d'échec, l'erreur s'affiche au-dessus et l'aperçu
+  l'envoi ; vers un tab sans Claude, l'envoi échoue avant le Mac :
+  « Plus de Claude dans <label> — <tab> : relance-le sur le Mac. » ; en cas d'échec, l'erreur s'affiche au-dessus et l'aperçu
   reste ouvert ; en cas de succès il se ferme
 - apprentissage des corrections, sans rien afficher : quand on tape
   Envoyer sur une dictée, le texte proposé (nettoyé, ou brut) est
@@ -276,7 +308,8 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
 
 ## 6. Ce que fait un envoi
 
-Cible : l'agent herdr `<slug>-main` dans le tab 1 du workspace.
+Cible : l'agent herdr `<slug>-main` dans le tab 1 du workspace. Un
+envoi vers un tab suit §6.3.
 
 1. agent absent : split d'un pane du tab 1 (cwd de ce pane) et
    lancement de Claude en yolo mode, nom Remote Control `<label>—main`
@@ -297,12 +330,19 @@ Notice après l'envoi (5 s, fermée au tap) :
 | `idle` ou `done` | Envoyé à <label> — Le Mac vide le contexte de Claude, puis lui transmet la demande. |
 | autre, ou envoi déjà en file | En file pour <label> — Claude est occupé : la demande partira dès qu'il aura fini. |
 
+Vers un tab, `<label>` devient `<label> — <tab>`, et un Claude `idle`
+ou `done` sans « Envoyer /clear avant » donne « Envoyé à <label> — <tab>
+— Le Mac transmet la demande telle quelle à Claude, qui garde son
+contexte. »
+
 Un envoi suivi par l'app qui passe `failed` affiche « Échec de l'envoi
-vers <label> » avec sa raison, une seule fois.
+vers <label> » (`<label> — <tab>` pour un tab) avec sa raison, une
+seule fois.
 
 Chaque envoi est enregistré sur l'iPhone dès qu'on tape Envoyer, avant
 la connexion au Mac : le texte tel que saisi (sans la consigne), le
-workspace et la date. Son statut :
+workspace, le tab et le choix de `/clear` pour un envoi vers un tab, et
+la date. Son statut :
 
 | Moment | Statut |
 | --- | --- |
@@ -365,7 +405,32 @@ Le relais suit le même chemin qu'un envoi de l'app vers ce workspace
 s'affiche sur la ligne du projet. Un relais vers Home ou vers un
 workspace inconnu est refusé.
 
-### 6.3 Nommage
+### 6.3 Envoi vers un tab
+
+Cible : le premier Claude du tab choisi (§4.2), désigné par son
+`pane_id`, sans nom herdr (les Claude lancés par /start n'en ont pas).
+
+1. le texte part précédé du seul avertissement de dictée, sans
+   consigne standard (§6.1) ni consigne de Home (§6.2), réservées au
+   `main` :
+
+   ```text
+   Demande envoyée depuis l'iPhone (peut venir d'une dictée vocale :
+   attention aux erreurs de transcription).
+
+   <texte>
+   ```
+2. `/clear` avant le texte seulement si « Envoyer /clear avant » est
+   coché
+3. Claude `working` ou `blocked` : même file que pour le `main`,
+   l'envoi attend `idle` ou `done`, ordre conservé
+4. jamais de lancement de Claude : un pane qui n'héberge plus de
+   Claude, qui appartient à un autre workspace ou dont le Claude porte
+   un nom herdr (un `-main` déplacé, qui a sa propre file) fait échouer
+   l'envoi ; vérifié à la prise du job et juste avant d'envoyer, après
+   l'attente
+
+### 6.4 Nommage
 
 - agent herdr : `slug(label)-main`
   - slug : minuscules, tout caractère hors `[a-z0-9_-]` devient `-`,
@@ -411,8 +476,13 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 
 - `workspace.list` : `workspace_id`, `number`, `label` ; son
   `agent_status`, agrégé sur tous les tabs, n'est pas lu
-- `agent.list` : `name` (absent pour un Claude lancé à la main),
+- `agent.list` : `name` (absent pour un Claude lancé à la main ou par
+  /start), `agent` (`claude` pour un Claude), `pane_id`,
   `workspace_id`, `tab_id`, `agent_status`
+- `tab.list` sans paramètre : `tab_id`, `workspace_id`, `number`,
+  `label` ; son `agent_status` n'est pas lu. Échec de cet appel : la
+  dernière liste reçue est gardée (aucun tab avant la première), le
+  reste de l'écran est inchangé
 - tolérance : tout autre champ est ignoré, un `agent_status` inconnu
   devient « État inconnu »
 
@@ -422,10 +492,13 @@ de l'app : sa sortie reste lisible par l'app plus récente.
 | --- | --- | --- |
 | `install` | le script | rien |
 | `enqueue <workspace_id> <agent> <label_base64>` | prompt enveloppé | id du job |
+| `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | texte brut | id du job ; code 2 pour un `pane_id` hors `[A-Za-z0-9]+:[A-Za-z0-9]+` ou une option inconnue |
 | `relay <workspace_id>` | demande brute | id du job ; code 2 vers Home ou un workspace inconnu |
 | `status` | rien | une ligne par job : `id`, `workspace_id`, `agent`, `state`, `error`, séparés par des tabulations |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | le hook | rien |
 
+- `agent` : nom de l'agent, ou `pane_id` pour un envoi vers un tab
+  (une app plus ancienne le compte dans le workspace)
 - `state` : `queued`, `sending`, `sent`, `failed` ; l'app ignore une
   ligne d'état inconnu
 - `error` : sur une ligne, tabulations et retours remplacés par des

@@ -3,8 +3,11 @@ world="$FAKE_HERDR_WORLD"
 
 agent_json() {
   name="$1"
-  printf '{"result":{"agent":{"name":"%s","workspace_id":"%s","agent_status":"%s","agent_session":{"value":"%s"}}}}\n' \
-    "$name" "$(cat "$world/agents/$name/workspace_id")" "$(cat "$world/agents/$name/status")" "$(cat "$world/agents/$name/session")"
+  kind="$(cat "$world/agents/$name/kind" 2>/dev/null || echo claude)"
+  herdr_name="$(cat "$world/agents/$name/name" 2>/dev/null)"
+  case "$name" in *:*) ;; *) herdr_name="$name" ;; esac
+  printf '{"result":{"agent":{"agent":"%s","name":"%s","workspace_id":"%s","agent_status":"%s","agent_session":{"value":"%s"}}}}\n' \
+    "$kind" "$herdr_name" "$(cat "$world/agents/$name/workspace_id")" "$(cat "$world/agents/$name/status")" "$(cat "$world/agents/$name/session")"
 }
 
 case "$1 $2" in
