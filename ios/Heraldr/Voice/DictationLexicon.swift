@@ -1,10 +1,12 @@
 import Foundation
 
-struct DictationCorrection: Codable, Equatable, Sendable {
+struct DictationCorrection: Codable, Equatable, Sendable, Identifiable {
     let heard: String
     var meant: String
     var count: Int
     var learnedAt: Date
+
+    var id: String { heard }
 }
 
 struct DictationLexicon: Codable, Equatable, Sendable {
@@ -30,6 +32,29 @@ struct DictationLexicon: Codable, Equatable, Sendable {
                 remember(heard: heard, meant: meant, at: date)
             }
         }
+    }
+
+    static func normalized(heard: String, meant: String) -> (heard: String, meant: String)? {
+        let heardWords = words(heard)
+        let meantWords = words(meant)
+        guard
+            (1...maxWordsPerSide).contains(heardWords.count),
+            (1...maxWordsPerSide).contains(meantWords.count),
+            heardWords.map(key) != meantWords.map(key)
+        else { return nil }
+        return (heardWords.joined(separator: " "), meantWords.joined(separator: " "))
+    }
+
+    @discardableResult
+    mutating func correct(heard: String, meant: String, replacing original: String? = nil, at date: Date = .now) -> Bool {
+        guard let correction = Self.normalized(heard: heard, meant: meant) else { return false }
+        if let original { forget(heard: original) }
+        remember(heard: correction.heard, meant: correction.meant, at: date)
+        return true
+    }
+
+    mutating func forget(heard: String) {
+        corrections.removeAll { Self.key($0.heard) == Self.key(heard) }
     }
 
     private mutating func remember(heard: String, meant: String, at date: Date) {

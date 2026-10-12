@@ -132,4 +132,54 @@ struct DictationLexiconTests {
 
         #expect(TranscriptCleaner.instructions(correcting: lexicon).hasSuffix("\n- on push → git push"))
     }
+
+    @Test("une correction ajoutée à la main pour une erreur connue la remplace et remonte en tête")
+    func manualCorrectionReplacesKnownHeard() {
+        var lexicon = DictationLexicon()
+        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+        lexicon.learn(sent: "Ouvre le fichier GitHub demain.", origin: dictated("Ouvre le fichier guide hub demain."))
+
+        let accepted = lexicon.correct(heard: "On Push", meant: "git pull")
+
+        #expect(accepted)
+
+        #expect(lexicon.promptLines == ["On Push → git pull", "guide hub → GitHub"])
+    }
+
+    @Test("modifier l'entendu d'une correction oublie l'ancien")
+    func editingHeardForgetsOriginal() {
+        var lexicon = DictationLexicon()
+        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+
+        lexicon.correct(heard: "on pousse", meant: "git push", replacing: "on push")
+
+        #expect(lexicon.promptLines == ["on pousse → git push"])
+    }
+
+    @Test("une correction vide, trop longue ou identique à l'entendu est refusée")
+    func invalidManualCorrectionIsRejected() {
+        var lexicon = DictationLexicon()
+        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+
+        let accepted = [
+            lexicon.correct(heard: "  ", meant: "git push"),
+            lexicon.correct(heard: "on push", meant: "git push origin main"),
+            lexicon.correct(heard: "Github", meant: "GitHub"),
+            lexicon.correct(heard: "on push", meant: "", replacing: "on push"),
+        ]
+
+        #expect(accepted == [false, false, false, false])
+
+        #expect(lexicon.promptLines == ["on push → git push"])
+    }
+
+    @Test("une correction supprimée ne guide plus la dictée")
+    func forgottenCorrectionIsGone() {
+        var lexicon = DictationLexicon()
+        lexicon.learn(sent: "Ensuite git push la branche.", origin: dictated("Ensuite on push la branche."))
+
+        lexicon.forget(heard: "On Push")
+
+        #expect(lexicon.corrections.isEmpty)
+    }
 }

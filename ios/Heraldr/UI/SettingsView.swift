@@ -2,11 +2,19 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var lexicon = DictationLexiconStore.load()
     private let build = BuildInfo.current
 
     var body: some View {
         NavigationStack {
             List {
+                Section("Dictée") {
+                    NavigationLink {
+                        LexiconView(lexicon: $lexicon)
+                    } label: {
+                        LabeledContent("Corrections", value: "\(lexicon.corrections.count)")
+                    }
+                }
                 Section("Build installé") {
                     LabeledContent("Version", value: build.version)
                     LabeledContent("Commit", value: build.commit ?? "inconnu")
@@ -20,6 +28,7 @@ struct SettingsView: View {
                 }
             }
             .textSelection(.enabled)
+            .onChange(of: lexicon) { DictationLexiconStore.save(lexicon) }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

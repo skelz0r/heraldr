@@ -150,8 +150,36 @@ liste les envois gardés (§6), du plus récent au plus ancien :
 ### 4.5 Réglages
 
 Bouton rond engrenage à droite du bouton Historique, « Réglages » pour
-VoiceOver. Il ouvre une feuille « Réglages » (« Fermer ») qui dit quel
-build tourne, sous « Build installé » :
+VoiceOver. Il ouvre une feuille « Réglages » (« Fermer »), à mi-hauteur
+et extensible, en deux sections.
+
+« Dictée » : « Corrections », avec leur nombre, ouvre la liste du
+lexique de dictée (§5.2), « Corrections de dictée » :
+
+- une ligne par correction, « entendu → voulu », dans l'ordre du
+  lexique, les plus récentes d'abord ; en pied, « <n> sur 50, les plus
+  récentes d'abord. Les 20 premières guident le nettoyage. »
+- balayer une ligne la supprime (« Supprimer ») ; pas de « Tout
+  vider »
+- taper une ligne ouvre « Modifier la correction », le bouton « + »
+  (« Ajouter une correction ») ouvre « Nouvelle correction » : champs
+  « Entendu » et « Voulu », sans correction automatique ni majuscule
+  imposée, « Annuler » et « Enregistrer »
+- « Enregistrer » reste désactivé tant que chaque côté ne compte pas
+  de 1 à 3 mots, ou que voulu et entendu sont égaux sans tenir compte
+  de la casse, des accents ni de la ponctuation en bord de mot ; les
+  espaces et la ponctuation en bord de mot sont retirés à
+  l'enregistrement
+- une correction enregistrée remonte en tête, comme une correction
+  apprise ; un entendu déjà dans le lexique est remplacé ; modifier
+  l'entendu retire l'ancien
+- les changements sont gardés aussitôt et servent dès la dictée
+  suivante
+- sans correction : « Aucune correction », « Corrige un mot mal
+  entendu dans l'aperçu d'une dictée : la correction s'ajoutera ici à
+  l'envoi. » et « Ajouter une correction »
+
+« Build installé » dit quel build tourne :
 
 - « Version » : `CFBundleShortVersionString` (0.1.0, jamais incrémentée)
 - « Commit » : SHA court du commit buildé, suffixé `-dirty` si le
@@ -160,8 +188,7 @@ build tourne, sous « Build installé » :
 
 Commit et date sont écrits dans l'`Info.plist` du `.app` à chaque build
 (`HeraldrBuildCommit`, `HeraldrBuildDate` en ISO 8601 UTC), quel que
-soit le chemin : `bin/` ou Xcode. Rien de plus dans cette feuille
-aujourd'hui.
+soit le chemin : `bin/` ou Xcode.
 
 ## 5. Composer une demande
 
@@ -237,8 +264,8 @@ Les trois boutons mènent au même aperçu, sur la cible du moment.
   suppression seuls, ni pour un envoi écrit ou collé
 - le lexique est gardé sur l'iPhone : une erreur déjà connue prend la
   nouvelle correction et remonte en tête ; au-delà de 50 corrections,
-  les plus anciennes sont oubliées. Pas d'écran pour le consulter ni
-  le vider
+  les plus anciennes sont oubliées. Il se consulte et se corrige dans
+  les Réglages (§4.5)
 
 ## 6. Ce que fait un envoi
 
