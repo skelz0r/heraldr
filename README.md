@@ -6,8 +6,13 @@
 
 <p align="center">
   <b>Speak an idea on your iPhone, a Claude Code agent picks it up on your Mac.</b><br>
-  A voice-first dispatch remote for <a href="https://herdr.dev">herdr</a> workspaces, over plain SSH.
+  An opinionated, voice-first dispatch remote for <a href="https://herdr.dev">herdr</a> workspaces, over plain SSH.
 </p>
+
+> [!WARNING]
+> **Work in progress.** The project changes quickly, with no stability
+> guarantees: commands, conventions and the contract with the Mac can
+> break from one commit to the next.
 
 <p align="center">
   <img src="docs/screenshots/home.png" width="250" alt="Home screen: target workspace and the state of each agent">
@@ -38,10 +43,6 @@ with nothing running permanently on the Mac side.
   speech recognizer keeps mishearing.
 - **No server.** Pairing by QR code, a pinned host key, SSH over the LAN
   or Tailscale. Nothing to install or keep running on the Mac.
-
-**Work in progress.** The project changes quickly, with no stability
-guarantees: commands, conventions and the contract with the Mac can
-break from one commit to the next.
 
 This is not a general-purpose herdr client. The app only works if herdr
 and Claude are organized in one specific way, mine: it was built for my
