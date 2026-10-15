@@ -432,6 +432,34 @@ struct ConnectionTests {
         }
     }
 
+    @Test("a link gone stale in the background is redialed: the refresh stays online")
+    func staleLinkRefresh() async throws {
+        let session = await Session(world())
+        await session.mac.goStale()
+
+        await session.model.refresh()
+
+        #expect(session.model.connection == .online)
+    }
+
+    @Test("a link gone stale in the background is redialed: the tapped answer loads in full")
+    func staleLinkAnswer() async throws {
+        var scenario = world()
+        scenario.answers = ["job-1": "Fixed the login\nThe session cookie was not renewed."]
+        let session = await Session(scenario)
+        await session.mac.goStale()
+        let notification = try #require(
+            AnswerNotification(userInfo: [
+                "kind": "answer", "job_id": "job-1", "workspace_id": "wS",
+                "aps": ["alert": ["body": "Fixed the login"]],
+            ]))
+
+        await session.model.open(notification)
+
+        #expect(session.model.presentedAnswer?.failure == nil)
+        #expect(session.model.presentedAnswer?.answer.body == "The session cookie was not renewed.")
+    }
+
     @Test("on a question tap, its workspace becomes the target; without an opened link, the card offers it")
     func questionTap() async throws {
         let session = await Session(world())

@@ -12,10 +12,15 @@
         private var sequence = 100
         private var holds: Set<String> = []
         private var waiting: [String: CheckedContinuation<Void, Never>] = [:]
+        private var linkStale = false
 
         init(_ scenario: FakeMacScenario) {
             self.scenario = scenario
             holds = Set(scenario.stalled ?? [])
+        }
+
+        func goStale() {
+            linkStale = true
         }
 
         func update(_ change: @Sendable (inout FakeMacScenario) -> Void) {
@@ -116,11 +121,16 @@
             }
         }
 
-        func disconnect() async {}
+        func disconnect() async {
+            linkStale = false
+        }
 
         private func pass(_ step: String) async throws {
             if holds.contains(step) {
                 await withCheckedContinuation { waiting[step] = $0 }
+            }
+            if linkStale {
+                throw MacLinkError.connectionLost
             }
             if let unreachable = scenario.unreachable {
                 throw MacLinkError.unreachable(unreachable)

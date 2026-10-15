@@ -73,9 +73,15 @@ default herdr session).
 Both go through the `MacTransport` protocol (`Mac/`): `run` (exec of a
 command, app-owned `CommandResult` with exit code and outputs) and
 `exchangeWithHerdr` (one JSON request on `herdr.sock`). `MacLink`, the
-SSH actor that holds the connection and reconnects, is its only real
-implementation; `Dispatcher` and `HerdrClient` only know the protocol,
-and nothing outside `Mac/` and `Pairing/` imports HeelerSSH.
+SSH actor that holds the connection and dials it when there is none,
+is its only real implementation: it turns the SSH errors of a dead
+connection (`channelFailed`, `connectionInvalidated`,
+`connectionFailed`, `unexpectedEOF`) into `MacLinkError.connectionLost`.
+`AppModel` wraps the link in `RedialingTransport`, which on
+`connectionLost` drops the connection and runs the command once more,
+so the fake Mac (a double of `MacLink`) goes through the same redial.
+`Dispatcher` and `HerdrClient` only know the protocol, and nothing
+outside `Mac/` and `Pairing/` imports HeelerSSH.
 `AppModel` receives an `AppEnvironment`: UserDefaults (history, paired
 Mac), the lexicon file, the transport factory for a paired Mac
 (`MacLink` and the Keychain key for real), pairing, the notification
