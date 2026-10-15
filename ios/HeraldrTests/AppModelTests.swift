@@ -432,6 +432,61 @@ struct ConnectionTests {
         }
     }
 
+    @Test("a link gone stale in the background is redialed: the refresh stays online")
+    func staleLinkRefresh() async throws {
+        let session = await Session(world())
+        await session.mac.goStale(failingAt: "workspace.list")
+
+        await session.model.refresh()
+
+        #expect(session.model.connection == .online)
+    }
+
+    @Test("a link gone stale in the background is redialed: the tapped answer loads in full")
+    func staleLinkAnswer() async throws {
+        var scenario = world()
+        scenario.answers = ["job-1": "Fixed the login\nThe session cookie was not renewed."]
+        let session = await Session(scenario)
+        await session.mac.goStale(failingAt: "read-answer")
+        let notification = try #require(
+            AnswerNotification(userInfo: [
+                "kind": "answer", "job_id": "job-1", "workspace_id": "wS",
+                "aps": ["alert": ["body": "Fixed the login"]],
+            ]))
+
+        await session.model.open(notification)
+
+        #expect(session.model.presentedAnswer?.failure == nil)
+        #expect(session.model.presentedAnswer?.answer.body == "The session cookie was not renewed.")
+    }
+
+    @Test("a link gone stale in the background is redialed: the send goes through, once")
+    func staleLinkSend() async throws {
+        let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
+        while case .changesPending = session.model.lexiconBackup { await Task.yield() }
+        await session.mac.goStale(failingAt: "install")
+
+        try await session.model.send("Fix the bug", to: Target(session.workspace("wS")))
+
+        #expect(session.model.notice?.kind == .sent)
+        #expect(await session.mac.prompts.count == 1)
+    }
+
+    @Test("a connection lost once the Mac has the request never sends it a second time")
+    func connectionLostAfterEnqueue() async throws {
+        let session = await Session(world(agents: [main("acme-main", in: "wS", "idle")]))
+        await session.mac.hold("enqueue:done")
+        let acme = try session.workspace("wS")
+        let sending = Task { try await session.model.send("Fix the bug", to: Target(acme)) }
+        while !(await session.mac.isWaiting(at: "enqueue:done")) { await Task.yield() }
+        await session.mac.goStale(failingAt: "enqueue:done")
+        await session.mac.release("enqueue:done")
+
+        _ = try? await sending.value
+
+        #expect(await session.mac.prompts.count == 1)
+    }
+
     @Test("on a question tap, its workspace becomes the target; without an opened link, the card offers it")
     func questionTap() async throws {
         let session = await Session(world())

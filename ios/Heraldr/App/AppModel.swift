@@ -431,7 +431,7 @@ final class AppModel {
     private func attach(_ mac: PairedMac) {
         guard let link = environment.connect(mac) else { return }
         self.mac = mac
-        self.link = link
+        self.link = RedialingTransport(link)
         connection = .connecting
     }
 
