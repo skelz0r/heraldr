@@ -410,6 +410,7 @@ final class AppModel {
     func pause() {
         pollTask?.cancel()
         pollTask = nil
+        Task { [link] in await link?.disconnect() }
     }
 
     private func attach(_ mac: PairedMac) {

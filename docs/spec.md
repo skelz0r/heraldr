@@ -81,6 +81,8 @@ others stay as fallbacks (LAN then Tailscale).
   after each send, then every 5 s as long as a send is queued, a named
   agent is working or the Claude of the targeted tab (§4.2) is
   working; stopped in the background
+- the SSH connection is closed when the app goes to the background and
+  dialed again by the first command back in the foreground
 
 ## 4. Main screen
 
