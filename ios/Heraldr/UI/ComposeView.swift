@@ -43,6 +43,10 @@ struct ComposeView: View {
         return tabVanished(from: target) ? nil : target
     }
 
+    private var targetLabel: String {
+        target?.label ?? (workspaceId.isEmpty && request.workspaceId == nil ? "Home — \(Tab.mainName)" : "?")
+    }
+
     private var targetVanished: Bool {
         guard let workspace = model.workspaces.first(where: { $0.id == workspaceId }) else { return false }
         return tabVanished(from: model.target(in: workspace, tabId: tabId))
@@ -86,6 +90,17 @@ struct ComposeView: View {
                 .presentationDetents([.medium, .large])
         }
         .onChange(of: tabId) { clearsContext = false }
+        .onChange(of: model.homeWorkspace?.id, initial: true) { _, homeId in
+            if workspaceId.isEmpty, request.workspaceId == nil, let homeId {
+                workspaceId = homeId
+            }
+        }
+        .onChange(of: model.homeDictationRequest) {
+            guard model.takeHomeDictationRequest(), stage == .preview, !sending else { return }
+            choosingTarget = false
+            showingRaw = false
+            dictateFollowUp()
+        }
         .sheet(isPresented: $showingRaw) {
             RawTranscriptSheet(origin: origin)
                 .presentationDetents([.medium])
@@ -93,7 +108,7 @@ struct ComposeView: View {
     }
 
     private func configure() {
-        workspaceId = request.workspaceId
+        workspaceId = request.workspaceId ?? model.homeWorkspace?.id ?? ""
         tabId = request.tabId
         switch request.source {
         case .voice:
@@ -112,11 +127,12 @@ struct ComposeView: View {
     }
 
     private var targetPill: some View {
-        Label(target?.label ?? "?", systemImage: "arrow.right")
+        Label(targetLabel, systemImage: "arrow.right")
             .font(.subheadline.weight(.bold))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .glassEffect(.regular, in: .capsule)
+            .accessibilityIdentifier("compose.pill")
     }
 
     private var recordingStage: some View {
@@ -222,7 +238,7 @@ struct ComposeView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.right").font(.title3.weight(.heavy)).foregroundStyle(Color.heraldrAccent)
-                    Text(target?.label ?? "?").font(.title2.weight(.heavy)).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(targetLabel).font(.title2.weight(.heavy)).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer()
                     if let target {
                         StatusDot(status: model.targetState(for: target).dotStatus)

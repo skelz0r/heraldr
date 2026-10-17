@@ -11,8 +11,10 @@ struct ComposeRequest: Identifiable {
 
     let id = UUID()
     let source: Source
-    let workspaceId: String
+    let workspaceId: String?
     let tabId: String?
+
+    static var dictationToHome: ComposeRequest { ComposeRequest(source: .voice, workspaceId: nil, tabId: nil) }
 }
 
 struct HomeView: View {
@@ -52,6 +54,14 @@ struct HomeView: View {
         .animation(.spring(duration: 0.35), value: model.unopenedQuestion)
         .fullScreenCover(item: $compose) { request in
             ComposeView(request: request)
+        }
+        .onChange(of: model.homeDictationRequest, initial: true) {
+            guard compose == nil, model.takeHomeDictationRequest() else { return }
+            showingHistory = false
+            showingSettings = false
+            confirmingForget = false
+            model.presentedAnswer = nil
+            compose = .dictationToHome
         }
         .sheet(isPresented: $showingHistory) {
             HistoryView()

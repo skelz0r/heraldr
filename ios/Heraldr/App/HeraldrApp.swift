@@ -1,10 +1,20 @@
+import AppIntents
 import SwiftUI
 
 @main
 struct HeraldrApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel(environment: .launch)
+    @State private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let model = AppModel(environment: .launch)
+        _model = State(initialValue: model)
+        AppDependencyManager.shared.add(dependency: model)
+        #if DEBUG
+            SimulatedActionButton.listen(for: model)
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {

@@ -380,6 +380,13 @@ in flight).
     the cleanup (`DictationLexicon.replacingKnownVariants`), the model
     going through `CleaningModel`, injectable in tests
   - `Push`: authorization, APNs token, notification taps
+  - `App`: `DictateToHomeIntent` (Action button, Shortcuts, Siri), a
+    foreground App Intent that gets the `AppModel` registered with
+    `AppDependencyManager` and calls `dictateToHome()`; the model
+    raises `homeDictationRequest`, which `HomeView` (compose closed)
+    or `ComposeView` (compose open) takes. Under `#if DEBUG`, the
+    Darwin notification `com.skelz0r.heraldr.debug.action-button`
+    calls the same method, posted by `ActionButtonTests`
   - `UI`: list, buttons, preview
 - Foundation Models unavailable (Apple Intelligence off, model not
   ready): the raw transcript is kept and the preview says so

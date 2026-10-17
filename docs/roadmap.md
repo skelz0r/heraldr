@@ -49,7 +49,8 @@ user to Claude mobile.
   `SessionDriver.swift` patch; in a dedicated branch, with
   `bin/local-ci` and `bin/qa --all`
 - multiple machines (several QR codes)
-- widget and Action button action to start voice directly
+- widget or Control Center control to start voice directly (the
+  Action button shipped, see spec §5.3)
 - Siri shortcut "dispatch to acme"
 - dictation log analysis script (`mac/dictation-report.mjs`): share of
   edited words per week, undone replacements per misheard → term pair,
