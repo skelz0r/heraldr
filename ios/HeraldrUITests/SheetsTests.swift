@@ -70,6 +70,30 @@ final class SheetsTests: XCTestCase {
         capture("lexicon-new-term", in: app)
     }
 
+    func testDictationLanguage() {
+        let app = launch("demo")
+        element("home.settings", in: app).tap()
+        let setting = element("settings.dictationLanguage", in: app)
+        waitFor(setting)
+        XCTAssertTrue(setting.label.contains("Same as iPhone"), setting.label)
+
+        setting.tap()
+        let iPhone = element("dictationLanguage.iPhone", in: app)
+        waitFor(iPhone)
+        XCTAssertTrue(iPhone.isSelected)
+        capture("dictation-language", in: app)
+
+        let french = element("dictationLanguage.fr-FR", in: app)
+        for _ in 0..<3 where !french.isHittable {
+            app.swipeUp()
+        }
+        french.tap()
+        XCTAssertTrue(french.isSelected)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        waitFor(setting)
+        XCTAssertTrue(setting.label.contains("French (France)"), setting.label)
+    }
+
     func testEmptyLexicon() {
         let app = launch("demo")
         element("home.settings", in: app).tap()

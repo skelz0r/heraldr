@@ -30,6 +30,9 @@
             if !relaunching {
                 try? FileManager.default.removeItem(at: journalFile)
             }
+            if !relaunching, let language = scenario.dictationLanguage {
+                DictationLanguageStore.save(.specific(language), to: defaults)
+            }
             if let lexicon = scenario.lexicon {
                 lexiconStore.save(lexicon)
             }
@@ -37,6 +40,10 @@
                 defaults: defaults,
                 lexiconStore: lexiconStore,
                 dictationJournalFile: journalFile,
+                transcriptionLocales: {
+                    let identifiers = scenario.transcriptionLocales ?? FakeMacScenario.defaultTranscriptionLocales
+                    return TranscriptionLocales.sortedByName(identifiers.map(Locale.init(identifier:)))
+                },
                 connect: { _ in mac },
                 pair: { code in
                     let parsed: PairingCode
