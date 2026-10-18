@@ -258,7 +258,8 @@ whatever the path: `bin/` or Xcode.
 
 ## 5. Composing a request
 
-The three buttons lead to the same preview, on the current target.
+The three buttons lead to the same preview, on the current target;
+the Action button leads to the dictation on Home (§5.3).
 
 ### 5.1 Dictation
 
@@ -456,6 +457,27 @@ The three buttons lead to the same preview, on the current target.
     pending file is excluded from the iCloud backup
   - the entry keeps the text as it was when Send was tapped, even if
     it is edited during the send
+
+### 5.3 Action button
+
+- the app exposes one App Shortcut, "Dictate to Home" (Siri phrases
+  "Dictate to Home with Heraldr", "Dictate with Heraldr"), to pick in
+  Settings > Action Button > Shortcut; also available in Shortcuts and
+  Siri
+- it opens the app and the dictation screen (§5.1) on Home's `main`,
+  whatever the target was, the same way a tap on the voice drop does;
+  Home also becomes the target of the main screen
+- works the same with the app killed, in the background or open:
+  the microphone starts without waiting for the workspace list; until
+  it arrives, the target reads "Home — main", then Home's label
+- the History, Settings or answer sheet, or the "Forget this Mac?"
+  confirmation, open at that time is closed first
+- a preview already open keeps its text and its target: the button
+  starts a "Dictate more" burst there (§5.2); a dictation or a cleanup
+  in progress, or a send, is left as is
+- app not paired: the pairing screen, no dictation
+- microphone or speech recognition refused: same message as from the
+  voice drop (§5.1)
 
 ## 6. What a send does
 

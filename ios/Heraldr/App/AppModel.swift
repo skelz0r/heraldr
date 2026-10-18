@@ -87,6 +87,7 @@ final class AppModel {
     var notice: Notice?
     var unopenedQuestion: QuestionNotification?
     var presentedAnswer: PresentedAnswer?
+    private(set) var homeDictationRequest: UUID?
     private var pushDevice: PushDevice?
     private var pushDeviceRegistered = false
     private var notificationsRequested = false
@@ -120,6 +121,10 @@ final class AppModel {
 
     var lexiconBackup: LexiconKeeper.BackupState {
         lexiconKeeper.backupState
+    }
+
+    var homeWorkspace: Workspace? {
+        workspaces.first(where: \.isHome) ?? workspaces.first
     }
 
     var selectedWorkspace: Workspace? {
@@ -183,8 +188,19 @@ final class AppModel {
     }
 
     func resetTargetToHome() {
-        selectedWorkspaceId = workspaces.first(where: \.isHome)?.id ?? workspaces.first?.id
+        selectedWorkspaceId = homeWorkspace?.id
         selectedTabId = nil
+    }
+
+    func dictateToHome() {
+        guard mac != nil else { return }
+        resetTargetToHome()
+        homeDictationRequest = UUID()
+    }
+
+    func takeHomeDictationRequest() -> Bool {
+        defer { homeDictationRequest = nil }
+        return homeDictationRequest != nil
     }
 
     func refresh() async {

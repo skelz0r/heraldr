@@ -47,6 +47,10 @@ already cover. A defect found is first reproduced in a test (fake Mac,
   `tail -1 ~/.config/heraldr/journal-dictees.jsonl` on the Mac shows
   the replacement.
 - [ ] Uninstall, reinstall, pair: "Lexicon restored from the Mac".
+- [ ] Settings > Action Button > Shortcut > Heraldr > "Dictate to
+  Home", then press the button with the app killed, then in the
+  background on another target: the microphone opens on Home's
+  `main` each time, the request sent lands in Home.
 
 ## Notifications (Push/, mac/notify-hook.mjs)
 
