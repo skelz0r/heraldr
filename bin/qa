@@ -51,7 +51,7 @@ flows_from_diff() {
     base="$(git -C "${PROJECT_DIR}" merge-base HEAD "${BASE_BRANCH}")" || return 1
     paths="$(git -C "${PROJECT_DIR}" diff --name-only "${base}")" || return 1
     paths+=$'\n'"$(git -C "${PROJECT_DIR}" ls-files --others --exclude-standard)" || return 1
-    while IFS= read -r path; do [ -n "$path" ] && flows_for_path "$path"; done <<< "$paths" | sort -u
+    while IFS= read -r path; do [ -z "$path" ] || flows_for_path "$path"; done <<< "$paths" | sort -u
 }
 
 simulator_udid() {

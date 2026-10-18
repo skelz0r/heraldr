@@ -63,6 +63,17 @@ others stay as fallbacks (LAN then Tailscale).
     again"
   - Tailscale SSH answered: "Tailscale SSH answered instead of the
     Mac's sshd: turn it off (RunSSH: false)"
+  - connection still lost after redialing: "Connection to the Mac
+    lost"
+  - command with no reply before its timeout: "The Mac did not answer
+    in time"
+- a connection found lost by a command (typically gone stale while the
+  app was in the background) is dropped and redialed once, without
+  showing anything: the command runs again on the new connection.
+  Never for `enqueue` and `enqueue-pane`, which the Mac may already
+  have received (a request sent twice): a send absorbs the stale
+  connection on its `install`, which runs first. A timeout is not
+  redialed, the command may have run on the Mac
 - Mac pill at the top (`<user>@<address>`, dot: green online, blue
   connecting, amber unreachable), menu:
   - "Refresh"

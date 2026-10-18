@@ -12,10 +12,15 @@
         private var sequence = 100
         private var holds: Set<String> = []
         private var waiting: [String: CheckedContinuation<Void, Never>] = [:]
+        private var staleAt: String?
 
         init(_ scenario: FakeMacScenario) {
             self.scenario = scenario
             holds = Set(scenario.stalled ?? [])
+        }
+
+        func goStale(failingAt step: String) {
+            staleAt = step
         }
 
         func update(_ change: @Sendable (inout FakeMacScenario) -> Void) {
@@ -41,7 +46,7 @@
             waiting[step] != nil
         }
 
-        func run(_ command: String, input: Data, timeout: Duration) async throws -> CommandResult {
+        func run(_ command: String, input: Data, timeout: Duration, replayable: Bool) async throws -> CommandResult {
             let arguments = Self.dispatchArguments(of: command)
             let subcommand = arguments.first ?? "install"
             try await pass(subcommand)
@@ -116,11 +121,17 @@
             }
         }
 
-        func disconnect() async {}
+        func disconnect() async {
+            staleAt = nil
+        }
 
         private func pass(_ step: String) async throws {
             if holds.contains(step) {
                 await withCheckedContinuation { waiting[step] = $0 }
+            }
+            if staleAt == step {
+                staleAt = nil
+                throw MacLinkError.connectionLost
             }
             if let unreachable = scenario.unreachable {
                 throw MacLinkError.unreachable(unreachable)

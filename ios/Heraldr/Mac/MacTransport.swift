@@ -10,13 +10,13 @@ struct CommandResult: Sendable, Equatable {
 }
 
 protocol MacTransport: Sendable {
-    func run(_ command: String, input: Data, timeout: Duration) async throws -> CommandResult
+    func run(_ command: String, input: Data, timeout: Duration, replayable: Bool) async throws -> CommandResult
     func exchangeWithHerdr(_ request: Data) async throws -> Data
     func disconnect() async
 }
 
 extension MacTransport {
-    func run(_ command: String, input: Data = Data()) async throws -> CommandResult {
-        try await run(command, input: input, timeout: .seconds(20))
+    func run(_ command: String, input: Data = Data(), replayable: Bool = true) async throws -> CommandResult {
+        try await run(command, input: input, timeout: .seconds(20), replayable: replayable)
     }
 }

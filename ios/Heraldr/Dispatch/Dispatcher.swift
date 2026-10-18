@@ -82,7 +82,7 @@ struct Dispatcher: Sendable {
 
     private func enqueue(_ arguments: String, prompt: String) async throws -> String {
         try await installScript()
-        let result = try await link.run("/bin/sh \(Self.script) \(arguments)", input: Data(prompt.utf8))
+        let result = try await link.run("/bin/sh \(Self.script) \(arguments)", input: Data(prompt.utf8), replayable: false)
         guard result.exitStatus == 0 else { throw failure(result) }
         return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
