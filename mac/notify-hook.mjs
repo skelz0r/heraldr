@@ -78,7 +78,7 @@ function remoteControlUrl(sessionId) {
 
 function paneScreen(paneId) {
   const result = spawnSync(herdr, ["pane", "read", paneId, "--source", "recent-unwrapped", "--lines", "60"], { encoding: "utf8" });
-  return result.status === 0 ? result.stdout.split("\n").map((line) => line.trim()) : [];
+  return result.status === 0 ? result.stdout.split("\n").map((line) => line.trimEnd()) : [];
 }
 
 const separatorPattern = /^─{10,}$/;
@@ -93,6 +93,27 @@ function dialogLines(screen) {
 
 function shorten(text) {
   return text.length > notificationBodyLength ? `${text.slice(0, notificationBodyLength - 1).trimEnd()}…` : text;
+}
+
+function shortenFromStart(text) {
+  return text.length > notificationBodyLength ? `…${text.slice(text.length - notificationBodyLength + 1).trimStart()}` : text;
+}
+
+function claudeMessages(screen) {
+  const messages = [];
+  screen.forEach((line, index) => {
+    if (!line.startsWith("⏺ ")) return;
+    const end = screen.findIndex((next, after) => after > index && next !== "" && !next.startsWith("  "));
+    const lines = [line.slice(2), ...screen.slice(index + 1, end < 0 ? screen.length : end)].map((entry) => entry.trim());
+    const toolCall = /^[\w.:-]+\(/.test(lines[0]) || lines.some((entry) => entry.startsWith("⎿"));
+    if (!toolCall) messages.push(lines.filter((entry) => entry !== "").join(" "));
+  });
+  return messages;
+}
+
+function lastClaudeMessage(screen) {
+  const message = claudeMessages(screen).at(-1);
+  return message ? shortenFromStart(message) : null;
 }
 
 function askedQuestion(screen) {
@@ -213,7 +234,8 @@ async function main() {
   const label = herdrJson("workspace", "get", agent.workspace_id)?.result?.workspace?.label ?? agent.workspace_id;
   const sessionId = agent.agent_session?.value;
   const url = sessionId ? remoteControlUrl(sessionId) : null;
-  const question = pendingRequest(paneScreen(paneId));
+  const screen = paneScreen(paneId);
+  const question = pendingRequest(screen.map((line) => line.trim())) ?? lastClaudeMessage(screen);
   const topic = sessionTopic(agent);
   const body = {
     aps: {

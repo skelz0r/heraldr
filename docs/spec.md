@@ -746,7 +746,11 @@ summary. The sheet closes the history and settings if they are open.
   - file permission: "Wants to edit: <file>" (edit, overwrite) or
     "Wants to create: <file>"
   - other permission: "Permission request: <request title>"
-  - nothing recognized: "Waiting for an answer"
+  - nothing recognized: the last message Claude wrote on screen (not a
+    tool call), its end kept when too long ("…" at the start, where
+    Claude asks)
+  - nothing recognized and no message on screen: "Waiting for an
+    answer"
 - a notification goes out when a `-main` hands in its answer to a
   simple question (§6.5): title = the send's label, subtitle "Answer",
   body = summary, truncated to 178 characters ("…"); tap: the answer

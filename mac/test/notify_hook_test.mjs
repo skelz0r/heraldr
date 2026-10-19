@@ -374,7 +374,62 @@ describe("notification of a -main agent asking a question", () => {
     assert.equal(existsSync(join(world, "home", ".local", "state", "heraldr", "push-device.json")), false);
   });
 
-  it("falls back on a generic text when the question cannot be found", async () => {
+  it("shows the end of Claude's last message when the dialog is not recognized", async () => {
+    setAgent();
+    showScreen(
+      "⏺ Bash(git status)",
+      "  ⎿  On branch main",
+      "",
+      "⏺ The export is ready in tmp/contacts.csv.",
+      "  Should I also purge the exports older than a week?",
+      "",
+      "⏺ Read(tmp/contacts.csv)",
+      "  ⎿  Read 12 lines",
+      "",
+      "─".repeat(80),
+      " Unknown dialog",
+      " ❯ Continue",
+    );
+
+    await runHook("blocked");
+
+    assert.equal(
+      pushes[0].body.aps.alert.body,
+      "The export is ready in tmp/contacts.csv. Should I also purge the exports older than a week?",
+    );
+  });
+
+  it("keeps every paragraph of Claude's last message, not a tool call waiting for its result", async () => {
+    setAgent();
+    showScreen(
+      "⏺ The migration is ready.",
+      "",
+      "  Should I apply it to production?",
+      "",
+      "⏺ Fetch(https://example.com/status)",
+      "",
+      "─".repeat(80),
+      " Unknown dialog",
+      " ❯ Continue",
+    );
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "The migration is ready. Should I apply it to production?");
+  });
+
+  it("keeps the end of a long last message, where Claude asks", async () => {
+    setAgent();
+    showScreen(`⏺ ${"Context. ".repeat(40)}`, "  Which one do we keep?", "", "─".repeat(80), " ❯ Continue");
+
+    await runHook("blocked");
+
+    const { body } = pushes[0].body.aps.alert;
+    assert.equal(body.length, 178);
+    assert.match(body, /^….*Which one do we keep\?$/);
+  });
+
+  it("falls back on a generic text when the screen is empty", async () => {
     setAgent();
 
     await runHook("blocked");
