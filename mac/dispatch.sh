@@ -30,7 +30,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put | journal-append" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | reply <pane_id> <question_id> <option> | lexicon-get | lexicon-put | journal-append" >&2
   exit 2
 }
 
@@ -452,6 +452,11 @@ register_push_device() {
   mv "$PUSH_DEVICE_PATH.tmp" "$PUSH_DEVICE_PATH"
 }
 
+reply_to_question() {
+  install_notify_plugin || exit 1
+  node "$PLUGIN_DIR/notify-hook.mjs" reply "$1" "$2" "$3"
+}
+
 print_lexicon() {
   [ ! -f "$LEXICON_PATH" ] || cat "$LEXICON_PATH"
 }
@@ -531,6 +536,7 @@ case "$command" in
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;
+  reply) [ $# -eq 3 ] || fail_usage; reply_to_question "$@" ;;
   lexicon-get) [ $# -eq 0 ] || fail_usage; print_lexicon ;;
   lexicon-put) [ $# -eq 0 ] || fail_usage; store_lexicon ;;
   journal-append) [ $# -eq 0 ] || fail_usage; append_journal ;;

@@ -801,6 +801,7 @@ the app: its output stays readable by the newer app.
 | `read-answer <job_id>` | nothing | the answer as handed in; code 2 without an answer |
 | `status` | nothing | one line per job: `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (empty without an answer), tab-separated |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | the hook | nothing |
+| `reply <pane_id> <question_id> <option>` | the hook | nothing; types the option in the pane once the screen is read again; code 3 when the pane is no longer a `blocked` agent or shows another question (reason on stderr, nothing typed); code 2 for a pane that is not a `-main`, a malformed argument or an option not offered by the notification; code 1 when the pane did not take the answer; once typed, a next question that cannot be notified only adds a line on stderr, code 0 |
 | `lexicon-get` | nothing | the lexicon backup as written, nothing without a backup (code 0) |
 | `lexicon-put` | the lexicon (JSON of §5.2) | nothing; code 2 for an input without a readable integer `version`, previous backup intact |
 | `journal-append` | dictation journal entries (§5.2), one JSON line each | nothing; code 2 for an empty entry, one that is not a JSON object, without an integer `version` or without an `id` in `[A-Za-z0-9-]{1,64}`, journal intact and nothing from the send appended; code 1 when the journal cannot be written or stays held by another append for more than 10 s |
@@ -840,9 +841,18 @@ the app: its output stays readable by the newer app.
 
 ### 8.3 Notification payload
 
-Question: `aps.alert` (`title`, `subtitle`, `body`), `workspace_id`,
-`agent` and optional `session_url`. Without `workspace_id` or `agent`,
-the tap is ignored.
+Question: `aps.alert` (`title`, optional `subtitle`, `body`),
+`workspace_id`, `agent` and optional `session_url`. Without
+`workspace_id` or `agent`, the tap is ignored.
+
+An AskUserQuestion with single choice also carries
+`aps.mutable-content` = 1, `pane_id`, `question_id` (16 hexadecimal
+characters) and `options`: `[{"number", "label"}]`, the options of the
+question without "Type something", at most 4. No `options` for a
+multiple choice, a permission request, an unrecognized screen or an
+agent whose `state_change_seq` herdr does not give.
+Without `pane_id`, `question_id` or a readable `options`, the
+notification offers no answer.
 
 Answer: `aps.alert`, `kind` = `answer`, `job_id`, `workspace_id`,
 `agent`. Without `kind` = `answer` or `job_id`, the notification is
