@@ -735,7 +735,10 @@ summary. The sheet closes the history and settings if they are open.
   stays so for 3 s, once per question; never for worktree Claudes.
   Title: workspace label, subtitle: agent, body: what the agent's
   screen shows, truncated to 178 characters ("…"):
-  - question of an AskUserQuestion
+  - question of an AskUserQuestion, whatever its rendering (options
+    with a preview, several questions in tabs, multiple choice): the
+    question on screen; on the review step of several questions,
+    "Submit your answers? <answer> · <answer>"
   - Bash permission: "Wants to run: <description>", or "Wants to run a
     command" without a description, never the raw command
   - file permission: "Wants to edit: <file>" (edit, overwrite) or

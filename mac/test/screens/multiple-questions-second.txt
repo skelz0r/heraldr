@@ -1,0 +1,15 @@
+⏺ Understood: one status per contact, distinct from active or inactive.
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+←  ☒ Status set  ☐ Stacking  ☐ Active  ☐ Delay  ✔ Submit  →
+
+│ A contact has documents to review AND missing ones: one status or several badges?
+
+❯ 1. One status, by priority (Recommended)
+     The most urgent wins. Simple filter and sort, one readable column.
+  2. Several badges
+     More faithful but ambiguous sorting and a busy column.
+  3. Type something.
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  4. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel

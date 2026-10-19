@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { generateKeyPairSync } from "node:crypto";
 
 const hook = join(dirname(fileURLToPath(import.meta.url)), "..", "notify-hook.mjs");
+const screens = join(dirname(fileURLToPath(import.meta.url)), "screens");
 const dispatch = join(dirname(hook), "dispatch.sh");
 const debounceMs = 300;
 const sessionId = "6b1d0c1e-0000-4000-8000-000000000001";
@@ -44,6 +45,10 @@ function removeAgent() {
 
 function showScreen(...lines) {
   writeFileSync(join(world, "herdr", "screen.txt"), `${lines.join("\n")}\n`);
+}
+
+function showCapturedScreen(name) {
+  copyFileSync(join(screens, name), join(world, "herdr", "screen.txt"));
 }
 
 function showDialog(...lines) {
@@ -225,6 +230,24 @@ describe("notification of a -main agent asking a question", () => {
 
     assert.equal(pushes[0].body.aps.alert.body, "Do we keep the cache or clear it?");
   });
+
+  for (const [screen, question] of [
+    ["multiple-questions-preview.txt", "Which layout should the contacts page use?"],
+    ["single-question-preview.txt", "Which layout should the contacts page use? Pick the one that reads best on a phone."],
+    ["multiple-questions-multiselect.txt", "Which columns do we show?"],
+    ["multiple-questions.txt", "Which database should we use?"],
+    ["multiple-questions-second.txt", "A contact has documents to review AND missing ones: one status or several badges?"],
+    ["multiple-questions-review.txt", "Submit your answers? SQLite · One PR"],
+  ]) {
+    it(`reads the question on a real AskUserQuestion screen (${screen})`, async () => {
+      setAgent();
+      showCapturedScreen(screen);
+
+      await runHook("blocked");
+
+      assert.equal(pushes[0].body.aps.alert.body, question);
+    });
+  }
 
   it("describes the command a Claude asks permission to run", async () => {
     setAgent();

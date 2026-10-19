@@ -81,10 +81,13 @@ function paneScreen(paneId) {
   return result.status === 0 ? result.stdout.split("\n").map((line) => line.trim()) : [];
 }
 
+const separatorPattern = /^─{10,}$/;
+const questionTabsPattern = /^(?:←\s+)?[☐☒✔]\s/;
+
 function dialogLines(screen) {
   const selected = screen.findLastIndex((line) => /^❯ \d+\./.test(line));
   if (selected < 0) return [];
-  const top = screen.findLastIndex((line, index) => index < selected && /^─{10,}$/.test(line));
+  const top = screen.findLastIndex((line, index) => index < selected && separatorPattern.test(line));
   return top < 0 ? [] : screen.slice(top + 1, selected);
 }
 
@@ -92,10 +95,29 @@ function shorten(text) {
   return text.length > notificationBodyLength ? `${text.slice(0, notificationBodyLength - 1).trimEnd()}…` : text;
 }
 
-function pendingRequest(paneId) {
-  const dialog = dialogLines(paneScreen(paneId));
-  const question = dialog.filter((line) => line.startsWith("│")).map((line) => line.slice(1).trim());
-  if (question.length > 0) return shorten(question.join(" "));
+function askedQuestion(screen) {
+  const first = screen.findLastIndex((line) => /^(?:❯\s*)?1\.\s/.test(line));
+  if (first < 0) return null;
+  const top = screen.findLastIndex((line, index) => index < first && separatorPattern.test(line));
+  if (top < 0) return null;
+  const header = screen.slice(top + 1, first).filter((line) => line !== "");
+  const tabs = header.find((line) => questionTabsPattern.test(line));
+  if (!tabs) return null;
+  const lines = header.filter((line) => line !== tabs).map((line) => line.replace(/^│\s*/, ""));
+  const text =
+    lines[0] === "Review your answers"
+      ? `Submit your answers? ${lines
+          .filter((line) => line.startsWith("→"))
+          .map((line) => line.slice(1).trim())
+          .join(" · ")}`
+      : lines.join(" ");
+  return { text };
+}
+
+function pendingRequest(screen) {
+  const question = askedQuestion(screen);
+  if (question) return shorten(question.text);
+  const dialog = dialogLines(screen);
   const [title, ...rest] = dialog.filter((line) => line !== "");
   if (title === "Bash command") {
     const separator = rest.findIndex((line) => /^╌+$/.test(line));
@@ -186,7 +208,7 @@ async function main() {
   const label = herdrJson("workspace", "get", agent.workspace_id)?.result?.workspace?.label ?? agent.workspace_id;
   const sessionId = agent.agent_session?.value;
   const url = sessionId ? remoteControlUrl(sessionId) : null;
-  const question = pendingRequest(paneId);
+  const question = pendingRequest(paneScreen(paneId));
   const body = {
     aps: {
       alert: { title: label, subtitle: agent.name, body: question ?? "Waiting for an answer" },
