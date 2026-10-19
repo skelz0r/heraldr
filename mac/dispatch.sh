@@ -30,7 +30,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | lexicon-get | lexicon-put | journal-append" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | reply <pane_id> <question_id> <option> | lexicon-get | lexicon-put | journal-append" >&2
   exit 2
 }
 
@@ -424,7 +424,13 @@ print_answer() {
 
 install_notify_plugin() {
   mkdir -p "$PLUGIN_DIR"
-  cat > "$PLUGIN_DIR/notify-hook.mjs.tmp" && mv "$PLUGIN_DIR/notify-hook.mjs.tmp" "$PLUGIN_DIR/notify-hook.mjs"
+  cat > "$PLUGIN_DIR/notify-hook.mjs.tmp" || return 1
+  if [ ! -s "$PLUGIN_DIR/notify-hook.mjs.tmp" ]; then
+    rm -f "$PLUGIN_DIR/notify-hook.mjs.tmp"
+    echo "empty hook" >&2
+    exit 2
+  fi
+  mv "$PLUGIN_DIR/notify-hook.mjs.tmp" "$PLUGIN_DIR/notify-hook.mjs"
   cat > "$PLUGIN_DIR/herdr-plugin.toml" <<'MANIFEST'
 id = "heraldr"
 name = "Heraldr"
@@ -450,6 +456,11 @@ register_push_device() {
   mkdir -p "$STATE_DIR"
   printf '{"token":"%s","env":"%s","topic":"%s","team":"%s"}\n' "$1" "$2" "$3" "$4" > "$PUSH_DEVICE_PATH.tmp"
   mv "$PUSH_DEVICE_PATH.tmp" "$PUSH_DEVICE_PATH"
+}
+
+reply_to_question() {
+  install_notify_plugin || exit 1
+  node "$PLUGIN_DIR/notify-hook.mjs" reply "$1" "$2" "$3"
 }
 
 print_lexicon() {
@@ -531,6 +542,7 @@ case "$command" in
   run) [ $# -eq 1 ] || fail_usage; run_agent_queue "$1" ;;
   status) print_status ;;
   register-push) [ $# -eq 4 ] || fail_usage; register_push_device "$@" ;;
+  reply) [ $# -eq 3 ] || fail_usage; reply_to_question "$@" ;;
   lexicon-get) [ $# -eq 0 ] || fail_usage; print_lexicon ;;
   lexicon-put) [ $# -eq 0 ] || fail_usage; store_lexicon ;;
   journal-append) [ $# -eq 0 ] || fail_usage; append_journal ;;

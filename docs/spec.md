@@ -733,15 +733,38 @@ summary. The sheet closes the history and settings if they are open.
   APNs registration failure: "Notifications unavailable"
 - a notification goes out when a `-main` agent turns `blocked` and
   stays so for 3 s, once per question; never for worktree Claudes.
-  Title: workspace label, subtitle: agent, body: what the agent's
-  screen shows, truncated to 178 characters ("…"):
-  - question of an AskUserQuestion
+  Title: workspace label, subtitle: topic of the session (terminal
+  title of the Claude, none when it is empty or the default "Claude
+  Code", never the agent name, always `<slug>-main`), body: what the
+  agent's screen shows, truncated to 178 characters ("…"):
+  - question of an AskUserQuestion, whatever its rendering (options
+    with a preview, several questions in tabs, multiple choice): the
+    question on screen; on the review step of several questions,
+    "Submit your answers? <answer> · <answer>"
   - Bash permission: "Wants to run: <description>", or "Wants to run a
     command" without a description, never the raw command
   - file permission: "Wants to edit: <file>" (edit, overwrite) or
     "Wants to create: <file>"
   - other permission: "Permission request: <request title>"
-  - nothing recognized: "Waiting for an answer"
+  - nothing recognized: the last message Claude wrote on screen (not a
+    tool call), its end kept when too long ("…" at the start, where
+    Claude asks)
+  - nothing recognized and no message on screen: "Waiting for an
+    answer"
+- answer from the notification, for an AskUserQuestion with single
+  choice: a long press shows one button per option, labelled as on
+  the Mac ("Type something" excluded); the iPhone must be unlocked.
+  The app answers in the background (`reply`, §8.2), without opening:
+  - typed: "Answer sent to <agent>" notice, detail: the option; the
+    next question of the same AskUserQuestion, or its review step,
+    comes as a new notification
+  - refused because Claude no longer waits or shows another question:
+    nothing typed, "Answer not sent to <agent>" notification and
+    notice, detail "<reason>: <option> was not typed."
+  - other failure (Mac unreachable, refused command): same
+    notification and notice, detail "<option>: <error>"
+  - multiple choice, permission request or unrecognized screen: no
+    button, the tap stays the only action
 - a notification goes out when a `-main` hands in its answer to a
   simple question (§6.5): title = the send's label, subtitle "Answer",
   body = summary, truncated to 178 characters ("…"); tap: the answer
@@ -791,7 +814,8 @@ the app: its output stays readable by the newer app.
 | `answer <job_id>` | summary on the first line, blank line, full answer | nothing; code 2 for an unknown job or an empty first line; notification refused: answer kept, reason on stderr, code 0 |
 | `read-answer <job_id>` | nothing | the answer as handed in; code 2 without an answer |
 | `status` | nothing | one line per job: `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (empty without an answer), tab-separated |
-| `register-push <token> <sandbox\|production> <topic> <team_id>` | the hook | nothing |
+| `register-push <token> <sandbox\|production> <topic> <team_id>` | the hook | nothing; code 2 for an empty hook, the installed one kept |
+| `reply <pane_id> <question_id> <option>` | the hook | nothing; types the option in the pane once the screen is read again; code 3 when the pane is no longer a `blocked` agent or shows another question (reason on stderr, nothing typed); code 2 for an empty hook (the installed one kept), a pane that is not a `-main`, a malformed argument or an option not offered by the notification; code 1 when the pane did not take the answer; once typed, a next question that cannot be notified only adds a line on stderr, code 0 |
 | `lexicon-get` | nothing | the lexicon backup as written, nothing without a backup (code 0) |
 | `lexicon-put` | the lexicon (JSON of §5.2) | nothing; code 2 for an input without a readable integer `version`, previous backup intact |
 | `journal-append` | dictation journal entries (§5.2), one JSON line each | nothing; code 2 for an empty entry, one that is not a JSON object, without an integer `version` or without an `id` in `[A-Za-z0-9-]{1,64}`, journal intact and nothing from the send appended; code 1 when the journal cannot be written or stays held by another append for more than 10 s |
@@ -831,9 +855,18 @@ the app: its output stays readable by the newer app.
 
 ### 8.3 Notification payload
 
-Question: `aps.alert` (`title`, `subtitle`, `body`), `workspace_id`,
-`agent` and optional `session_url`. Without `workspace_id` or `agent`,
-the tap is ignored.
+Question: `aps.alert` (`title`, optional `subtitle`, `body`),
+`workspace_id`, `agent` and optional `session_url`. Without
+`workspace_id` or `agent`, the tap is ignored.
+
+An AskUserQuestion with single choice also carries
+`aps.mutable-content` = 1, `pane_id`, `question_id` (16 hexadecimal
+characters) and `options`: `[{"number", "label"}]`, the options of the
+question without "Type something", at most 4. No `options` for a
+multiple choice, a permission request, an unrecognized screen or an
+agent whose `state_change_seq` herdr does not give.
+Without `pane_id`, `question_id` or a readable `options`, the
+notification offers no answer.
 
 Answer: `aps.alert`, `kind` = `answer`, `job_id`, `workspace_id`,
 `agent`. Without `kind` = `answer` or `job_id`, the notification is

@@ -59,6 +59,13 @@ struct Dispatcher: Sendable {
         guard result.exitStatus == 0 else { throw failure(result) }
     }
 
+    func reply(to question: QuestionReply, choosing option: QuestionReply.Option) async throws {
+        try await installScript()
+        let arguments = [question.paneId, question.questionId, String(option.number)].map(quoted).joined(separator: " ")
+        let result = try await link.run("/bin/sh \(Self.script) reply \(arguments)", input: Self.bundledNotifyHook, replayable: false)
+        guard result.exitStatus == 0 else { throw failure(result) }
+    }
+
     func upload(_ image: Data) async throws -> String {
         let result = try await link.run("/bin/sh \(Self.script) attach jpg", input: image)
         guard result.exitStatus == 0 else { throw failure(result) }

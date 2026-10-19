@@ -1,0 +1,19 @@
+⏺ A few decisions before I start on the contacts page.
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+←  ☐ Layout  ☐ Columns  ☐ Scope  ✔ Submit  →
+
+Which columns do we show?
+
+  1. [ ] Status
+         Current contact status
+  2. [ ] Completion
+         Completion percentage
+❯ 3. [ ] Last reminder
+         Date of the last reminder sent
+  4. [ ] Type something
+     Next
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  5. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel

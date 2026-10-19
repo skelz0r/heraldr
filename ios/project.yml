@@ -37,6 +37,7 @@ targets:
         buildPhase: resources
     dependencies:
       - package: HeelerSSH
+      - target: HeraldrNotificationService
     postBuildScripts:
       - name: Stamp build version
         basedOnDependencyAnalysis: false
@@ -89,6 +90,31 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "The local network is used to reach the Mac over SSH."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
 
+  HeraldrNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: HeraldrNotificationService
+      - path: Heraldr/Push/QuestionReply.swift
+    info:
+      path: HeraldrNotificationService/Info.plist
+      properties:
+        CFBundleDisplayName: Heraldr
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(HERALDR_BUNDLE_ID).notification-service
+        SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+        GCC_TREAT_WARNINGS_AS_ERRORS: YES
+        SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        APPLICATION_EXTENSION_API_ONLY: YES
+
   HeraldrTests:
     type: bundle.unit-test
     platform: iOS
@@ -97,6 +123,8 @@ targets:
       - path: ../Vendor/Heeler/plugin/test-vectors/pairing-code-v1.json
         buildPhase: resources
       - path: ../mac/test/agent-names.tsv
+        buildPhase: resources
+      - path: ../mac/test/question-notification.json
         buildPhase: resources
     dependencies:
       - target: Heraldr

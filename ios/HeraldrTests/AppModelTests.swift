@@ -501,3 +501,74 @@ struct ConnectionTests {
         #expect(session.model.unopenedQuestion == question)
     }
 }
+
+@MainActor
+@Suite("Answer chosen in a question notification")
+struct NotificationAnswerTests {
+    private static let questionId = "685f9aaf7c411d69"
+
+    private func waitingAcme(question: String = questionId, status: String = "blocked") -> FakeMacScenario {
+        var acme = main("acme-main", in: "wS", status)
+        acme.question = FakeMacScenario.Question(id: question, options: [1, 2])
+        return world(agents: [acme])
+    }
+
+    private func notification() throws -> (QuestionNotification, QuestionReply.Option) {
+        let question = try #require(
+            QuestionNotification(userInfo: [
+                "workspace_id": "wS", "agent": "acme-main", "pane_id": "wS:p1", "question_id": Self.questionId,
+                "options": [["number": 1, "label": "Postgres"], ["number": 2, "label": "SQLite"]],
+            ]))
+        return (question, try #require(question.reply?.options.last))
+    }
+
+    @Test("the option is typed on the Mac while Claude still waits on the same question")
+    func answered() async throws {
+        let session = await Session(waitingAcme())
+        let (question, sqlite) = try notification()
+
+        await session.model.answer(question, with: sqlite)
+
+        #expect(await session.mac.replies == ["wS:p1 2"])
+        #expect(session.model.notice?.kind == .sent)
+        #expect(session.model.notice?.title == "Answer sent to acme-main")
+        #expect(session.model.notice?.detail == "SQLite")
+        #expect(session.model.agents.first?.agentStatus == .working)
+    }
+
+    @Test("a question that changed on the Mac is never answered, and the refusal is announced")
+    func changedQuestion() async throws {
+        let session = await Session(waitingAcme(question: "0000000000000000"))
+        let (question, sqlite) = try notification()
+
+        await session.model.answer(question, with: sqlite)
+
+        #expect(await session.mac.replies.isEmpty)
+        #expect(session.model.notice?.kind == .failed)
+        #expect(session.model.notice?.title == "Answer not sent to acme-main")
+        #expect(session.model.notice?.detail == "The question on the Mac changed: SQLite was not typed.")
+    }
+
+    @Test("once Claude moved on, the answer is refused")
+    func noLongerWaiting() async throws {
+        let session = await Session(waitingAcme(status: "working"))
+        let (question, sqlite) = try notification()
+
+        await session.model.answer(question, with: sqlite)
+
+        #expect(await session.mac.replies.isEmpty)
+        #expect(session.model.notice?.detail == "Claude is no longer waiting for this answer: SQLite was not typed.")
+    }
+
+    @Test("an unreachable Mac is announced with the option that was not sent")
+    func unreachable() async throws {
+        let session = await Session(waitingAcme())
+        await session.mac.update { $0.unreachable = "timed out" }
+        let (question, sqlite) = try notification()
+
+        await session.model.answer(question, with: sqlite)
+
+        #expect(session.model.notice?.kind == .failed)
+        #expect(session.model.notice?.detail == "SQLite: Mac unreachable (timed out)")
+    }
+}

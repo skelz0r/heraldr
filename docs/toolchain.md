@@ -8,7 +8,10 @@ XcodeGen added.
 - `ios/project.yml` (XcodeGen) is versioned, the `.xcodeproj` is
   generated and ignored by git: no `.pbxproj` conflicts between agent
   worktrees
-- dev bundle id: `HERALDR_BUNDLE_ID` (`ios/Signing.local.xcconfig`)
+- dev bundle id: `HERALDR_BUNDLE_ID` (`ios/Signing.local.xcconfig`);
+  the notification service extension embedded in the app is
+  `$(HERALDR_BUNDLE_ID).notification-service`, its App ID and profile
+  created by automatic signing like the app's
 - automatic signing with a personal team, direct install on the iPhone
   (no TestFlight)
 

@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { generateKeyPairSync } from "node:crypto";
 
 const hook = join(dirname(fileURLToPath(import.meta.url)), "..", "notify-hook.mjs");
+const screens = join(dirname(fileURLToPath(import.meta.url)), "screens");
 const dispatch = join(dirname(hook), "dispatch.sh");
 const debounceMs = 300;
 const sessionId = "6b1d0c1e-0000-4000-8000-000000000001";
@@ -24,7 +25,7 @@ function writeJson(path, value) {
   writeFileSync(path, JSON.stringify(value));
 }
 
-function setAgent({ name = "acme_app-main", status = "blocked" } = {}) {
+function setAgent({ name = "acme_app-main", status = "blocked", title = "Export of the contacts", seq = 41 } = {}) {
   writeJson(join(world, "herdr", "agent.json"), {
     result: {
       agent: {
@@ -32,7 +33,9 @@ function setAgent({ name = "acme_app-main", status = "blocked" } = {}) {
         pane_id: "w1:p2",
         workspace_id: "w1",
         agent_status: status,
+        ...(seq === null ? {} : { state_change_seq: seq }),
         agent_session: { value: sessionId },
+        ...(title === null ? {} : { terminal_title_stripped: title }),
       },
     },
   });
@@ -44,6 +47,10 @@ function removeAgent() {
 
 function showScreen(...lines) {
   writeFileSync(join(world, "herdr", "screen.txt"), `${lines.join("\n")}\n`);
+}
+
+function showCapturedScreen(name) {
+  copyFileSync(join(screens, name), join(world, "herdr", "screen.txt"));
 }
 
 function showDialog(...lines) {
@@ -118,9 +125,11 @@ function runDispatch(args, input = "") {
       env: {
         ...process.env,
         PATH: `${join(world, "herdr")}:${process.env.PATH}`,
+        HERDR_BIN_PATH: join(world, "herdr", "herdr"),
         HERALDR_STATE_DIR: stateDir(),
         HERALDR_HOME: join(world, "home"),
         HERALDR_APNS_ORIGIN: `http://localhost:${apns.address().port}`,
+        HERALDR_REPLY_SETTLE_MS: "100",
       },
     });
     let stdout = "";
@@ -130,6 +139,42 @@ function runDispatch(args, input = "") {
     child.on("close", (code) => resolve({ code, stdout, stderr }));
     child.stdin.end(input);
   });
+}
+
+function installDispatch() {
+  mkdirSync(stateDir(), { recursive: true });
+  copyFileSync(dispatch, join(stateDir(), "dispatch.sh"));
+}
+
+function afterTyping(key, { screen, status }) {
+  if (screen) copyFileSync(join(screens, screen), join(world, "herdr", `after-${key}.txt`));
+  if (status) {
+    const agent = JSON.parse(readFileSync(join(world, "herdr", "agent.json"), "utf8"));
+    agent.result.agent.agent_status = status;
+    writeJson(join(world, "herdr", `agent-after-${key}.json`), agent);
+  }
+}
+
+function typed() {
+  const log = join(world, "herdr", "typed.log");
+  return existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : [];
+}
+
+function reply(questionId, option, pane = "w1:p2") {
+  installDispatch();
+  return runDispatch(["reply", pane, questionId, option], readFileSync(hook));
+}
+
+function forgetMarkers() {
+  rmSync(join(stateDir(), "notified"), { recursive: true, force: true });
+}
+
+async function notifiedQuestion(screen) {
+  setAgent();
+  showCapturedScreen(screen);
+  forgetMarkers();
+  await runHook("blocked");
+  return pushes.pop().body;
 }
 
 async function sentQuestion(text) {
@@ -170,6 +215,12 @@ case "$1 $2" in
   "agent get") cat "${join(world, "herdr", "agent.json")}" 2>/dev/null || exit 1 ;;
   "agent list") echo '{"result":{"agents":[]}}' ;;
   "pane read") cat "${join(world, "herdr", "screen.txt")}" 2>/dev/null || exit 1 ;;
+  "pane send-text" | "pane send-keys")
+    echo "$2 $3 $4" >> "${join(world, "herdr", "typed.log")}"
+    [ ! -f "${join(world, "herdr", "after-")}$4.txt" ] || mv "${join(world, "herdr", "after-")}$4.txt" "${join(world, "herdr", "screen.txt")}"
+    [ ! -f "${join(world, "herdr", "agent-after-")}$4.json" ] || mv "${join(world, "herdr", "agent-after-")}$4.json" "${join(world, "herdr", "agent.json")}"
+    ;;
+  "plugin list") echo "- heraldr (linked)" ;;
   "workspace get") echo '{"result":{"workspace":{"label":"acme_app"}}}' ;;
   *) exit 1 ;;
 esac
@@ -195,7 +246,7 @@ esac
 });
 
 describe("notification of a -main agent asking a question", () => {
-  it("alerts the iPhone with the workspace, the agent, the question and the Remote Control session link", async () => {
+  it("alerts the iPhone with the workspace, the session topic, the question and the Remote Control session link", async () => {
     setAgent();
     showQuestion("Which database should we use?");
 
@@ -208,13 +259,25 @@ describe("notification of a -main agent asking a question", () => {
     assert.match(push.headers.authorization, /^bearer /);
     assert.deepEqual(push.body.aps.alert, {
       title: "acme_app",
-      subtitle: "acme_app-main",
+      subtitle: "Export of the contacts",
       body: "Which database should we use?",
     });
     assert.equal(push.body.session_url, "https://claude.ai/code/session_01ABCDEFGHIJKLMNOPQRSTUV");
     assert.equal(push.body.workspace_id, "w1");
     assert.equal(push.body.agent, "acme_app-main");
   });
+
+  for (const title of [null, "", "Claude Code"]) {
+    it(`shows no subtitle, never the agent name, for a session without topic (${JSON.stringify(title)})`, async () => {
+      setAgent({ title });
+      showQuestion("Which database should we use?");
+
+      await runHook("blocked");
+
+      assert.equal(pushes[0].body.aps.alert.subtitle, undefined);
+      assert.equal(pushes[0].body.aps.alert.title, "acme_app");
+    });
+  }
 
   it("reads the question on screen, the transcript only holding the tool run before it", async () => {
     setAgent();
@@ -224,6 +287,45 @@ describe("notification of a -main agent asking a question", () => {
     await runHook("blocked");
 
     assert.equal(pushes[0].body.aps.alert.body, "Do we keep the cache or clear it?");
+  });
+
+  for (const [screen, question] of [
+    ["multiple-questions-preview.txt", "Which layout should the contacts page use?"],
+    ["single-question-preview.txt", "Which layout should the contacts page use? Pick the one that reads best on a phone."],
+    ["multiple-questions-multiselect.txt", "Which columns do we show?"],
+    ["multiple-questions.txt", "Which database should we use?"],
+    ["multiple-questions-second.txt", "A contact has documents to review AND missing ones: one status or several badges?"],
+    ["multiple-questions-review.txt", "Submit your answers? SQLite · One PR"],
+  ]) {
+    it(`reads the question on a real AskUserQuestion screen (${screen})`, async () => {
+      setAgent();
+      showCapturedScreen(screen);
+
+      await runHook("blocked");
+
+      assert.equal(pushes[0].body.aps.alert.body, question);
+    });
+  }
+
+  it("does not mistake a permission whose command shows a checkbox for a question", async () => {
+    setAgent();
+    showDialog(
+      " Bash command",
+      " Write the deploy checklist",
+      "╌".repeat(80),
+      "   cat > checklist.md <<EOF",
+      "   ☐ Verify deployment",
+      "   EOF",
+      "╌".repeat(80),
+      " Do you want to proceed?",
+      " ❯ 1. Yes",
+      "   2. No",
+    );
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "Wants to run: Write the deploy checklist");
+    assert.equal(pushes[0].body.options, undefined);
   });
 
   it("describes the command a Claude asks permission to run", async () => {
@@ -338,7 +440,62 @@ describe("notification of a -main agent asking a question", () => {
     assert.equal(existsSync(join(world, "home", ".local", "state", "heraldr", "push-device.json")), false);
   });
 
-  it("falls back on a generic text when the question cannot be found", async () => {
+  it("shows the end of Claude's last message when the dialog is not recognized", async () => {
+    setAgent();
+    showScreen(
+      "⏺ Bash(git status)",
+      "  ⎿  On branch main",
+      "",
+      "⏺ The export is ready in tmp/contacts.csv.",
+      "  Should I also purge the exports older than a week?",
+      "",
+      "⏺ Read(tmp/contacts.csv)",
+      "  ⎿  Read 12 lines",
+      "",
+      "─".repeat(80),
+      " Unknown dialog",
+      " ❯ Continue",
+    );
+
+    await runHook("blocked");
+
+    assert.equal(
+      pushes[0].body.aps.alert.body,
+      "The export is ready in tmp/contacts.csv. Should I also purge the exports older than a week?",
+    );
+  });
+
+  it("keeps every paragraph of Claude's last message, not a tool call waiting for its result", async () => {
+    setAgent();
+    showScreen(
+      "⏺ The migration is ready.",
+      "",
+      "  Should I apply it to production?",
+      "",
+      "⏺ Fetch(https://example.com/status)",
+      "",
+      "─".repeat(80),
+      " Unknown dialog",
+      " ❯ Continue",
+    );
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "The migration is ready. Should I apply it to production?");
+  });
+
+  it("keeps the end of a long last message, where Claude asks", async () => {
+    setAgent();
+    showScreen(`⏺ ${"Context. ".repeat(40)}`, "  Which one do we keep?", "", "─".repeat(80), " ❯ Continue");
+
+    await runHook("blocked");
+
+    const { body } = pushes[0].body.aps.alert;
+    assert.equal(body.length, 178);
+    assert.match(body, /^….*Which one do we keep\?$/);
+  });
+
+  it("falls back on a generic text when the screen is empty", async () => {
     setAgent();
 
     await runHook("blocked");
@@ -432,5 +589,201 @@ describe("answer of a -main to a simple question", () => {
     assert.equal((await runDispatch(["answer", "20261010120000-1-deadbeef"], answer)).code, 2);
     assert.equal((await runDispatch(["answer", "../../etc"], answer)).code, 2);
     assert.equal(pushes.length, 0);
+  });
+});
+
+describe("answer to a question from the notification", () => {
+  it("carries the options of the question, without the free text one, as the app reads them", async () => {
+    const body = await notifiedQuestion("multiple-questions.txt");
+
+    assert.deepEqual(body, JSON.parse(readFileSync(join(dirname(hook), "test", "question-notification.json"), "utf8")));
+  });
+
+  it("never takes numbered lines of an option description for options", async () => {
+    setAgent();
+    showScreen(
+      "─".repeat(80),
+      "←  ☐ Base  ✔ Submit  →",
+      "",
+      "Which database should we use?",
+      "",
+      "❯ 1. Postgres",
+      "     Migration in two steps:",
+      "     1. Preserve the existing data.",
+      "     2. Run the migration.",
+      "  2. SQLite",
+      "  3. Type something.",
+      "─".repeat(80),
+      "  4. Chat about this",
+    );
+    forgetMarkers();
+
+    await runHook("blocked");
+
+    assert.equal(pushes[0].body.aps.alert.body, "Which database should we use?");
+    assert.deepEqual(pushes[0].body.options, [
+      { number: 1, label: "Postgres" },
+      { number: 2, label: "SQLite" },
+    ]);
+  });
+
+  it("reads the option labels next to their preview", async () => {
+    const body = await notifiedQuestion("multiple-questions-preview.txt");
+
+    assert.deepEqual(body.options, [
+      { number: 1, label: "Table" },
+      { number: 2, label: "Cards" },
+    ]);
+  });
+
+  it("offers to submit or cancel on the review step of several questions", async () => {
+    const body = await notifiedQuestion("multiple-questions-review.txt");
+
+    assert.deepEqual(body.options, [
+      { number: 1, label: "Submit answers" },
+      { number: 2, label: "Cancel" },
+    ]);
+  });
+
+  it("offers no answer from the iPhone for a multiple choice or a permission", async () => {
+    const multiple = await notifiedQuestion("multiple-questions-multiselect.txt");
+    showDialog(" Bash command", "╌".repeat(80), " rm -rf tmp/cache", "╌".repeat(80), " Do you want to proceed?", " ❯ 1. Yes", "   2. No");
+    forgetMarkers();
+    await runHook("blocked");
+    const permission = pushes.pop().body;
+
+    for (const body of [multiple, permission]) {
+      assert.equal(body.options, undefined);
+      assert.equal(body.question_id, undefined);
+      assert.equal(body.aps["mutable-content"], undefined);
+    }
+  });
+
+  it("types the chosen option in the pane still waiting on the same question", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    afterTyping("1", { status: "working" });
+
+    const { code, stderr } = await reply(question_id, "1");
+
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(typed(), ["send-text w1:p2 1"]);
+  });
+
+  it("confirms with Enter an option that the preview only highlights", async () => {
+    const { question_id } = await notifiedQuestion("single-question-preview.txt");
+    afterTyping("2", { screen: "single-question-preview-second-highlighted.txt" });
+    afterTyping("Enter", { status: "working" });
+
+    const { code, stderr } = await reply(question_id, "2");
+
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(typed(), ["send-text w1:p2 2", "send-keys w1:p2 Enter"]);
+  });
+
+  it("notifies the next question of the same AskUserQuestion once answered", async () => {
+    const first = await notifiedQuestion("multiple-questions.txt");
+    afterTyping("2", { screen: "multiple-questions-second.txt" });
+
+    const { code, stderr } = await reply(first.question_id, "2");
+
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(typed(), ["send-text w1:p2 2"]);
+    assert.equal(pushes.length, 1);
+    assert.equal(pushes[0].body.aps.alert.body, "A contact has documents to review AND missing ones: one status or several badges?");
+    assert.notEqual(pushes[0].body.question_id, first.question_id);
+  });
+
+  it("reports a typed answer as sent even when the next question cannot be notified", async () => {
+    const first = await notifiedQuestion("multiple-questions.txt");
+    afterTyping("2", { screen: "multiple-questions-second.txt" });
+    apnsAnswer = { status: 503, body: '{"reason":"ServiceUnavailable"}' };
+
+    const { code, stderr } = await reply(first.question_id, "2");
+
+    assert.equal(code, 0);
+    assert.match(stderr, /next question not notified/);
+    assert.deepEqual(typed(), ["send-text w1:p2 2"]);
+  });
+
+  it("never answers a question that changed on the Mac since the notification", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    showCapturedScreen("multiple-questions-second.txt");
+
+    const { code, stderr } = await reply(question_id, "1");
+
+    assert.equal(code, 3);
+    assert.match(stderr, /question on the Mac changed/);
+    assert.deepEqual(typed(), []);
+  });
+
+  it("never answers the same question asked again once Claude moved on", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    setAgent({ seq: 43 });
+
+    const { code, stderr } = await reply(question_id, "1");
+
+    assert.equal(code, 3);
+    assert.match(stderr, /question on the Mac changed/);
+    assert.deepEqual(typed(), []);
+  });
+
+  it("offers no answer, and refuses one, when herdr does not tell the blocking occurrence", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    setAgent({ seq: null });
+    forgetMarkers();
+    await runHook("blocked");
+
+    const { code } = await reply(question_id, "1");
+
+    assert.equal(pushes.pop().body.options, undefined);
+    assert.equal(code, 3);
+    assert.deepEqual(typed(), []);
+  });
+
+  it("never answers once Claude is no longer waiting", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    setAgent({ status: "working" });
+
+    const { code, stderr } = await reply(question_id, "1");
+
+    assert.equal(code, 3);
+    assert.match(stderr, /no longer waiting/);
+    assert.deepEqual(typed(), []);
+  });
+
+  it("refuses the free text option, a worktree Claude and malformed arguments", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+
+    assert.equal((await reply(question_id, "3")).code, 2);
+    assert.equal((await reply(question_id, "1", "w1;rm")).code, 2);
+    assert.equal((await reply("not-an-id", "1")).code, 2);
+    assert.equal((await reply(question_id, "12")).code, 2);
+    setAgent({ name: null });
+    assert.equal((await reply(question_id, "1")).code, 2);
+    assert.deepEqual(typed(), []);
+  });
+
+  it("refuses an empty hook and keeps the installed one, for reply as for register-push", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    await reply(question_id, "9");
+    const installed = readFileSync(join(stateDir(), "plugin", "notify-hook.mjs"), "utf8");
+
+    const replied = await runDispatch(["reply", "w1:p2", question_id, "1"], "");
+    const registered = await runDispatch(["register-push", "ab".repeat(32), "sandbox", "com.example.heraldr.dev", "ABCDE12345"], "");
+
+    assert.equal(replied.code, 2);
+    assert.equal(registered.code, 2);
+    assert.match(replied.stderr, /empty hook/);
+    assert.equal(readFileSync(join(stateDir(), "plugin", "notify-hook.mjs"), "utf8"), installed);
+    assert.deepEqual(typed(), []);
+  });
+
+  it("reports an answer the pane did not take", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+
+    const { code, stderr } = await reply(question_id, "1");
+
+    assert.equal(code, 1);
+    assert.match(stderr, /not taken/);
   });
 });

@@ -303,13 +303,17 @@ The hook, a short process per state change started by herdr:
 4. session URL: `~/.claude/sessions/*.json` whose `sessionId` is
    `agent_session.value`, `https://claude.ai/code/<bridgeSessionId>`
 5. question: read from the screen (`herdr pane read <pane> --source
-   recent-unwrapped`), in the box between the last `─` rule and the
-   selected option `❯ 1.`. `│` lines: the AskUserQuestion text.
-   Otherwise the permission request title (`Bash command`: description
-   before the first `╌` rule) or the `Do you want to …` line (file
-   edited, overwritten or created). Not the transcript: Claude Code
-   only writes the pending `tool_use` there once answered, the last
-   readable `tool_use` is the one of the tool already run before
+   recent-unwrapped`). AskUserQuestion: the lines between the last `─`
+   rule and the last option `1.`, once a tab header (`☐`, `☒`, `✔`)
+   is found there, without their `│` prefix; the options follow, a
+   preview box (`┌`, `│`, `└`) on their right. Otherwise the
+   permission request title (`Bash command`: description before the
+   first `╌` rule) or the `Do you want to …` line (file edited,
+   overwritten or created), then the last `⏺` message without a tool
+   result (`⎿`). Not the transcript: Claude Code only writes the
+   pending `tool_use` there once answered, the last readable
+   `tool_use` is the one of the tool already run before. The screens
+   of `mac/test/screens/` are real Claude Code renderings
 6. ES256 JWT signed with the `.p8`, POST `/3/device/<token>` on
    `api.sandbox.push.apple.com` or `api.push.apple.com`,
    `apns-collapse-id` = agent name
@@ -317,11 +321,45 @@ The hook, a short process per state change started by herdr:
    until the app's next launch. Errors go to stderr, readable with
    `herdr plugin log list --plugin heraldr`
 
-Payload: `aps.alert` (title = workspace label, subtitle = agent, body
-= question), `workspace_id`, `agent`, `session_url`. On tap, the app
-targets the workspace, opens `session_url` with `universalLinksOnly`,
-and shows an "Open in Claude" card if opening fails or the URL is
-missing.
+Payload: `aps.alert` (title = workspace label, subtitle =
+`terminal_title_stripped` of `herdr agent get`, the session topic
+Claude Code sets as terminal title, body = question), `workspace_id`,
+`agent`, `session_url`. On tap, the app targets the workspace, opens
+`session_url` with `universalLinksOnly`, and shows an "Open in Claude"
+card if opening fails or the URL is missing.
+
+### Answering from the notification
+
+```text
+hook ── options, question_id, pane_id, mutable-content ──> APNs
+iPhone: service extension → category with one action per option
+action ──SSH──> dispatch.sh reply <pane> <question_id> <n>
+                └─ node plugin/notify-hook.mjs reply → herdr pane send-text
+```
+
+- `question_id`: first 16 hex characters of the SHA-256 of the
+  agent's `state_change_seq` (herdr), the tab header, the question
+  lines and the option labels, never the cursor position.
+  `state_change_seq` stays the same while the agent stays `blocked`,
+  keystrokes included, and changes when it resumes then blocks again:
+  the same question asked again later gets another id, and a stale
+  notification never answers it. Within one AskUserQuestion, Claude
+  Code requires distinct question texts
+- `reply` reads the screen again just before typing: the pane must be
+  a `-main` still `blocked` with the same `question_id`, otherwise
+  nothing is typed (code 3). The tiny window between this reading and
+  the keystroke is accepted
+- a plain question takes the digit and moves on by itself; a question
+  whose options show a preview only highlights it, so `reply` checks
+  the highlight is on the option then sends `Enter`. The rendering
+  decides, never a wait: an Enter sent after a digit that already
+  answered would answer the next question
+- the agent stays `blocked` when an AskUserQuestion has several
+  questions, so herdr fires no event: `reply` notifies the next
+  question itself, `apns-collapse-id` replacing the previous one
+- `reply` reinstalls the hook it receives on its standard input, as
+  `register-push` does: an older hook on the Mac would not know
+  `reply` and would exit 0 without typing anything
 
 ### Answers
 

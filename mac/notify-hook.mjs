@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { createPrivateKey, createSign } from "node:crypto";
+import { createHash, createPrivateKey, createSign } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { connect } from "node:http2";
 import { homedir } from "node:os";
@@ -12,6 +12,8 @@ const stateDir = process.env.HERALDR_STATE_DIR ?? join(home, ".local/state/heral
 const configDir = process.env.HERALDR_CONFIG_DIR ?? join(home, ".config/heraldr");
 const claudeDir = join(home, ".claude");
 const debounceMs = Number(process.env.HERALDR_NOTIFY_DEBOUNCE_MS ?? 3000);
+const replySettleMs = Number(process.env.HERALDR_REPLY_SETTLE_MS ?? 800);
+const maximumActions = 4;
 const notificationBodyLength = 178;
 
 const apnsHosts = {
@@ -78,13 +80,17 @@ function remoteControlUrl(sessionId) {
 
 function paneScreen(paneId) {
   const result = spawnSync(herdr, ["pane", "read", paneId, "--source", "recent-unwrapped", "--lines", "60"], { encoding: "utf8" });
-  return result.status === 0 ? result.stdout.split("\n").map((line) => line.trim()) : [];
+  return result.status === 0 ? result.stdout.split("\n").map((line) => line.trimEnd()) : [];
 }
+
+const separatorPattern = /^─{10,}$/;
+const questionTabsPattern = /^(?:←\s+)?[☐☒✔]\s/;
+const optionPattern = /^(❯ | {2})(\d+)\.\s+(.*)$/;
 
 function dialogLines(screen) {
   const selected = screen.findLastIndex((line) => /^❯ \d+\./.test(line));
   if (selected < 0) return [];
-  const top = screen.findLastIndex((line, index) => index < selected && /^─{10,}$/.test(line));
+  const top = screen.findLastIndex((line, index) => index < selected && separatorPattern.test(line));
   return top < 0 ? [] : screen.slice(top + 1, selected);
 }
 
@@ -92,10 +98,80 @@ function shorten(text) {
   return text.length > notificationBodyLength ? `${text.slice(0, notificationBodyLength - 1).trimEnd()}…` : text;
 }
 
-function pendingRequest(paneId) {
-  const dialog = dialogLines(paneScreen(paneId));
-  const question = dialog.filter((line) => line.startsWith("│")).map((line) => line.slice(1).trim());
-  if (question.length > 0) return shorten(question.join(" "));
+function shortenFromStart(text) {
+  return text.length > notificationBodyLength ? `…${text.slice(text.length - notificationBodyLength + 1).trimStart()}` : text;
+}
+
+function claudeMessages(screen) {
+  const messages = [];
+  screen.forEach((line, index) => {
+    if (!line.startsWith("⏺ ")) return;
+    const end = screen.findIndex((next, after) => after > index && next !== "" && !next.startsWith("  "));
+    const lines = [line.slice(2), ...screen.slice(index + 1, end < 0 ? screen.length : end)].map((entry) => entry.trim());
+    const toolCall = /^[\w.:-]+\(/.test(lines[0]) || lines.some((entry) => entry.startsWith("⎿"));
+    if (!toolCall) messages.push(lines.filter((entry) => entry !== "").join(" "));
+  });
+  return messages;
+}
+
+function lastClaudeMessage(screen) {
+  const message = claudeMessages(screen).at(-1);
+  return message ? shortenFromStart(message) : null;
+}
+
+function questionOptions(lines) {
+  const options = [];
+  for (const line of lines) {
+    if (separatorPattern.test(line.trim())) break;
+    const match = line.match(optionPattern);
+    if (!match || Number(match[2]) !== options.length + 1) continue;
+    options.push({
+      number: Number(match[2]),
+      label: match[3].replace(/\s{2,}[┌│└].*$/, "").trim(),
+      cursor: match[1] === "❯ ",
+      preview: /\s{2,}[┌│└]/.test(match[3]),
+    });
+  }
+  return options;
+}
+
+function answerableOptions(options) {
+  if (options.some((option) => /^\[.\]\s/.test(option.label))) return [];
+  const choices = options.filter((option) => !/^Type something\.?$/.test(option.label));
+  return choices.length <= maximumActions ? choices.map(({ number, label }) => ({ number, label })) : [];
+}
+
+function askedQuestion(screen, blockedSince = null) {
+  const first = screen.findLastIndex((line) => /^(?:❯ | {2})1\.\s/.test(line));
+  if (first < 0) return null;
+  const top = screen.findLastIndex((line, index) => index < first && separatorPattern.test(line));
+  if (top < 0) return null;
+  if (screen.slice(first).some((line) => line.startsWith("⏺"))) return null;
+  const [tabs, ...lines] = screen
+    .slice(top + 1, first)
+    .map((line) => line.trim().replace(/^│\s*/, ""))
+    .filter((line) => line !== "");
+  if (!questionTabsPattern.test(tabs ?? "")) return null;
+  const text =
+    lines[0] === "Review your answers"
+      ? `Submit your answers? ${lines
+          .filter((line) => line.startsWith("→"))
+          .map((line) => line.slice(1).trim())
+          .join(" · ")}`
+      : lines.join(" ");
+  const options = questionOptions(screen.slice(first));
+  const id = createHash("sha256")
+    .update(JSON.stringify([blockedSince, tabs, lines, options.map((option) => option.label)]))
+    .digest("hex")
+    .slice(0, 16);
+  const choices = Number.isInteger(blockedSince) ? answerableOptions(options) : [];
+  return { id, text, options, choices, preview: options.some((option) => option.preview) };
+}
+
+function pendingRequest(screen) {
+  const question = askedQuestion(screen);
+  if (question) return shorten(question.text);
+  const dialog = dialogLines(screen.map((line) => line.trim()));
   const [title, ...rest] = dialog.filter((line) => line !== "");
   if (title === "Bash command") {
     const separator = rest.findIndex((line) => /^╌+$/.test(line));
@@ -159,6 +235,11 @@ function postToApns(device, token, headers, body) {
   });
 }
 
+function sessionTopic(agent) {
+  const title = typeof agent.terminal_title_stripped === "string" ? agent.terminal_title_stripped.trim() : "";
+  return title === "" || title === "Claude Code" || title === agent.name ? null : title;
+}
+
 async function main() {
   const event = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON ?? "{}").data ?? {};
   const paneId = event.pane_id;
@@ -179,26 +260,91 @@ async function main() {
   }
   if (!agent.name?.endsWith("-main") || alreadyNotified(paneId)) return;
 
+  if (await notify(paneId, agent)) rememberNotified(paneId);
+}
+
+async function notify(paneId, agent, screen = paneScreen(paneId)) {
   const device = readJson(join(stateDir, "push-device.json"));
   const key = apnsKey();
-  if (!device || !key) return;
+  if (!device || !key) return false;
 
   const label = herdrJson("workspace", "get", agent.workspace_id)?.result?.workspace?.label ?? agent.workspace_id;
   const sessionId = agent.agent_session?.value;
   const url = sessionId ? remoteControlUrl(sessionId) : null;
-  const question = pendingRequest(paneId);
+  const asked = askedQuestion(screen, agent.state_change_seq);
+  const question = pendingRequest(screen) ?? lastClaudeMessage(screen);
+  const topic = sessionTopic(agent);
+  const answerable = asked && asked.choices.length > 0;
   const body = {
     aps: {
-      alert: { title: label, subtitle: agent.name, body: question ?? "Waiting for an answer" },
+      alert: { title: label, ...(topic ? { subtitle: topic } : {}), body: question ?? "Waiting for an answer" },
       sound: "default",
       "thread-id": agent.name,
+      ...(answerable ? { "mutable-content": 1 } : {}),
     },
     workspace_id: agent.workspace_id,
     agent: agent.name,
     ...(url ? { session_url: url } : {}),
+    ...(answerable ? { pane_id: paneId, question_id: asked.id, options: asked.choices } : {}),
   };
   await deliver(device, key, { "apns-collapse-id": agent.name }, body);
-  rememberNotified(paneId);
+  return true;
+}
+
+class ReplyRefused extends Error {
+  constructor(message, exitCode) {
+    super(message);
+    this.exitCode = exitCode;
+  }
+}
+
+function blockedMain(paneId) {
+  const agent = herdrJson("agent", "get", paneId)?.result?.agent;
+  if (agent && !agent.name?.endsWith("-main")) throw new ReplyRefused(`pane ${paneId} is not a -main agent`, 2);
+  return agent?.agent_status === "blocked" ? agent : null;
+}
+
+function herdrPane(...args) {
+  const result = spawnSync(herdr, ["pane", ...args], { encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`herdr pane ${args[0]}: ${result.stderr.trim()}`);
+}
+
+async function reply(paneId, questionId, choice) {
+  if (!/^[A-Za-z0-9]+:[A-Za-z0-9]+$/.test(paneId ?? "")) throw new ReplyRefused(`invalid pane: ${paneId}`, 2);
+  if (!/^[0-9a-f]{16}$/.test(questionId ?? "")) throw new ReplyRefused(`invalid question: ${questionId}`, 2);
+  if (!/^[1-9]$/.test(choice ?? "")) throw new ReplyRefused(`invalid option: ${choice}`, 2);
+  const number = Number(choice);
+  const waiting = blockedMain(paneId);
+  if (!waiting) throw new ReplyRefused("Claude is no longer waiting for this answer", 3);
+  const question = askedQuestion(paneScreen(paneId), waiting.state_change_seq);
+  if (question?.id !== questionId || !Number.isInteger(waiting.state_change_seq)) {
+    throw new ReplyRefused("the question on the Mac changed", 3);
+  }
+  if (!question.choices.some((option) => option.number === number))
+    throw new ReplyRefused(`option ${number} cannot be answered from the iPhone`, 2);
+
+  herdrPane("send-text", paneId, choice);
+  await sleep(replySettleMs);
+  if (question.preview) {
+    const highlighted = askedQuestion(paneScreen(paneId), blockedMain(paneId)?.state_change_seq);
+    if (highlighted?.id !== questionId || highlighted.options.find((option) => option.cursor)?.number !== number) {
+      throw new Error("the answer was not taken, the option is not highlighted");
+    }
+    herdrPane("send-keys", paneId, "Enter");
+    await sleep(replySettleMs);
+  }
+
+  const agent = blockedMain(paneId);
+  if (!agent) return;
+  const screen = paneScreen(paneId);
+  const next = askedQuestion(screen, agent.state_change_seq);
+  if (next?.id === questionId) throw new Error("the answer was not taken, the question is still on screen");
+  if (!next) return;
+  try {
+    await notify(paneId, agent, screen);
+  } catch (error) {
+    console.error(`answer typed, next question not notified: ${error.message}`);
+  }
 }
 
 async function deliver(device, key, headers, body) {
@@ -244,8 +390,9 @@ async function pushAnswer(jobId) {
   await deliver(device, key, { "apns-collapse-id": jobId }, body);
 }
 
-const run = process.argv[2] === "answer" ? pushAnswer(process.argv[3]) : main();
+const [, , mode, ...args] = process.argv;
+const run = mode === "answer" ? pushAnswer(args[0]) : mode === "reply" ? reply(...args) : main();
 run.catch((error) => {
-  console.error(`heraldr notify: ${error.message}`);
-  process.exit(1);
+  console.error(mode === "reply" ? error.message : `heraldr notify: ${error.message}`);
+  process.exit(error.exitCode ?? 1);
 });

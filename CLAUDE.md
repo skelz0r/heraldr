@@ -46,9 +46,10 @@ ios/Heraldr/
 ├── Herdr/      # HerdrClient: JSON API over herdr.sock, Workspace, Agent
 ├── Mac/        # MacTransport (protocol), MacLink (SSH actor, reconnection), PairedMac
 ├── Pairing/    # PairingCode (HERDR-PAIR:1), PairingCeremony, DeviceKey (Keychain)
-├── Push/       # PushDevice, QuestionNotification, AppDelegate
+├── Push/       # PushDevice, QuestionNotification, QuestionReply (shared with the extension), AppDelegate
 ├── Voice/      # Dictation (SpeechAnalyzer), TranscriptCleaner (Foundation Models), DictationLexicon, LexiconKeeper (backup on the Mac)
 └── UI/
+ios/HeraldrNotificationService/ # notification service extension: one action per option of a question
 ios/HeraldrTests/   # Swift Testing
 ios/HeraldrUITests/ # XCUITest on the fake Mac, one class per flow
 mac/                # dispatch.sh, notify-hook.mjs

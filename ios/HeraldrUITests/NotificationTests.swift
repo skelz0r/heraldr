@@ -26,6 +26,27 @@ final class NotificationTests: XCTestCase {
         assertQuestionOpened(in: app, capturedAs: "unopened-question")
     }
 
+    func testAnswerAQuestionFromTheNotification() {
+        let app = launchAllowingNotifications()
+        XCUIDevice.shared.press(.home)
+
+        let banner = questionBanner()
+        XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
+        banner.press(forDuration: 1.5)
+        let sqlite = springboard.buttons["SQLite"]
+        XCTAssertTrue(sqlite.waitForExistence(timeout: 5), "answer action missing")
+        XCTAssertTrue(springboard.buttons["Postgres"].exists)
+        capture("question-notification-actions", in: springboard, dark: false)
+        sqlite.tap()
+
+        app.activate()
+        let notice = element("notice", in: app)
+        waitFor(notice)
+        XCTAssertTrue(notice.label.contains("Answer sent to acme-main"), notice.label)
+        XCTAssertTrue(notice.label.contains("SQLite"), notice.label)
+        capture("question-answered-from-notification", in: app)
+    }
+
     private func launchAllowingNotifications(environment: [String: String] = [:]) -> XCUIApplication {
         let app = launch("question", environment: environment)
         waitFor(element("tile.wS", in: app))
@@ -37,8 +58,12 @@ final class NotificationTests: XCTestCase {
         return app
     }
 
+    private func questionBanner() -> XCUIElement {
+        springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Which database for the export")).firstMatch
+    }
+
     private func tapNotification() {
-        let banner = springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Which database for the export")).firstMatch
+        let banner = questionBanner()
         XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
         banner.tap()
     }

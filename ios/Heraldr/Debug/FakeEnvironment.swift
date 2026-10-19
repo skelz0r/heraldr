@@ -57,7 +57,8 @@
                     return FakeMac.pairedMac
                 },
                 requestNotifications: { await scheduleNotification(of: scenario) },
-                openURL: { _ in false })
+                openURL: { _ in false },
+                alert: postLocalNotification)
         }
 
         private static func scheduleNotification(of scenario: FakeMacScenario) async {
@@ -65,10 +66,14 @@
             let center = UNUserNotificationCenter.current()
             guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
             let content = UNMutableNotificationContent()
-            content.title = payload.removeValue(forKey: "title") ?? ""
-            content.subtitle = payload.removeValue(forKey: "subtitle") ?? ""
-            content.body = payload.removeValue(forKey: "body") ?? ""
-            content.userInfo = payload
+            content.title = payload.removeValue(forKey: "title")?.text ?? ""
+            content.subtitle = payload.removeValue(forKey: "subtitle")?.text ?? ""
+            content.body = payload.removeValue(forKey: "body")?.text ?? ""
+            content.userInfo = payload.mapValues(\.userInfoValue)
+            if let reply = QuestionReply(userInfo: content.userInfo) {
+                await reply.register()
+                content.categoryIdentifier = reply.categoryIdentifier
+            }
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: scenario.notificationDelay ?? 5, repeats: false)
             try? await center.add(UNNotificationRequest(identifier: "fake-mac-question", content: content, trigger: trigger))
         }
