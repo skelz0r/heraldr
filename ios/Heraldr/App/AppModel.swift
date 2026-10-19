@@ -79,6 +79,9 @@ final class AppModel {
     private(set) var jobs: [DispatchJob] = []
     private(set) var agents: [Agent] = []
     private(set) var tabs: [Tab] = []
+    var dictationLanguage: DictationLanguage {
+        didSet { DictationLanguageStore.save(dictationLanguage, to: environment.defaults) }
+    }
     private(set) var history: SendHistory {
         didSet { SendHistoryStore.save(history, to: environment.defaults) }
     }
@@ -104,6 +107,7 @@ final class AppModel {
     init(environment: AppEnvironment = .live) {
         self.environment = environment
         history = SendHistoryStore.load(from: environment.defaults)
+        dictationLanguage = DictationLanguageStore.load(from: environment.defaults)
         lexiconKeeper = LexiconKeeper(store: environment.lexiconStore)
         dictationJournal = DictationJournal(fileURL: environment.dictationJournalFile)
         if let mac = PairedMacStore.load(from: environment.defaults) {
@@ -117,6 +121,10 @@ final class AppModel {
             lexiconKeeper.update(newValue)
             scheduleLexiconBackup()
         }
+    }
+
+    func transcriptionLocales() async -> [Locale] {
+        await environment.transcriptionLocales()
     }
 
     var lexiconBackup: LexiconKeeper.BackupState {

@@ -42,11 +42,14 @@
         var answers: [String: String]?
         var history: [SentRequest]?
         var lexicon: DictationLexicon?
+        var dictationLanguage: String?
+        var transcriptionLocales: [String]?
         var failures: [String: String]?
         var stalled: [String]?
         var notification: [String: String]?
         var notificationDelay: Double?
 
+        static let defaultTranscriptionLocales = ["en-US", "en-GB", "fr-FR", "fr-CA", "de-DE", "es-ES", "it-IT", "ja-JP", "pt-BR", "zh-CN"]
         static let launchArgument = "-HeraldrFakeMac"
         static let environmentKey = "HERALDR_FAKE_MAC"
         static let keptForRelaunchEnvironmentKey = "HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH"

@@ -491,7 +491,7 @@ struct ComposeView: View {
     private func startDictation() async {
         dictationError = nil
         do {
-            try await dictation.start(vocabulary: model.lexicon.vocabulary)
+            try await dictation.start(locale: model.dictationLanguage.locale(), vocabulary: model.lexicon.vocabulary)
         } catch {
             dictationError = error.localizedDescription
         }

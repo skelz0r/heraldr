@@ -9,8 +9,9 @@ hook) is in [architecture](architecture.md), the why in
 
 The app is in English, whatever the iPhone's language: its texts, and
 what the system formats for it (relative dates, VoiceOver labels of
-symbols), the app being localized in English only. Dictation follows
-the iPhone's language (§5.1).
+symbols), the app being localized in English only. Dictation listens
+in the iPhone's language, or in the one chosen in Settings (§4.5,
+§5.1).
 
 ## 1. Assumed herdr conventions
 
@@ -221,8 +222,28 @@ Round gear button to the right of the History button, "Settings" for
 VoiceOver. It opens a "Settings" sheet, with no Close button (swipe it
 down), half height and expandable, in two sections.
 
-"Dictation": "Lexicon", with the number of terms, opens the list of
-the dictation lexicon (§5.2), "Dictation lexicon":
+"Dictation": "Language", then "Lexicon".
+
+"Language" shows "Same as iPhone" or the chosen language, and opens
+"Dictation language":
+
+- "Same as iPhone", with below it the name of the iPhone's first
+  preferred language (Settings > General > Language & Region), not the
+  app's language, which is always English; it is the default
+- footer: "Only the microphone listens in this language: the app stays
+  in English. Applies from the next dictation."
+- "Languages": every language the iPhone can transcribe on device
+  (SpeechAnalyzer's `SpeechTranscriber` and `DictationTranscriber`
+  locales), named in English with their region ("French (Canada)"),
+  in alphabetical order
+- a checkmark marks the current choice; tapping a row selects it,
+  kept immediately and across launches; nothing else changes (the
+  lexicon and the cleanup are shared by every language)
+- a language no longer transcribable keeps its choice; the dictation
+  then says so (§5.1)
+
+"Lexicon", with the number of terms, opens the list of the dictation
+lexicon (§5.2), "Dictation lexicon":
 
 - one row per term, in neutral text colour (not the accent), in
   lexicon order, most recent first: the term, and below it its heard
@@ -275,10 +296,11 @@ the Action button leads to the dictation on Home (§5.3).
 ### 5.1 Dictation
 
 - "Preparing the microphone…", then "Go ahead, I'm listening.", then
-  the live transcript (SpeechAnalyzer, on device, in the iPhone's
-  language), level waveform and timer; a language the iPhone cannot
-  transcribe: "Transcription in this language is not available on this
-  iPhone"
+  the live transcript (SpeechAnalyzer, on device, in the language of
+  Settings (§4.5): by default the iPhone's first preferred language,
+  never the app's English), level waveform and timer; a language the
+  iPhone cannot transcribe: "Transcription in this language is not
+  available on this iPhone"
 - while the microphone is active, the screen does not lock by itself;
   auto-lock comes back as soon as it stops (stop, cancel, error,
   screen closed, app in the background), so not during cleanup; a

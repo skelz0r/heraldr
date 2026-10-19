@@ -56,7 +56,7 @@ final class Dictation {
         (finalizedText + volatileText).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func start(locale requested: Locale = .current, vocabulary: [String] = []) async throws {
+    func start(locale requested: Locale, vocabulary: [String] = []) async throws {
         guard phase == .idle else { return }
         phase = .preparing
         finalizedText = ""

@@ -34,6 +34,10 @@ already cover. A defect found is first reproduced in a test (fake Mac,
 
 ## Dictation (Voice/, UI/ComposeView.swift)
 
+- [ ] iPhone in French, Settings > Dictation > Language on "Same as
+  iPhone" (subtitle "French (France)"): a dictation in French is
+  transcribed in French; switched to "English (United States)", the
+  next dictation is transcribed in English.
 - [ ] Dictate a request with hesitations: "Dictation cleaned up",
   "See original" shows the raw transcript.
 - [ ] Dictate longer than auto-lock: the screen stays on, then locks

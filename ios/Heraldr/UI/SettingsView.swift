@@ -10,6 +10,12 @@ struct SettingsView: View {
             List {
                 Section("Dictation") {
                     NavigationLink {
+                        DictationLanguageView(language: $model.dictationLanguage, supportedLocales: model.transcriptionLocales)
+                    } label: {
+                        LabeledContent("Language", value: languageLabel)
+                    }
+                    .accessibilityIdentifier("settings.dictationLanguage")
+                    NavigationLink {
                         LexiconView(lexicon: $model.lexicon, backup: model.lexiconBackup)
                     } label: {
                         LabeledContent("Lexicon", value: "\(model.lexicon.terms.count)")
@@ -31,6 +37,15 @@ struct SettingsView: View {
             .textSelection(.enabled)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var languageLabel: String {
+        switch model.dictationLanguage {
+        case .iPhone:
+            "Same as iPhone"
+        case .specific(let identifier):
+            DictationLanguage.name(of: Locale(identifier: identifier))
         }
     }
 }
