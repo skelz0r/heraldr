@@ -181,6 +181,11 @@ function postToApns(device, token, headers, body) {
   });
 }
 
+function sessionTopic(agent) {
+  const title = typeof agent.terminal_title_stripped === "string" ? agent.terminal_title_stripped.trim() : "";
+  return title === "" || title === "Claude Code" || title === agent.name ? null : title;
+}
+
 async function main() {
   const event = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON ?? "{}").data ?? {};
   const paneId = event.pane_id;
@@ -209,9 +214,10 @@ async function main() {
   const sessionId = agent.agent_session?.value;
   const url = sessionId ? remoteControlUrl(sessionId) : null;
   const question = pendingRequest(paneScreen(paneId));
+  const topic = sessionTopic(agent);
   const body = {
     aps: {
-      alert: { title: label, subtitle: agent.name, body: question ?? "Waiting for an answer" },
+      alert: { title: label, ...(topic ? { subtitle: topic } : {}), body: question ?? "Waiting for an answer" },
       sound: "default",
       "thread-id": agent.name,
     },

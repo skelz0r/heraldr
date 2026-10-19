@@ -106,7 +106,7 @@
         static var withQuestion: FakeMacScenario {
             var scenario = demo
             scenario.notification = [
-                "title": "Acme", "subtitle": "acme-main", "body": "Which database for the export?",
+                "title": "Acme", "subtitle": "Export of the contacts", "body": "Which database for the export?",
                 "workspace_id": "wS", "agent": "acme-main", "session_url": "https://claude.ai/code/session_01fake",
             ]
             scenario.notificationDelay = 12

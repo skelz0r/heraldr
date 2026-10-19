@@ -25,7 +25,7 @@ function writeJson(path, value) {
   writeFileSync(path, JSON.stringify(value));
 }
 
-function setAgent({ name = "acme_app-main", status = "blocked" } = {}) {
+function setAgent({ name = "acme_app-main", status = "blocked", title = "Export of the contacts" } = {}) {
   writeJson(join(world, "herdr", "agent.json"), {
     result: {
       agent: {
@@ -34,6 +34,7 @@ function setAgent({ name = "acme_app-main", status = "blocked" } = {}) {
         workspace_id: "w1",
         agent_status: status,
         agent_session: { value: sessionId },
+        ...(title === null ? {} : { terminal_title_stripped: title }),
       },
     },
   });
@@ -200,7 +201,7 @@ esac
 });
 
 describe("notification of a -main agent asking a question", () => {
-  it("alerts the iPhone with the workspace, the agent, the question and the Remote Control session link", async () => {
+  it("alerts the iPhone with the workspace, the session topic, the question and the Remote Control session link", async () => {
     setAgent();
     showQuestion("Which database should we use?");
 
@@ -213,13 +214,25 @@ describe("notification of a -main agent asking a question", () => {
     assert.match(push.headers.authorization, /^bearer /);
     assert.deepEqual(push.body.aps.alert, {
       title: "acme_app",
-      subtitle: "acme_app-main",
+      subtitle: "Export of the contacts",
       body: "Which database should we use?",
     });
     assert.equal(push.body.session_url, "https://claude.ai/code/session_01ABCDEFGHIJKLMNOPQRSTUV");
     assert.equal(push.body.workspace_id, "w1");
     assert.equal(push.body.agent, "acme_app-main");
   });
+
+  for (const title of [null, "", "Claude Code"]) {
+    it(`shows no subtitle, never the agent name, for a session without topic (${JSON.stringify(title)})`, async () => {
+      setAgent({ title });
+      showQuestion("Which database should we use?");
+
+      await runHook("blocked");
+
+      assert.equal(pushes[0].body.aps.alert.subtitle, undefined);
+      assert.equal(pushes[0].body.aps.alert.title, "acme_app");
+    });
+  }
 
   it("reads the question on screen, the transcript only holding the tool run before it", async () => {
     setAgent();

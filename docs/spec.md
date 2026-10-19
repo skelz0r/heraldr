@@ -733,8 +733,10 @@ summary. The sheet closes the history and settings if they are open.
   APNs registration failure: "Notifications unavailable"
 - a notification goes out when a `-main` agent turns `blocked` and
   stays so for 3 s, once per question; never for worktree Claudes.
-  Title: workspace label, subtitle: agent, body: what the agent's
-  screen shows, truncated to 178 characters ("…"):
+  Title: workspace label, subtitle: topic of the session (terminal
+  title of the Claude, none when it is empty or the default "Claude
+  Code", never the agent name, always `<slug>-main`), body: what the
+  agent's screen shows, truncated to 178 characters ("…"):
   - question of an AskUserQuestion, whatever its rendering (options
     with a preview, several questions in tabs, multiple choice): the
     question on screen; on the review step of several questions,

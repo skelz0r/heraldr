@@ -317,8 +317,9 @@ The hook, a short process per state change started by herdr:
    until the app's next launch. Errors go to stderr, readable with
    `herdr plugin log list --plugin heraldr`
 
-Payload: `aps.alert` (title = workspace label, subtitle = agent, body
-= question), `workspace_id`, `agent`, `session_url`. On tap, the app
+Payload: `aps.alert` (title = workspace label, subtitle =
+`terminal_title_stripped` of `herdr agent get`, the session topic
+Claude Code sets as terminal title, body = question), `workspace_id`, `agent`, `session_url`. On tap, the app
 targets the workspace, opens `session_url` with `universalLinksOnly`,
 and shows an "Open in Claude" card if opening fails or the URL is
 missing.
