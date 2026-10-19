@@ -93,6 +93,8 @@
                     return CommandResult(exitStatus: 2, stdout: Data(), stderr: Data("no answer for \(arguments[1])".utf8))
                 }
                 return .success(answer)
+            case "register-push" where input.isEmpty:
+                return Self.failure("2:empty hook")
             case "reply" where arguments.count == 4:
                 return reply(pane: arguments[1], questionId: arguments[2], option: arguments[3], hook: input)
             case "reply":
@@ -147,7 +149,7 @@
             guard pane.wholeMatch(of: #/[A-Za-z0-9]+:[A-Za-z0-9]+/#) != nil else { return Self.failure("2:invalid pane: \(pane)") }
             guard questionId.wholeMatch(of: #/[0-9a-f]{16}/#) != nil else { return Self.failure("2:invalid question: \(questionId)") }
             guard let number = Int(option), option.wholeMatch(of: #/[1-9]/#) != nil else { return Self.failure("2:invalid option: \(option)") }
-            guard !hook.isEmpty else { return Self.failure("1:no hook to install") }
+            guard !hook.isEmpty else { return Self.failure("2:empty hook") }
             guard let index = scenario.agents?.firstIndex(where: { $0.paneId == pane }), let agent = scenario.agents?[index] else {
                 return Self.failure("3:Claude is no longer waiting for this answer")
             }

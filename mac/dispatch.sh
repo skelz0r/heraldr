@@ -424,7 +424,13 @@ print_answer() {
 
 install_notify_plugin() {
   mkdir -p "$PLUGIN_DIR"
-  cat > "$PLUGIN_DIR/notify-hook.mjs.tmp" && mv "$PLUGIN_DIR/notify-hook.mjs.tmp" "$PLUGIN_DIR/notify-hook.mjs"
+  cat > "$PLUGIN_DIR/notify-hook.mjs.tmp" || return 1
+  if [ ! -s "$PLUGIN_DIR/notify-hook.mjs.tmp" ]; then
+    rm -f "$PLUGIN_DIR/notify-hook.mjs.tmp"
+    echo "empty hook" >&2
+    exit 2
+  fi
+  mv "$PLUGIN_DIR/notify-hook.mjs.tmp" "$PLUGIN_DIR/notify-hook.mjs"
   cat > "$PLUGIN_DIR/herdr-plugin.toml" <<'MANIFEST'
 id = "heraldr"
 name = "Heraldr"

@@ -763,6 +763,21 @@ describe("answer to a question from the notification", () => {
     assert.deepEqual(typed(), []);
   });
 
+  it("refuses an empty hook and keeps the installed one, for reply as for register-push", async () => {
+    const { question_id } = await notifiedQuestion("multiple-questions.txt");
+    await reply(question_id, "9");
+    const installed = readFileSync(join(stateDir(), "plugin", "notify-hook.mjs"), "utf8");
+
+    const replied = await runDispatch(["reply", "w1:p2", question_id, "1"], "");
+    const registered = await runDispatch(["register-push", "ab".repeat(32), "sandbox", "com.example.heraldr.dev", "ABCDE12345"], "");
+
+    assert.equal(replied.code, 2);
+    assert.equal(registered.code, 2);
+    assert.match(replied.stderr, /empty hook/);
+    assert.equal(readFileSync(join(stateDir(), "plugin", "notify-hook.mjs"), "utf8"), installed);
+    assert.deepEqual(typed(), []);
+  });
+
   it("reports an answer the pane did not take", async () => {
     const { question_id } = await notifiedQuestion("multiple-questions.txt");
 
