@@ -1,0 +1,27 @@
+{
+  "aps": {
+    "alert": {
+      "title": "acme_app",
+      "subtitle": "Export of the contacts",
+      "body": "Which database should we use?"
+    },
+    "sound": "default",
+    "thread-id": "acme_app-main",
+    "mutable-content": 1
+  },
+  "workspace_id": "w1",
+  "agent": "acme_app-main",
+  "session_url": "https://claude.ai/code/session_01ABCDEFGHIJKLMNOPQRSTUV",
+  "pane_id": "w1:p2",
+  "question_id": "940875c98fd07e68",
+  "options": [
+    {
+      "number": 1,
+      "label": "Postgres"
+    },
+    {
+      "number": 2,
+      "label": "SQLite"
+    }
+  ]
+}

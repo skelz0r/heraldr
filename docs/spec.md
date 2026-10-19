@@ -751,6 +751,20 @@ summary. The sheet closes the history and settings if they are open.
     Claude asks)
   - nothing recognized and no message on screen: "Waiting for an
     answer"
+- answer from the notification, for an AskUserQuestion with single
+  choice: a long press shows one button per option, labelled as on
+  the Mac ("Type something" excluded); the iPhone must be unlocked.
+  The app answers in the background (`reply`, §8.2), without opening:
+  - typed: "Answer sent to <agent>" notice, detail: the option; the
+    next question of the same AskUserQuestion, or its review step,
+    comes as a new notification
+  - refused because Claude no longer waits or shows another question:
+    nothing typed, "Answer not sent to <agent>" notification and
+    notice, detail "<reason>: <option> was not typed."
+  - other failure (Mac unreachable, refused command): same
+    notification and notice, detail "<option>: <error>"
+  - multiple choice, permission request or unrecognized screen: no
+    button, the tap stays the only action
 - a notification goes out when a `-main` hands in its answer to a
   simple question (§6.5): title = the send's label, subtitle "Answer",
   body = summary, truncated to 178 characters ("…"); tap: the answer

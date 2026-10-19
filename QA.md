@@ -56,10 +56,18 @@ already cover. A defect found is first reproduced in a test (fake Mac,
   background on another target: the microphone opens on Home's
   `main` each time, the request sent lands in Home.
 
-## Notifications (Push/, mac/notify-hook.mjs)
+## Notifications (Push/, HeraldrNotificationService/, mac/notify-hook.mjs)
 
 - [ ] Get a `-main` to ask an AskUserQuestion: the notification
-  arrives with label, agent and question; the tap opens the session in
-  the Claude app.
+  arrives with label, session topic and question; the tap opens the
+  session in the Claude app.
+- [ ] iPhone locked, long press a question notification: one button
+  per option; after Face ID, the option chosen is typed on the Mac and
+  Claude resumes.
+- [ ] AskUserQuestion with two questions, the first with previews:
+  answer both from the notifications, then "Submit answers"; Claude
+  receives both answers.
+- [ ] Answer a question on the Mac, then tap an option in its older
+  notification: "Answer not sent" notification, nothing typed.
 - [ ] Send a simple question to a project: "Answer" notification with
   the summary, the tap opens the sheet with the full answer.

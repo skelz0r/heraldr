@@ -11,6 +11,7 @@ struct AppEnvironment {
     let pair: @MainActor (String) async throws -> PairedMac
     let requestNotifications: @MainActor () async -> Void
     let openURL: @MainActor (URL) async -> Bool
+    let alert: @MainActor (String, String) async -> Void
 
     static var live: AppEnvironment {
         AppEnvironment(
@@ -34,7 +35,16 @@ struct AppEnvironment {
             },
             openURL: { url in
                 await UIApplication.shared.open(url, options: [.universalLinksOnly: true])
-            })
+            },
+            alert: postLocalNotification)
+    }
+
+    static func postLocalNotification(title: String, body: String) async {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 }
 

@@ -11,6 +11,7 @@ struct HeraldrApp: App {
         let model = AppModel(environment: .launch)
         _model = State(initialValue: model)
         AppDependencyManager.shared.add(dependency: model)
+        AppDelegate.launchedModel = model
         #if DEBUG
             SimulatedActionButton.listen(for: model)
         #endif

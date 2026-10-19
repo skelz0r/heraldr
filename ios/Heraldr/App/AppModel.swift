@@ -277,6 +277,28 @@ final class AppModel {
         unopenedQuestion = question
     }
 
+    func answer(_ question: QuestionNotification, with option: QuestionReply.Option) async {
+        guard let reply = question.reply else { return }
+        do {
+            guard let link else { throw MacLinkError.unreachable("no paired Mac") }
+            try await Dispatcher(link: link).reply(to: reply, choosing: option)
+            notice = Notice(kind: .sent, title: "Answer sent to \(question.agent)", detail: option.label)
+            await refresh()
+        } catch {
+            let detail = Self.replyFailure(error, option: option)
+            notice = Notice(kind: .failed, title: "Answer not sent to \(question.agent)", detail: detail)
+            await environment.alert("Answer not sent to \(question.agent)", detail)
+        }
+    }
+
+    private static func replyFailure(_ error: any Error, option: QuestionReply.Option) -> String {
+        guard case .commandFailed(let status, let reason) = error as? MacLinkError, status == 3 else {
+            return "\(option.label): \(error.localizedDescription)"
+        }
+        let sentence = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        return "\(sentence.prefix(1).uppercased())\(sentence.dropFirst()): \(option.label) was not typed."
+    }
+
     func open(_ notification: AnswerNotification) async {
         let entry = history.entry(forJob: notification.jobId)
         let label =

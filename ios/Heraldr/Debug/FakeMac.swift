@@ -9,6 +9,7 @@
         private(set) var commands: [String] = []
         private(set) var prompts: [String] = []
         private(set) var lexiconBackup: Data?
+        private(set) var replies: [String] = []
         private var sequence = 100
         private var holds: Set<String> = []
         private var waiting: [String: CheckedContinuation<Void, Never>] = [:]
@@ -92,6 +93,10 @@
                     return CommandResult(exitStatus: 2, stdout: Data(), stderr: Data("no answer for \(arguments[1])".utf8))
                 }
                 return .success(answer)
+            case "reply" where arguments.count == 4:
+                return reply(pane: arguments[1], questionId: arguments[2], option: arguments[3], hook: input)
+            case "reply":
+                return Self.failure("2:usage")
             case "lexicon-get":
                 return CommandResult(exitStatus: 0, stdout: lexiconBackup ?? Data(), stderr: Data())
             case "lexicon-put":
@@ -136,6 +141,24 @@
             if let unreachable = scenario.unreachable {
                 throw MacLinkError.unreachable(unreachable)
             }
+        }
+
+        private func reply(pane: String, questionId: String, option: String, hook: Data) -> CommandResult {
+            guard pane.wholeMatch(of: #/[A-Za-z0-9]+:[A-Za-z0-9]+/#) != nil else { return Self.failure("2:invalid pane: \(pane)") }
+            guard questionId.wholeMatch(of: #/[0-9a-f]{16}/#) != nil else { return Self.failure("2:invalid question: \(questionId)") }
+            guard let number = Int(option), option.wholeMatch(of: #/[1-9]/#) != nil else { return Self.failure("2:invalid option: \(option)") }
+            guard !hook.isEmpty else { return Self.failure("1:no hook to install") }
+            guard let index = scenario.agents?.firstIndex(where: { $0.paneId == pane }), let agent = scenario.agents?[index] else {
+                return Self.failure("3:Claude is no longer waiting for this answer")
+            }
+            guard agent.name?.hasSuffix(AgentName.suffix) == true else { return Self.failure("2:pane \(pane) is not a -main agent") }
+            guard agent.status == "blocked" else { return Self.failure("3:Claude is no longer waiting for this answer") }
+            guard let question = agent.question, question.id == questionId else { return Self.failure("3:the question on the Mac changed") }
+            guard question.options.contains(number) else { return Self.failure("2:option \(number) cannot be answered from the iPhone") }
+            replies.append("\(pane) \(number)")
+            scenario.agents?[index].status = "working"
+            scenario.agents?[index].question = nil
+            return .success("")
         }
 
         private func mainAgents(of workspaceId: String) -> [String] {

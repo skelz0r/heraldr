@@ -593,16 +593,10 @@ describe("answer of a -main to a simple question", () => {
 });
 
 describe("answer to a question from the notification", () => {
-  it("carries the options of the question, without the free text one, to answer from the iPhone", async () => {
+  it("carries the options of the question, without the free text one, as the app reads them", async () => {
     const body = await notifiedQuestion("multiple-questions.txt");
 
-    assert.equal(body.aps["mutable-content"], 1);
-    assert.equal(body.pane_id, "w1:p2");
-    assert.match(body.question_id, /^[0-9a-f]{16}$/);
-    assert.deepEqual(body.options, [
-      { number: 1, label: "Postgres" },
-      { number: 2, label: "SQLite" },
-    ]);
+    assert.deepEqual(body, JSON.parse(readFileSync(join(dirname(hook), "test", "question-notification.json"), "utf8")));
   });
 
   it("never takes numbered lines of an option description for options", async () => {

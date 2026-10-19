@@ -27,6 +27,7 @@ struct QuestionNotification: Sendable, Equatable {
     let workspaceId: String
     let agent: String
     let sessionURL: URL?
+    let reply: QuestionReply?
 
     init?(userInfo: [AnyHashable: Any]) {
         guard
@@ -36,6 +37,7 @@ struct QuestionNotification: Sendable, Equatable {
         self.workspaceId = workspaceId
         self.agent = agent
         sessionURL = (userInfo["session_url"] as? String).flatMap(URL.init(string:))
+        reply = QuestionReply(userInfo: userInfo)
     }
 }
 
@@ -74,6 +76,8 @@ enum NotificationTap: Sendable, Equatable {
 
 @MainActor
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    static weak var launchedModel: AppModel?
+
     weak var model: AppModel? {
         didSet { deliverPending() }
     }
@@ -83,6 +87,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        if model == nil {
+            model = Self.launchedModel
+        }
         return true
     }
 
@@ -106,10 +113,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping @Sendable () -> Void
     ) {
         let tap = NotificationTap(userInfo: response.notification.request.content.userInfo)
+        let action = response.actionIdentifier
         Task { @MainActor in
-            if let tap { received(tap) }
+            if case .question(let question) = tap, let option = question.reply?.option(forAction: action) {
+                await answer(question, with: option)
+            } else if let tap {
+                received(tap)
+            }
             completionHandler()
         }
+    }
+
+    private func answer(_ question: QuestionNotification, with option: QuestionReply.Option) async {
+        guard let model = model ?? Self.launchedModel else { return }
+        let backgroundTask = BackgroundTask(named: "Answer \(question.agent)")
+        await model.answer(question, with: option)
+        backgroundTask.end()
     }
 
     private func received(_ tap: NotificationTap) {
@@ -130,5 +149,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             case .answer(let answer): Task { await model.open(answer) }
             }
         }
+    }
+}
+
+@MainActor
+private final class BackgroundTask {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+
+    init(named name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            self?.end()
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
     }
 }

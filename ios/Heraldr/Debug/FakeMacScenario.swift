@@ -22,6 +22,12 @@
             var workspaceId: String?
             var tabId: String?
             var status: String
+            var question: Question?
+        }
+
+        struct Question: Codable, Sendable {
+            var id: String
+            var options: [Int]
         }
 
         struct Job: Codable, Sendable {
@@ -46,7 +52,7 @@
         var transcriptionLocales: [String]?
         var failures: [String: String]?
         var stalled: [String]?
-        var notification: [String: String]?
+        var notification: [String: FakeNotificationValue]?
         var notificationDelay: Double?
 
         static let defaultTranscriptionLocales = ["en-US", "en-GB", "fr-FR", "fr-CA", "de-DE", "es-ES", "it-IT", "ja-JP", "pt-BR", "zh-CN"]
@@ -108,7 +114,13 @@
             scenario.notification = [
                 "title": "Acme", "subtitle": "Export of the contacts", "body": "Which database for the export?",
                 "workspace_id": "wS", "agent": "acme-main", "session_url": "https://claude.ai/code/session_01fake",
+                "pane_id": "wS:p1", "question_id": .text(questionId),
+                "options": .options([.init(number: 1, label: "Postgres"), .init(number: 2, label: "SQLite")]),
             ]
+            if let index = scenario.agents?.firstIndex(where: { $0.name == "acme-main" }) {
+                scenario.agents?[index].status = "blocked"
+                scenario.agents?[index].question = Question(id: questionId, options: [1, 2])
+            }
             scenario.notificationDelay = 12
             return scenario
         }
@@ -195,6 +207,52 @@
                 jobs: [
                     Job(id: "20261012090000-000000000001-aa", workspaceId: "wS", agent: "acme-main", state: "queued")
                 ])
+        }
+    }
+
+    extension FakeMacScenario {
+        static let questionId = "5f0c2a7e9b41d386"
+    }
+
+    enum FakeNotificationValue: Codable, Sendable, Equatable, ExpressibleByStringLiteral {
+        struct Option: Codable, Sendable, Equatable {
+            var number: Int
+            var label: String
+        }
+
+        case text(String)
+        case options([Option])
+
+        init(stringLiteral value: String) {
+            self = .text(value)
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let text = try? container.decode(String.self) {
+                self = .text(text)
+            } else {
+                self = .options(try container.decode([Option].self))
+            }
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .text(let text): try container.encode(text)
+            case .options(let options): try container.encode(options)
+            }
+        }
+
+        var userInfoValue: Any {
+            switch self {
+            case .text(let text): text
+            case .options(let options): options.map { ["number": $0.number, "label": $0.label] as [String: Any] }
+            }
+        }
+
+        var text: String? {
+            if case .text(let text) = self { text } else { nil }
         }
     }
 #endif
