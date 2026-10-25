@@ -34,6 +34,12 @@ esac
 
 BRANCH="$(git -C "${WORKTREE_PATH}" branch --show-current)"
 
+if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain)" ]; then
+    echo "${WORKTREE_PATH} has uncommitted changes: commit or drop them first" >&2
+    git -C "${WORKTREE_PATH}" status --short >&2
+    exit 1
+fi
+
 if pkill -f "${WORKTREE_PATH}/"; then
     echo "Stopped the processes started from ${WORKTREE_PATH}"
     sleep 1
@@ -41,7 +47,7 @@ fi
 
 IOS_TEST_SIMULATOR_NAME="Heraldr ${NAME}" "${PROJECT_DIR}/bin/ios-simulator" --delete
 
-git -C "${MAIN_CHECKOUT}" worktree remove "${WORKTREE_PATH}"
+git -C "${MAIN_CHECKOUT}" worktree remove --force "${WORKTREE_PATH}"
 echo "Removed worktree ${WORKTREE_PATH}"
 
 if [ -n "${BRANCH}" ]; then
