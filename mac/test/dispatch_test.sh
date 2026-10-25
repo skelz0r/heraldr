@@ -384,6 +384,37 @@ wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "failure announced with the herdr reason" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4)|$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "failed|agent start: {\"error\":{\"code\":\"pane_not_ready"
 teardown_world
 
+echo "a new pane still running its shell rc is waited for before starting Claude"
+setup_world
+echo 3 > "$FAKE_HERDR_WORLD/start_busy_attempts"
+enqueue w1 '~' "Slow shell"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "Claude started once the pane is an available shell" "$(wc -l < "$FAKE_HERDR_WORLD/starts" | tr -d ' ')" "4"
+check "the request goes out after /clear" "$(prompts_of home-main)" "idle|/clear
+idle|Slow shell"
+check "the pane is kept" "$(cat "$FAKE_HERDR_WORLD/closed_panes" 2>/dev/null)" ""
+teardown_world
+
+echo "a new pane never available within the start timeout fails the send and is closed"
+setup_world
+export HERALDR_START_TIMEOUT_MS=2000
+echo 1000 > "$FAKE_HERDR_WORLD/start_busy_attempts"
+enqueue w1 '~' "Never ready"
+wait_until 15 '[ "$(job_states)" = "failed " ]'
+check "failure announced with the herdr reason" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*agent_pane_busy')" "agent start: {\"error\":{\"code\":\"agent_pane_busy"
+check "the split pane is closed" "$(cat "$FAKE_HERDR_WORLD/closed_panes")" "w1:p2"
+check "nothing was sent" "$(prompts_of home-main)" ""
+unset HERALDR_START_TIMEOUT_MS
+teardown_world
+
+echo "a Claude that does not start leaves no pane behind"
+setup_world
+echo pane_not_ready > "$FAKE_HERDR_WORLD/start_error"
+enqueue w1 '~' "Cold request"
+wait_until 10 '[ "$(job_states)" = "failed " ]'
+check "the split pane is closed" "$(cat "$FAKE_HERDR_WORLD/closed_panes")" "w1:p2"
+teardown_world
+
 echo "a /clear without effect fails the send, without sending the request in the old context"
 setup_world
 export HERALDR_CLEAR_TIMEOUT_SECONDS=2

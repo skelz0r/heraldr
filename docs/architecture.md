@@ -138,7 +138,11 @@ wrapped to zero after 99999):
    that pane's cwd, then
    `herdr agent start <agent> --kind claude --pane <pane> --
    --dangerously-skip-permissions --remote-control "<label>—main"`
-   (equivalent to `dclaude`, keeping herdr's readiness detection)
+   (equivalent to `dclaude`, keeping herdr's readiness detection).
+   `agent_pane_busy` means the new pane's shell is not at its prompt
+   yet (slow rc): retried every 0.5 s within the 60 s start timeout.
+   Any other failure, or the timeout, closes the split pane
+   (`herdr pane close`) so tab 1 keeps no orphan
 4. `herdr agent wait <agent> --until idle --until done`, no timeout:
    this is the queue, which waits as long as the agent is working or
    blocked
