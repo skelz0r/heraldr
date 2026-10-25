@@ -54,6 +54,7 @@ flows_from_diff() {
 }
 
 prepare_simulator() {
+    xcrun simctl ui "$1" appearance dark
     xcrun simctl ui "$1" appearance light
     xcrun simctl status_bar "$1" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 }

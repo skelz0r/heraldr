@@ -101,5 +101,7 @@ Every script that runs the app targets the worktree's simulator by udid
 (`bin/ios-simulator`), never a shared simulator nor `booted`. Driving
 it by hand, with argent, and the evidence: the `verify-heraldr` skill.
 
-A simulator left booted for a long time can ignore the appearance change
-(everything stays light): `xcrun simctl shutdown` then `boot` fixes it.
+A simulator whose appearance was never switched to dark ignores the
+appearance changes of the UI tests (every dark capture stays light),
+even across reboots: one `xcrun simctl ui <udid> appearance dark` fixes
+it for good, so `bin/qa` switches to dark then light before playing.
