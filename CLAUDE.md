@@ -26,6 +26,7 @@ bin/lint                     # shellcheck, swift-format, SwiftLint, Biome, guard
 bin/qa [--all|<class>...]    # UI tests touched by the diff on the fake Mac, light and dark screenshots
 bin/local-ci                 # lint then tests (iOS skipped if the diff is docs only)
 bin/local-ci push            # checks then push, no remote CI
+bin/remove-worktree <name>   # after merge: processes, simulator, worktree, branch
 ```
 
 Installing on the iPhone follows the global `ios-device-install` skill
@@ -213,9 +214,11 @@ Each topic goes in a dedicated worktree (`start` skill), under
 git worktree add worktrees/<name> -b feature/<name> origin/main
 ```
 
-No setup script: `bin/generate-ios` initializes the Heeler submodule on
-the first build. After merge:
-`git worktree remove worktrees/<name> && git branch -d feature/<name>`.
+No setup script: `bin/generate-ios` initializes the Heeler submodule
+and `bin/ios-simulator` creates the worktree's simulator on first use.
+After merge, from the main checkout (`/cleanup` calls it):
+`bin/remove-worktree <name>` stops the processes started from the
+worktree, deletes its simulator, the worktree and its merged branch.
 
 ## Documentation
 
