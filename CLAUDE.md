@@ -141,8 +141,8 @@ A test that breaks with no intended behavior change: say whether the
 test or the code is wrong, never adapt it silently.
 
 End of iteration: `$PWD/bin/run-ios-tests` (or `bin/run-mac-tests` if
-only the Mac scripts changed), `$PWD/bin/qa` if the UI or the app
-changed (see *QA*), then `docs/spec.md` up to date. Lint runs on its
+only the Mac scripts changed), the `verify-heraldr` skill if the UI or
+the app changed, then `docs/spec.md` up to date. Lint runs on its
 own: the project's Stop hook (`.claude/settings.json`) runs `bin/lint`
 before handing back, and so does `bin/local-ci`.
 
@@ -175,22 +175,10 @@ options in `docs/decisions.md`.
 
 ## QA
 
-QA is done by the agent, in two steps:
-
-1. End of iteration, on the simulator: `$PWD/bin/qa` runs the UI test
-   classes touched by the diff (a few minutes, `--all` for everything,
-   3 to 4 min, on 3 simulator clones), on iPhone SE, the smallest iOS
-   26 screen, and exports the screenshots to
-   `~/share/screenshots/<worktree>/`. It records the durations in
-   `build/qa-durations.tsv` of the main checkout and warns when a test
-   exceeds 45 s or `--all` grows by 20 %: move a check down to a unit
-   test, merge flows, cut fixed waits. Look at them, in light and dark
-   (`docs/design.md`), before saying the UI is done; a defect seen is
-   fixed with its test.
-2. After a `bin/run-ios-device`, only if the diff touches one of its
-   areas: show the user 3 to 5 boxes from `QA.md` at most, those of
-   these areas, never the whole list. `QA.md` only keeps what requires
-   the real iPhone and the real Mac; a box a test can cover leaves it.
+QA is done by the agent with the `verify-heraldr` skill
+(`.claude/skills/verify-heraldr/`): launch on the worktree's simulator
+and the fake Mac, doctor, `bin/qa` and its screenshots, argent to
+explore, then the `QA.md` boxes after an install on the iPhone.
 
 ## Git
 

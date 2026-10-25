@@ -97,17 +97,9 @@ to the agent so it fixes them before answering. Only one retry per turn
 
 ## Simulator and screenshots
 
-Useful commands to look at the app by hand, always by `--udid` or udid,
-never `booted` (several worktrees share the machine):
-
-- launch on the fake Mac: `xcrun simctl launch <udid>
-  <bundle id> -HeraldrFakeMac demo` (presets: `demo`, `history`,
-  `question`, `unpaired`, `unreachable`, `connecting`, `empty`), or
-  `SIMCTL_CHILD_HERALDR_FAKE_MAC='<json>'` for a whole scenario
-- `xcrun simctl ui <udid> appearance dark|light`, `status_bar <udid>
-  override --time 9:41`, `io <udid> screenshot <file>`
-- AXe: `axe describe-ui --udid <udid>`, `axe tap --id <identifier>
-  --udid <udid>`, `axe type '<text>' --udid <udid>`
+Every script that runs the app targets the worktree's simulator by udid
+(`bin/ios-simulator`), never a shared simulator nor `booted`. Driving
+it by hand, with argent, and the evidence: the `verify-heraldr` skill.
 
 A simulator left booted for a long time can ignore the appearance change
 (everything stays light): `xcrun simctl shutdown` then `boot` fixes it.
