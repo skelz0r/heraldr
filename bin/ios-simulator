@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORKTREE="$(basename "${PROJECT_DIR}")"
+SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-Heraldr ${WORKTREE}}"
+DEVICE_TYPE="${QA_DEVICE_TYPE:-iPhone SE (3rd generation)}"
+ARGENT="${HOME}/.local/share/argent/node_modules/.bin/argent"
+
+usage() {
+    cat <<USAGE
+Usage: bin/ios-simulator [--boot | --name | --delete]
+
+Prints the udid of the simulator dedicated to this worktree
+("${SIMULATOR}", ${DEVICE_TYPE}), created on first use and
+recreated when its device type changed. Every script that runs the app
+on a simulator targets it by this udid, never a shared simulator nor
+"booted".
+
+  --boot    also boot it and wait until it is usable
+  --name    print its name only
+  --delete  stop the argent services driving it, shut it down and
+            delete it (worktree removal)
+USAGE
+}
+
+existing_simulator() {
+    xcrun simctl list devices "$@" -j | plutil -extract devices json -o - - |
+        python3 -c 'import json,sys; name=sys.argv[1]; print(next((d["udid"] + " " + d["deviceTypeIdentifier"] for r in json.load(sys.stdin).values() for d in r if d["name"] == name), ""))' "${SIMULATOR}"
+}
+
+device_type_identifier() {
+    xcrun simctl list devicetypes -j | plutil -extract devicetypes json -o - - |
+        python3 -c 'import json,sys; name=sys.argv[1]; print(next(t["identifier"] for t in json.load(sys.stdin) if t["name"] == name))' "${DEVICE_TYPE}"
+}
+
+simulator_udid() {
+    local found udid device_type
+    found="$(existing_simulator available)"
+    udid="${found%% *}"
+    device_type="$(device_type_identifier)"
+    if [ -n "$udid" ] && [ "${found#* }" != "$device_type" ]; then
+        xcrun simctl shutdown "$udid" 2>/dev/null || true
+        xcrun simctl delete "$udid"
+        udid=""
+    fi
+    if [ -z "$udid" ]; then
+        udid="$(xcrun simctl create "${SIMULATOR}" "${device_type}")"
+    fi
+    printf '%s\n' "$udid"
+}
+
+case "${1:-}" in
+    -h | --help) usage ;;
+    --name) printf '%s\n' "${SIMULATOR}" ;;
+    --delete)
+        found="$(existing_simulator)"
+        [ -n "$found" ] || exit 0
+        if [ -x "${ARGENT}" ] && [[ "$("${ARGENT}" server status --json 2>/dev/null)" == *'"running": true'* ]]; then
+            "${ARGENT}" run stop-all-simulator-servers --devices "${found%% *}" >/dev/null
+        fi
+        xcrun simctl shutdown "${found%% *}" 2>/dev/null || true
+        xcrun simctl delete "${found%% *}"
+        echo "Deleted simulator ${SIMULATOR} (${found%% *})"
+        ;;
+    --boot)
+        udid="$(simulator_udid)"
+        xcrun simctl boot "$udid" 2>/dev/null || true
+        xcrun simctl bootstatus "$udid" -b >/dev/null
+        printf '%s\n' "$udid"
+        ;;
+    "") simulator_udid ;;
+    *) usage >&2; exit 1 ;;
+esac

@@ -3,13 +3,12 @@ set -eo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKTREE="$(basename "${PROJECT_DIR}")"
-SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-Heraldr ${WORKTREE}}"
+SIMULATOR="$("${PROJECT_DIR}/bin/ios-simulator" --name)"
 DERIVED_DATA="${PROJECT_DIR}/build/qa"
 RESULT_BUNDLE="${DERIVED_DATA}/qa.xcresult"
 ATTACHMENTS="${DERIVED_DATA}/attachments"
 SCREENSHOTS="${HOME}/share/screenshots/${WORKTREE}"
 BASE_BRANCH="origin/main"
-DEVICE_TYPE="${QA_DEVICE_TYPE:-iPhone SE (3rd generation)}"
 DURATIONS="$(dirname "$(git -C "${PROJECT_DIR}" rev-parse --path-format=absolute --git-common-dir)")/build/qa-durations.tsv"
 ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacAndVoiceTests)
 
@@ -18,8 +17,8 @@ usage() {
 Usage: bin/qa [--all | <flow>...]
 
 Plays the UI flows touched by the diff since ${BASE_BRANCH} on the
-simulator dedicated to this worktree ("${SIMULATOR}", ${DEVICE_TYPE},
-the smallest screen iOS 26 runs on), against the fake Mac, then
+simulator dedicated to this worktree ("${SIMULATOR}", bin/ios-simulator,
+an iPhone SE, the smallest screen iOS 26 runs on), against the fake Mac, then
 exports light and dark screenshots to ${SCREENSHOTS}/ and records
 test durations in ${DURATIONS}.
 
@@ -54,27 +53,7 @@ flows_from_diff() {
     while IFS= read -r path; do [ -z "$path" ] || flows_for_path "$path"; done <<< "$paths" | sort -u
 }
 
-simulator_udid() {
-    local found udid device_type
-    found="$(xcrun simctl list devices available -j | plutil -extract devices json -o - - |
-        python3 -c 'import json,sys; name=sys.argv[1]; print(next((d["udid"] + " " + d["deviceTypeIdentifier"] for r in json.load(sys.stdin).values() for d in r if d["name"] == name), ""))' "${SIMULATOR}")"
-    udid="${found%% *}"
-    device_type="$(xcrun simctl list devicetypes -j | plutil -extract devicetypes json -o - - |
-        python3 -c 'import json,sys; name=sys.argv[1]; print(next(t["identifier"] for t in json.load(sys.stdin) if t["name"] == name))' "${DEVICE_TYPE}")"
-    if [ -n "$udid" ] && [ "${found#* }" != "$device_type" ]; then
-        xcrun simctl shutdown "$udid" 2>/dev/null || true
-        xcrun simctl delete "$udid"
-        udid=""
-    fi
-    if [ -z "$udid" ]; then
-        udid="$(xcrun simctl create "${SIMULATOR}" "${device_type}")"
-    fi
-    printf '%s' "$udid"
-}
-
 prepare_simulator() {
-    xcrun simctl boot "$1" 2>/dev/null || true
-    xcrun simctl bootstatus "$1" -b >/dev/null
     xcrun simctl ui "$1" appearance light
     xcrun simctl status_bar "$1" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 }
@@ -164,7 +143,7 @@ if [ ${#FLOWS[@]} -eq 0 ]; then
     exit 0
 fi
 
-UDID="$(simulator_udid)"
+UDID="$("${PROJECT_DIR}/bin/ios-simulator" --boot)"
 prepare_simulator "${UDID}"
 "${PROJECT_DIR}/bin/generate-ios"
 

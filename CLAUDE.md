@@ -17,7 +17,8 @@ directly on the iPhone.
 bin/setup-ios                # Xcode, XcodeGen, Heeler submodule, pinned lint tools
 bin/generate-ios             # ios/project.yml -> .xcodeproj, Heeler patches
 bin/build-ios [simulator|device]
-bin/run-ios                  # simulator
+bin/run-ios [preset]         # worktree's simulator, on the fake Mac preset given
+bin/ios-simulator            # udid of the worktree's simulator, created on first use
 bin/run-ios-device [uuid]    # iPhone, signed with an App Store Connect key, OTA install off the LAN
 bin/run-ios-tests [suite]    # app unit tests, then bin/run-mac-tests; fails on 0 tests or below the floor
 bin/run-mac-tests            # dispatch.sh (fake herdr) and hook (fake APNs), no Xcode
@@ -144,11 +145,10 @@ changed (see *QA*), then `docs/spec.md` up to date. Lint runs on its
 own: the project's Stop hook (`.claude/settings.json`) runs `bin/lint`
 before handing back, and so does `bin/local-ci`.
 
-Several worktrees running their tests at the same time on the same
-simulator crash each other: `bin/qa` creates and targets by udid a
-simulator dedicated to the worktree ("Heraldr <worktree>"), to pass to
-`bin/run-ios-tests` too with `IOS_TEST_SIMULATOR_NAME`. Never
-`booted`.
+Several worktrees running on the same simulator crash each other:
+`bin/run-ios`, `bin/run-ios-tests` and `bin/qa` target by udid the
+simulator of the worktree ("Heraldr <worktree>", `bin/ios-simulator`).
+Never a shared simulator, never `booted`.
 
 ## Specification
 
