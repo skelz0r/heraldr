@@ -519,7 +519,10 @@ time. A send to a tab follows §6.3.
 
 1. agent missing: split of a pane of tab 1 (cwd of that pane) and
    Claude started in yolo mode, named `<slug>-main`, Remote Control
-   name `<label>—main` (`~` becomes `home`)
+   name `<label>—main` (`~` becomes `home`), once the new pane's shell
+   is at its prompt (a slow shell rc is waited for, 60 s at most); if
+   Claude does not start, the send fails with the herdr reason
+   ("agent start: …") and the new pane is closed
 2. agent `idle` or `done`: `/clear`, then the wrapped prompt
 3. agent `working` or `blocked`: the send waits on the Mac and goes
    out as soon as it is `idle` or `done` again

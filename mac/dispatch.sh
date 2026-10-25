@@ -23,7 +23,8 @@ CLEAR_TIMEOUT_SECONDS="${HERALDR_CLEAR_TIMEOUT_SECONDS:-20}"
 PROMPT_START_TIMEOUT_MS=10000
 STALLED_PROMPT_GRACE_MS=30000
 SEQUENCE_LOCK_STALE_MINUTES=1
-START_TIMEOUT_MS=60000
+START_TIMEOUT_MS="${HERALDR_START_TIMEOUT_MS:-60000}"
+START_RETRY_SECONDS=0.5
 
 json_value() {
   plutil -extract "$1" raw -o - - 2>/dev/null
@@ -276,13 +277,29 @@ start_agent() {
   pane_id="$(printf '%s' "$split" | json_value result.pane.pane_id)" || { fail_job "$job_dir" "pane split without pane_id"; return 1; }
 
   remote_control_name="$(printf '%s' "$label" | sed 's/^~$/home/')—main"
-  if ! started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$START_TIMEOUT_MS" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"; then
+  start_deadline=$(( $(date +%s) + START_TIMEOUT_MS / 1000 ))
+  attempt_timeout_ms="$START_TIMEOUT_MS"
+  until started="$(herdr agent start "$agent" --kind claude --pane "$pane_id" --timeout "$attempt_timeout_ms" -- --dangerously-skip-permissions --remote-control "$remote_control_name" 2>&1)"; do
     case "$started" in
       *agent_not_ready*) return 0 ;;
+      *agent_pane_busy*)
+        if [ "$(date +%s)" -lt "$start_deadline" ]; then
+          sleep "$START_RETRY_SECONDS"
+          attempt_timeout_ms="$(milliseconds_until "$start_deadline")"
+          continue
+        fi
+        ;;
     esac
+    herdr pane close "$pane_id" > /dev/null 2>&1
     fail_job "$job_dir" "agent start: $started"
     return 1
-  fi
+  done
+}
+
+milliseconds_until() {
+  remaining=$(( ($1 - $(date +%s)) * 1000 ))
+  [ "$remaining" -ge 1000 ] || remaining=1000
+  printf '%s' "$remaining"
 }
 
 wait_for_clear() {

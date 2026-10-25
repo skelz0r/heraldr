@@ -214,6 +214,12 @@ case "$command" in
     printf '{"id":"cli:pane:split","result":{"pane":{"agent_status":"unknown","cwd":"%s","focused":false,"pane_id":"%s:p2","revision":0,"tab_id":"%s:t1","workspace_id":"%s"},"type":"pane_info"}}\n' \
       "$(option --cwd)" "${anchor%%:*}" "${anchor%%:*}" "${anchor%%:*}"
     ;;
+  "pane close")
+    parse "" "" "$@"
+    require_positionals 1
+    printf '%s\n' "$(positional 1)" >> "$world/closed_panes"
+    echo '{"id":"cli:pane:close","result":{"type":"ok"}}'
+    ;;
   "agent start")
     parse "" "--kind --pane --timeout" "$@"
     require_positionals 1
@@ -221,6 +227,11 @@ case "$command" in
     pane="$(option --pane)"
     [ -n "$(option --kind)" ] && [ -n "$pane" ] || usage_error "the following required arguments were not provided: --kind <KIND> --pane <ID>"
     printf '%s\n' "$(printf '%s' "$*" | sed "s/^$name //")" >> "$world/starts"
+    busy_attempts="$(cat "$world/start_busy_attempts" 2>/dev/null || echo 0)"
+    if [ "$busy_attempts" -gt 0 ]; then
+      echo $((busy_attempts - 1)) > "$world/start_busy_attempts"
+      herdr_error agent_pane_busy "agent target pane $pane is not an available shell"
+    fi
     if [ -f "$world/start_error" ]; then
       herdr_error "$(cat "$world/start_error")" "agent start failed"
     fi
