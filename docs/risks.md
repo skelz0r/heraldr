@@ -47,6 +47,11 @@ throwaway "Spike compagnon" workspace and its
      the channel closes, without receiving SIGHUP. Redirecting all
      three descriptors is required: otherwise sshd waits for them to
      close.
+   - Later: macOS 26.4 `nohup` exits with "can't detach from console"
+     when started from a terminal (herdr pane, agent shell), so the
+     runner never started outside SSH and the `dispatch.sh` tests
+     failed. The script ignores SIGHUP itself instead
+     (`trap '' HUP` in a subshell), which needs no console.
    - New finding: in SSH exec the PATH does not contain
      `/opt/homebrew/bin`, hence no `herdr`. The script sets its PATH.
 8. Foundation Models: cleanup quality in French, context limit for a

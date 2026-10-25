@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+PROJECT_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+ARGENT="${HOME}/.local/share/argent/node_modules/.bin/argent"
+BUNDLE_ID="com.skelz0r.heraldr.dev"
+BUILT_APP="${PROJECT_DIR}/build/ios-run/Build/Products/Debug-iphonesimulator/Heraldr.app"
+SOURCES=("${PROJECT_DIR}/ios/Heraldr" "${PROJECT_DIR}/ios/project.yml" "${PROJECT_DIR}/mac")
+failures=0
+
+pass() { printf 'ok    %s\n' "$1"; }
+fail() {
+    printf 'FAIL  %s\n      fix: %s\n' "$1" "$2"
+    failures=$((failures + 1))
+}
+
+simulator_state() {
+    xcrun simctl list devices -j | plutil -extract devices json -o - - |
+        python3 -c 'import json,sys; udid=sys.argv[1]; print(next((d["state"] for r in json.load(sys.stdin).values() for d in r if d["udid"] == udid), "missing"))' "$1"
+}
+
+if [[ "$(xcode-select -p 2>/dev/null)" == *CommandLineTools* ]]; then
+    fail "xcode-select points to the Command Line Tools" "${PROJECT_DIR}/bin/setup-ios"
+else
+    pass "Xcode selected: $(xcode-select -p)"
+fi
+
+SIMULATOR="$("${PROJECT_DIR}/bin/ios-simulator" --name)"
+UDID="$(xcrun simctl list devices available -j | plutil -extract devices json -o - - |
+    python3 -c 'import json,sys; name=sys.argv[1]; print(next((d["udid"] for r in json.load(sys.stdin).values() for d in r if d["name"] == name), ""))' "${SIMULATOR}")"
+if [ -z "${UDID}" ]; then
+    fail "no simulator \"${SIMULATOR}\" for this worktree" "${PROJECT_DIR}/bin/run-ios demo"
+elif [ "$(simulator_state "${UDID}")" != Booted ]; then
+    fail "simulator \"${SIMULATOR}\" (${UDID}) is not booted" "${PROJECT_DIR}/bin/run-ios demo"
+else
+    pass "simulator \"${SIMULATOR}\" booted (${UDID})"
+fi
+
+installed_app="$([ -n "${UDID}" ] && xcrun simctl get_app_container "${UDID}" "${BUNDLE_ID}" 2>/dev/null)"
+if [ -z "${installed_app}" ] || [ ! -d "${BUILT_APP}" ]; then
+    fail "Heraldr not installed on \"${SIMULATOR}\" or not built in this worktree" "${PROJECT_DIR}/bin/run-ios demo"
+elif ! cmp -s "${installed_app}/Heraldr.debug.dylib" "${BUILT_APP}/Heraldr.debug.dylib" ||
+    ! cmp -s "${installed_app}/Heraldr" "${BUILT_APP}/Heraldr"; then
+    fail "the app installed on \"${SIMULATOR}\" is not the build of this worktree" "${PROJECT_DIR}/bin/run-ios demo"
+else
+    pass "installed app is this worktree's build"
+fi
+
+newer_source="$([ -d "${BUILT_APP}" ] && find "${SOURCES[@]}" -type f -newer "${BUILT_APP}/Heraldr.debug.dylib" -print -quit 2>/dev/null)"
+if [ -d "${BUILT_APP}" ] && [ -n "${newer_source}" ]; then
+    fail "the build predates ${newer_source#"${PROJECT_DIR}"/}" "${PROJECT_DIR}/bin/run-ios demo"
+elif [ -d "${BUILT_APP}" ]; then
+    pass "build is newer than the sources"
+fi
+
+app_process="$([ -n "${UDID}" ] && pgrep -f "Devices/${UDID}/.*/Heraldr.app/Heraldr" | head -1)"
+if [ -z "${app_process}" ]; then
+    fail "Heraldr is not running on \"${SIMULATOR}\"" "${PROJECT_DIR}/bin/run-ios demo"
+elif [[ "$(ps -o command= -p "${app_process}")" == *" -HeraldrFakeMac "* ||
+    "$(ps -E -o command= -p "${app_process}")" =~ HERALDR_FAKE_MAC=[^\ ] ]]; then
+    pass "Heraldr runs on the fake Mac: no request reaches a real Claude"
+else
+    fail "Heraldr runs on the paired Mac: a send would reach a real Claude" "${PROJECT_DIR}/bin/run-ios demo"
+fi
+
+if [ ! -x "${ARGENT}" ]; then
+    fail "argent not installed outside the repository" "npm install --prefix \"\$HOME/.local/share/argent\" @swmansion/argent"
+elif [[ ! "$("${ARGENT}" telemetry status 2>&1)" =~ state:\ +disabled ]]; then
+    fail "argent telemetry is enabled" "\"${ARGENT}\" telemetry disable"
+else
+    pass "argent $("${ARGENT}" --version), telemetry disabled"
+fi
+
+if [ -x "${ARGENT}" ] && [ -n "${app_process}" ]; then
+    status="$("${ARGENT}" run native-describe-screen --udid "${UDID}" --bundleId "${BUNDLE_ID}" 2>&1 |
+        python3 -c 'import json,sys; print(json.load(sys.stdin).get("status", "unknown"))' 2>/dev/null)"
+    if [ "${status}" = ok ]; then
+        pass "argent reads the screen of Heraldr"
+    else
+        fail "argent cannot read the screen (${status:-no answer})" "\"${ARGENT}\" run restart-app --udid ${UDID} --bundleId ${BUNDLE_ID}, else \"${ARGENT}\" server stop"
+    fi
+fi
+
+[ "${failures}" -eq 0 ] || { printf '\n%s check(s) failed\n' "${failures}"; exit 1; }

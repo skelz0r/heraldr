@@ -17,7 +17,8 @@ directly on the iPhone.
 bin/setup-ios                # Xcode, XcodeGen, Heeler submodule, pinned lint tools
 bin/generate-ios             # ios/project.yml -> .xcodeproj, Heeler patches
 bin/build-ios [simulator|device]
-bin/run-ios                  # simulator
+bin/run-ios [preset]         # worktree's simulator, on the fake Mac preset given
+bin/ios-simulator            # udid of the worktree's simulator, created on first use
 bin/run-ios-device [uuid]    # iPhone, signed with an App Store Connect key, OTA install off the LAN
 bin/run-ios-tests [suite]    # app unit tests, then bin/run-mac-tests; fails on 0 tests or below the floor
 bin/run-mac-tests            # dispatch.sh (fake herdr) and hook (fake APNs), no Xcode
@@ -25,6 +26,7 @@ bin/lint                     # shellcheck, swift-format, SwiftLint, Biome, guard
 bin/qa [--all|<class>...]    # UI tests touched by the diff on the fake Mac, light and dark screenshots
 bin/local-ci                 # lint then tests (iOS skipped if the diff is docs only)
 bin/local-ci push            # checks then push, no remote CI
+bin/remove-worktree <name>   # after merge: processes, simulator, worktree, branch
 ```
 
 Installing on the iPhone follows the global `ios-device-install` skill
@@ -139,16 +141,15 @@ A test that breaks with no intended behavior change: say whether the
 test or the code is wrong, never adapt it silently.
 
 End of iteration: `$PWD/bin/run-ios-tests` (or `bin/run-mac-tests` if
-only the Mac scripts changed), `$PWD/bin/qa` if the UI or the app
-changed (see *QA*), then `docs/spec.md` up to date. Lint runs on its
+only the Mac scripts changed), the `verify-heraldr` skill if the UI or
+the app changed, then `docs/spec.md` up to date. Lint runs on its
 own: the project's Stop hook (`.claude/settings.json`) runs `bin/lint`
 before handing back, and so does `bin/local-ci`.
 
-Several worktrees running their tests at the same time on the same
-simulator crash each other: `bin/qa` creates and targets by udid a
-simulator dedicated to the worktree ("Heraldr <worktree>"), to pass to
-`bin/run-ios-tests` too with `IOS_TEST_SIMULATOR_NAME`. Never
-`booted`.
+Several worktrees running on the same simulator crash each other:
+`bin/run-ios`, `bin/run-ios-tests` and `bin/qa` target by udid the
+simulator of the worktree ("Heraldr <worktree>", `bin/ios-simulator`).
+Never a shared simulator, never `booted`.
 
 ## Specification
 
@@ -174,22 +175,10 @@ options in `docs/decisions.md`.
 
 ## QA
 
-QA is done by the agent, in two steps:
-
-1. End of iteration, on the simulator: `$PWD/bin/qa` runs the UI test
-   classes touched by the diff (a few minutes, `--all` for everything,
-   3 to 4 min, on 3 simulator clones), on iPhone SE, the smallest iOS
-   26 screen, and exports the screenshots to
-   `~/share/screenshots/<worktree>/`. It records the durations in
-   `build/qa-durations.tsv` of the main checkout and warns when a test
-   exceeds 45 s or `--all` grows by 20 %: move a check down to a unit
-   test, merge flows, cut fixed waits. Look at them, in light and dark
-   (`docs/design.md`), before saying the UI is done; a defect seen is
-   fixed with its test.
-2. After a `bin/run-ios-device`, only if the diff touches one of its
-   areas: show the user 3 to 5 boxes from `QA.md` at most, those of
-   these areas, never the whole list. `QA.md` only keeps what requires
-   the real iPhone and the real Mac; a box a test can cover leaves it.
+QA is done by the agent with the `verify-heraldr` skill
+(`.claude/skills/verify-heraldr/`): launch on the worktree's simulator
+and the fake Mac, doctor, `bin/qa` and its screenshots, argent to
+explore, then the `QA.md` boxes after an install on the iPhone.
 
 ## Git
 
@@ -213,9 +202,11 @@ Each topic goes in a dedicated worktree (`start` skill), under
 git worktree add worktrees/<name> -b feature/<name> origin/main
 ```
 
-No setup script: `bin/generate-ios` initializes the Heeler submodule on
-the first build. After merge:
-`git worktree remove worktrees/<name> && git branch -d feature/<name>`.
+No setup script: `bin/generate-ios` initializes the Heeler submodule
+and `bin/ios-simulator` creates the worktree's simulator on first use.
+After merge, from the main checkout (`/cleanup` calls it):
+`bin/remove-worktree <name>` stops the processes started from the
+worktree, deletes its simulator, the worktree and its merged branch.
 
 ## Documentation
 

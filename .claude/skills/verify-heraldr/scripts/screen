@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+PROJECT_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+ARGENT="${HOME}/.local/share/argent/node_modules/.bin/argent"
+BUNDLE_ID="com.skelz0r.heraldr.dev"
+
+"${ARGENT}" run native-describe-screen \
+    --udid "$("${PROJECT_DIR}/bin/ios-simulator")" --bundleId "${BUNDLE_ID}" |
+    python3 -c '
+import json, sys
+screen = json.load(sys.stdin)
+if screen.get("status") != "ok":
+    sys.exit(json.dumps(screen))
+for element in screen["elements"]:
+    x, y = element["normalizedTapPoint"].values()
+    identifier = element.get("identifier") or "-"
+    traits = ",".join(element.get("traits", []))
+    label = element.get("label", "")
+    value = element.get("value")
+    suffix = f" value={value!r}" if value else ""
+    print(f"{identifier:32} {x:.3f},{y:.3f} [{traits}] {label!r}{suffix}")
+'

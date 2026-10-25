@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MAIN_CHECKOUT="$(dirname "$(git -C "${PROJECT_DIR}" rev-parse --path-format=absolute --git-common-dir)")"
+
+usage() {
+    cat <<EOF
+Usage: bin/remove-worktree <name>
+
+Tears down worktrees/<name> of ${MAIN_CHECKOUT}: stops the processes
+started from it (builds, tests, argent server), deletes its simulator
+("Heraldr <name>"), removes the worktree, then deletes its branch if
+merged (git branch -d). Run it from the main checkout or another
+worktree, never from the one being removed.
+EOF
+}
+
+case "${1:-}" in
+    -h | --help) usage; exit 0 ;;
+    "") usage >&2; exit 1 ;;
+esac
+
+NAME="$1"
+WORKTREE_PATH="${MAIN_CHECKOUT}/worktrees/${NAME}"
+
+if [ ! -d "${WORKTREE_PATH}" ]; then
+    echo "No worktree at ${WORKTREE_PATH}" >&2
+    exit 1
+fi
+case "$PWD/" in
+    "${WORKTREE_PATH}"/*) echo "Run bin/remove-worktree from outside ${WORKTREE_PATH}" >&2; exit 1 ;;
+esac
+
+BRANCH="$(git -C "${WORKTREE_PATH}" branch --show-current)"
+
+if pkill -f "${WORKTREE_PATH}/"; then
+    echo "Stopped the processes started from ${WORKTREE_PATH}"
+    sleep 1
+fi
+
+IOS_TEST_SIMULATOR_NAME="Heraldr ${NAME}" "${PROJECT_DIR}/bin/ios-simulator" --delete
+
+git -C "${MAIN_CHECKOUT}" worktree remove "${WORKTREE_PATH}"
+echo "Removed worktree ${WORKTREE_PATH}"
+
+if [ -n "${BRANCH}" ]; then
+    git -C "${MAIN_CHECKOUT}" branch -d "${BRANCH}" ||
+        echo "Kept branch ${BRANCH}: not merged locally, delete it with git branch -D once its PR is merged" >&2
+fi

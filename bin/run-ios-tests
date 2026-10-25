@@ -5,12 +5,12 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="${PROJECT_DIR}/ios"
 PROJECT_NAME="Heraldr"
 SCHEME="Heraldr"
-SIMULATOR="${IOS_TEST_SIMULATOR_NAME:-iPhone 17 Pro}"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-tests"
 RESULT_BUNDLE="${DERIVED_DATA}/Heraldr.xcresult"
 MINIMUM_TEST_COUNT_FILE="${IOS_DIR}/minimum-test-count"
 
 "${PROJECT_DIR}/bin/generate-ios"
+UDID="$("${PROJECT_DIR}/bin/ios-simulator")"
 
 ONLY_TESTING=(-skip-testing:HeraldrUITests)
 if [ -n "${1:-}" ]; then
@@ -22,7 +22,7 @@ rm -rf "${RESULT_BUNDLE}"
 xcodebuild test \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
-    -destination "platform=iOS Simulator,name=${SIMULATOR}" \
+    -destination "platform=iOS Simulator,id=${UDID}" \
     -derivedDataPath "${DERIVED_DATA}" \
     -resultBundlePath "${RESULT_BUNDLE}" \
     "${ONLY_TESTING[@]}" \

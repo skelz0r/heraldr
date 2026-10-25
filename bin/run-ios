@@ -6,7 +6,19 @@ IOS_DIR="${PROJECT_DIR}/ios"
 PROJECT_NAME="Heraldr"
 SCHEME="Heraldr"
 DERIVED_DATA="${PROJECT_DIR}/build/ios-run"
-SIMULATOR="${1:-iPhone 17 Pro}"
+FAKE_MAC_PRESET="${1:-}"
+
+if [[ "${FAKE_MAC_PRESET}" == -h || "${FAKE_MAC_PRESET}" == --help ]]; then
+    cat <<EOF
+Usage: bin/run-ios [fake Mac preset]
+
+Builds and launches the app on the simulator dedicated to this worktree
+(bin/ios-simulator). With a preset (demo, unpaired, history, question...,
+see FakeMacScenario.presets) the app runs on the fake Mac instead of the
+paired one; HERALDR_FAKE_MAC=<json> passes a whole scenario.
+EOF
+    exit 0
+fi
 
 CURRENT_DEV_DIR=$(xcode-select -p 2>/dev/null || echo "")
 if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then
@@ -16,43 +28,40 @@ fi
 
 "${PROJECT_DIR}/bin/generate-ios"
 
-echo "Building for ${SIMULATOR}..."
+SIMULATOR="$("${PROJECT_DIR}/bin/ios-simulator" --name)"
+SIMULATOR_UUID="$("${PROJECT_DIR}/bin/ios-simulator" --boot)"
+echo "Building for ${SIMULATOR} (${SIMULATOR_UUID})..."
 
 set +e
 BUILD_OUTPUT=$(xcodebuild \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
-    -destination "platform=iOS Simulator,name=${SIMULATOR}" \
+    -destination "platform=iOS Simulator,id=${SIMULATOR_UUID}" \
     -configuration Debug \
     -derivedDataPath "${DERIVED_DATA}" \
     build 2>&1)
 BUILD_STATUS=$?
 set -e
 
-echo "$BUILD_OUTPUT" | grep -E "(BUILD|error:|\*\*)" || true
+echo "$BUILD_OUTPUT" | grep -E "^\*\* |error:" || true
 
 if [ $BUILD_STATUS -ne 0 ] || ! echo "$BUILD_OUTPUT" | grep -q "BUILD SUCCEEDED"; then
     echo ""
     echo "Build failed"
-    echo "List simulators: xcrun simctl list devices available"
     exit 1
 fi
 
-SIMULATOR_UUID=$(xcrun simctl list devices available | grep "    ${SIMULATOR} (" | head -1 | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}')
-
-if [ -z "$SIMULATOR_UUID" ]; then
-    echo "Could not find simulator ${SIMULATOR}"
-    exit 1
-fi
-
-xcrun simctl boot "$SIMULATOR_UUID" 2>/dev/null || true
-open -a Simulator
+open -a Simulator --args -CurrentDeviceUDID "$SIMULATOR_UUID"
 
 APP_BUNDLE="${DERIVED_DATA}/Build/Products/Debug-iphonesimulator/${PROJECT_NAME}.app"
 BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${APP_BUNDLE}/Info.plist")
 
 echo "Installing ${BUNDLE_ID}..."
 xcrun simctl install "$SIMULATOR_UUID" "$APP_BUNDLE"
-xcrun simctl launch "$SIMULATOR_UUID" "$BUNDLE_ID"
+
+LAUNCH_ARGS=()
+[ -z "${FAKE_MAC_PRESET}" ] || LAUNCH_ARGS=(-HeraldrFakeMac "${FAKE_MAC_PRESET}")
+[ -z "${HERALDR_FAKE_MAC:-}" ] || export SIMCTL_CHILD_HERALDR_FAKE_MAC="${HERALDR_FAKE_MAC}"
+xcrun simctl launch --terminate-running-process "$SIMULATOR_UUID" "$BUNDLE_ID" "${LAUNCH_ARGS[@]}"
 
 echo "App launched on ${SIMULATOR}"

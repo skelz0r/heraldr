@@ -22,14 +22,16 @@ XcodeGen added.
 | `bin/setup-ios` | checks Xcode 26, xcode-select, XcodeGen, installs and checks the pinned tools (shellcheck 0.11.0, SwiftLint 0.65.1, Biome 2.5.15, xcbeautify 3.2.1, AXe 1.8.0; swift-format ships with Xcode), initializes the Heeler submodule |
 | `bin/generate-ios` | `xcodegen generate`, applies `Vendor/patches/*.patch` to the submodule |
 | `bin/build-ios [simulator\|device]` | build |
-| `bin/run-ios` | build and launch on the simulator |
+| `bin/ios-simulator [--boot\|--name\|--delete]` | prints the udid of the simulator dedicated to the worktree ("Heraldr <worktree>", iPhone SE 3rd generation, `QA_DEVICE_TYPE`), created on first use and recreated when its device type changes; `--delete` also stops the argent services driving it |
+| `bin/run-ios [preset]` | build, install and launch on the worktree's simulator; with a fake Mac preset (`demo`, `history`, `question`...) or `HERALDR_FAKE_MAC=<json>`, the app runs on the fake Mac |
 | `bin/run-ios-device [uuid]` | build then install on the iPhone through the global `ios-device-install` skill: `devicectl` when the iPhone is reachable, otherwise an OTA install page over Tailscale (waits while the device is busy, unlocks the CI keychain) |
-| `bin/run-ios-tests [suite]` | unit tests on the simulator (`IOS_TEST_SIMULATOR_NAME`, iPhone 17 Pro by default), full output through xcbeautify, warnings included, then `bin/run-mac-tests`; reads the `.xcresult` and fails if no test ran or, for the full suite, below the floor in `ios/minimum-test-count` (raise it as tests are added). UI tests do not run here |
+| `bin/run-ios-tests [suite]` | unit tests on the worktree's simulator, full output through xcbeautify, warnings included, then `bin/run-mac-tests`; reads the `.xcresult` and fails if no test ran or, for the full suite, below the floor in `ios/minimum-test-count` (raise it as tests are added). UI tests do not run here |
 | `bin/lint` | shellcheck (`.shellcheckrc`), `xcrun swift-format lint --strict` (`.swift-format`), SwiftLint CLI (`.swiftlint.yml`), Biome (`biome.json`), and two guards: `agent_status` read only for an agent, no filled-in "Known gaps" section in the spec; 2 s |
-| `bin/qa [--all\|<class>...]` | runs the `HeraldrUITests` classes touched by the diff since `origin/main` on the "Heraldr <worktree>" simulator (created if needed, targeted by udid, status bar frozen at 9:41), against the fake Mac, and exports light and dark screenshots to `~/share/screenshots/<worktree>/`, on 3 clones in parallel (`QA_WORKERS`); 3 to 4 min for `--all` |
+| `bin/qa [--all\|<class>...]` | runs the `HeraldrUITests` classes touched by the diff since `origin/main` on the worktree's simulator (status bar frozen at 9:41; xcodebuild shuts it down to clone it), against the fake Mac, and exports light and dark screenshots to `~/share/screenshots/<worktree>/`, on 3 clones in parallel (`QA_WORKERS`); 3 to 4 min for `--all` |
 | `bin/run-mac-tests` | tests of the dispatch script (`mac/test/dispatch_test.sh`, fake herdr) and of the notification hook (`node --test mac/test/notify_hook_test.mjs`, fake APNs) |
 | `bin/local-ci [push]` | `bin/lint` then all tests, iOS skipped if the diff since `origin/main` is docs only; `push` first pushes HEAD (with lease, never `main`), sets "Local CI" to pending on that commit, then to success, failure (failing step, HEAD or worktree changed during the run) or error (Ctrl-C, TERM, HUP); without `push`, no status |
 | `bin/open-ios-xcode` | generates then opens the project |
+| `bin/remove-worktree <name>` | after merge, from the main checkout (`/cleanup` calls it): stops the processes whose command line holds the worktree's path, deletes its simulator, removes the worktree, deletes its branch if merged |
 | `bin/render-ios-icon` | regenerates AppIcon and logo from `docs/branding/logo/voice-and-lanes-*.svg` (rsvg-convert) |
 
 `main` is protected on GitHub: the "Local CI" status must be success to
@@ -95,17 +97,11 @@ to the agent so it fixes them before answering. Only one retry per turn
 
 ## Simulator and screenshots
 
-Useful commands to look at the app by hand, always by `--udid` or udid,
-never `booted` (several worktrees share the machine):
+Every script that runs the app targets the worktree's simulator by udid
+(`bin/ios-simulator`), never a shared simulator nor `booted`. Driving
+it by hand, with argent, and the evidence: the `verify-heraldr` skill.
 
-- launch on the fake Mac: `xcrun simctl launch <udid>
-  <bundle id> -HeraldrFakeMac demo` (presets: `demo`, `history`,
-  `question`, `unpaired`, `unreachable`, `connecting`, `empty`), or
-  `SIMCTL_CHILD_HERALDR_FAKE_MAC='<json>'` for a whole scenario
-- `xcrun simctl ui <udid> appearance dark|light`, `status_bar <udid>
-  override --time 9:41`, `io <udid> screenshot <file>`
-- AXe: `axe describe-ui --udid <udid>`, `axe tap --id <identifier>
-  --udid <udid>`, `axe type '<text>' --udid <udid>`
-
-A simulator left booted for a long time can ignore the appearance change
-(everything stays light): `xcrun simctl shutdown` then `boot` fixes it.
+A simulator whose appearance was never switched to dark ignores the
+appearance changes of the UI tests (every dark capture stays light),
+even across reboots: one `xcrun simctl ui <udid> appearance dark` fixes
+it for good, so `bin/qa` switches to dark then light before playing.
