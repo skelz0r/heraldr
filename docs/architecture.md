@@ -103,8 +103,8 @@ runs two SSH execs:
    workspace's `-main` (below), the wrapped prompt arrives raw on stdin
    and becomes a job
    `~/.local/state/heraldr/jobs/<timestamp>-<sequence>-<random>/`, then
-   the script starts its detached runner:
-   `nohup /bin/sh dispatch.sh run <agent> </dev/null >/dev/null 2>&1 &`
+   the script starts its detached runner, SIGHUP ignored:
+   `(trap '' HUP; exec /bin/sh dispatch.sh run <agent>) </dev/null >/dev/null 2>&1 &`
 
 A workspace's `-main` is the agent of that workspace whose name ends
 with `-main` (`herdr agent list`, filtered on `workspace_id`): a

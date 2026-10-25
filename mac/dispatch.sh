@@ -161,7 +161,7 @@ create_job() {
   printf 'queued' > "$job_dir.tmp/state"
   mv "$job_dir.tmp" "$job_dir"
 
-  nohup /bin/sh "$SCRIPT_PATH" run "$agent" </dev/null >/dev/null 2>&1 &
+  (trap '' HUP; exec /bin/sh "$SCRIPT_PATH" run "$agent") </dev/null >/dev/null 2>&1 &
   echo "$job_id"
 }
 
