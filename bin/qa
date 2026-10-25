@@ -10,7 +10,7 @@ ATTACHMENTS="${DERIVED_DATA}/attachments"
 SCREENSHOTS="${HOME}/share/screenshots/${WORKTREE}"
 BASE_BRANCH="origin/main"
 DURATIONS="$(dirname "$(git -C "${PROJECT_DIR}" rev-parse --path-format=absolute --git-common-dir)")/build/qa-durations.tsv"
-ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacAndVoiceTests)
+ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacAndVoiceTests ActionButtonTests)
 
 usage() {
     cat <<EOF
