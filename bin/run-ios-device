@@ -26,19 +26,6 @@ if [[ "$CURRENT_DEV_DIR" == *"CommandLineTools"* ]]; then
     exit 1
 fi
 
-CI_KEYCHAIN="${HOME}/Library/Keychains/ci.keychain-db"
-if [[ -f "$CI_KEYCHAIN" ]]; then
-    if [[ -n "${CI_KEYCHAIN_PASSWORD:-}" ]]; then
-        echo "Unlocking CI keychain..."
-        security list-keychains -d user -s "$CI_KEYCHAIN" "${HOME}/Library/Keychains/login.keychain-db"
-        security unlock-keychain -p "${CI_KEYCHAIN_PASSWORD}" "$CI_KEYCHAIN"
-    else
-        echo "CI keychain present but CI_KEYCHAIN_PASSWORD not set."
-        echo "If codesign fails, unlock it first:"
-        echo "  security unlock-keychain ~/Library/Keychains/ci.keychain-db"
-    fi
-fi
-
 echo "Using device: ${DEVICE_UUID}"
 echo "Waiting for device to be ready..."
 
@@ -84,7 +71,7 @@ fi
 
 echo "Building for device..."
 
-if ! xcodebuild \
+if ! "${HOME}/dotfiles/bin/with-ci-keychain" xcodebuild \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
     -destination "generic/platform=iOS" \
