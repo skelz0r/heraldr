@@ -24,7 +24,7 @@ XcodeGen added.
 | `bin/build-ios [simulator\|device]` | build |
 | `bin/ios-simulator [--boot\|--name\|--delete]` | prints the udid of the simulator dedicated to the worktree ("Heraldr <worktree>", iPhone SE 3rd generation, `QA_DEVICE_TYPE`), created on first use and recreated when its device type changes; `--delete` also stops the argent services driving it |
 | `bin/run-ios [preset]` | build, install and launch on the worktree's simulator; with a fake Mac preset (`demo`, `history`, `question`...) or `HERALDR_FAKE_MAC=<json>`, the app runs on the fake Mac |
-| `bin/run-ios-device [uuid]` | build then install on the iPhone through the global `ios-device-install` skill: `devicectl` when the iPhone is reachable, otherwise an OTA install page over Tailscale (waits while the device is busy, unlocks the CI keychain) |
+| `bin/run-ios-device [uuid]` | build then install on the iPhone through the global `ios-device-install` skill: `devicectl` when the iPhone is reachable, otherwise an OTA install page over Tailscale (waits while the device is busy, signs through `~/dotfiles/bin/with-ci-keychain`) |
 | `bin/run-ios-tests [suite]` | unit tests on the worktree's simulator, full output through xcbeautify, warnings included, then `bin/run-mac-tests`; reads the `.xcresult` and fails if no test ran or, for the full suite, below the floor in `ios/minimum-test-count` (raise it as tests are added). UI tests do not run here |
 | `bin/lint` | shellcheck (`.shellcheckrc`), `xcrun swift-format lint --strict` (`.swift-format`), SwiftLint CLI (`.swiftlint.yml`), Biome (`biome.json`), and two guards: `agent_status` read only for an agent, no filled-in "Known gaps" section in the spec; 2 s |
 | `bin/qa [--all\|<class>...]` | runs the `HeraldrUITests` classes touched by the diff since `origin/main` on the worktree's simulator (status bar frozen at 9:41; xcodebuild shuts it down to clone it), against the fake Mac, and exports light and dark screenshots to `~/share/screenshots/<worktree>/`, on 3 clones in parallel (`QA_WORKERS`); 3 to 4 min for `--all` |
@@ -75,6 +75,15 @@ which then publishes the build at
 `https://<mac>.<tailnet>.ts.net/ios-ota/<bundle id>/`, to open in
 Safari on the iPhone. The dev profile already contains the iPhone's
 UDID: no archive or export.
+
+The build is signed through `~/dotfiles/bin/with-ci-keychain`, which
+puts the CI keychain first and unlocks it, then restores the order. herdr
+runs as a LaunchDaemon, outside the GUI session: `codesign` fails from its
+tabs (`errSecInternalComponent`, `unable to build chain to self-signed
+root`), so the wrapper re-runs `xcodebuild` through `ssh localhost`,
+where signing works. Environment variables do not cross that hop, hence
+the App Store Connect key passed as arguments. The install runs from
+herdr directly.
 
 Two differences with Heeler, which builds with Xcode 26.6:
 
