@@ -78,12 +78,13 @@ UDID: no archive or export.
 
 The build is signed through `~/dotfiles/bin/with-ci-keychain`, which
 puts the CI keychain first and unlocks it, then restores the order. herdr
-runs as a LaunchDaemon, outside the GUI session: `codesign` fails from its
-tabs (`errSecInternalComponent`, `unable to build chain to self-signed
-root`), so the wrapper re-runs `xcodebuild` through `ssh localhost`,
-where signing works. Environment variables do not cross that hop, hence
-the App Store Connect key passed as arguments. The install runs from
-herdr directly.
+runs as a LaunchDaemon, outside the GUI session: with login first,
+`codesign` fails from its tabs (`errSecInternalComponent`, `unable to
+build chain to self-signed root`). When the daemon runs without
+`SessionCreate` (`launchctl managername` = `System`), the wrapper
+re-runs `xcodebuild` through `ssh localhost`; environment variables do
+not cross that hop, hence the App Store Connect key passed as
+arguments. The install runs from herdr directly.
 
 Two differences with Heeler, which builds with Xcode 26.6:
 
