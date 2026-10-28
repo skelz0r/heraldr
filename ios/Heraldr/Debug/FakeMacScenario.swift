@@ -37,6 +37,7 @@
             var state: String
             var error: String?
             var answered: Bool?
+            var kind: String?
         }
 
         var paired: Bool?
@@ -51,6 +52,7 @@
         var dictationLanguage: String?
         var transcriptionLocales: [String]?
         var failures: [String: String]?
+        var startFailure: String?
         var stalled: [String]?
         var notification: [String: FakeNotificationValue]?
         var notificationDelay: Double?
@@ -191,6 +193,7 @@
                     Tab(id: "wS:t1", workspaceId: "wS", number: 1, label: "claude"),
                     Tab(id: "wM:t1", workspaceId: "wM", number: 1, label: "claude"),
                     Tab(id: "wL:t1", workspaceId: "wL", number: 1, label: "claude"),
+                    Tab(id: "wB:t1", workspaceId: "wB", number: 1, label: nil),
                 ],
                 agents: [
                     Agent(name: "home-main", kind: "claude", paneId: "wA:p1", workspaceId: "wA", tabId: "wA:t1", status: "idle"),

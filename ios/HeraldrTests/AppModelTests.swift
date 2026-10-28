@@ -572,3 +572,109 @@ struct NotificationAnswerTests {
         #expect(session.model.notice?.detail == "SQLite: Mac unreachable (timed out)")
     }
 }
+
+@MainActor
+@Suite("Starting the -main of a workspace from the grid")
+struct StartMainTests {
+    @Test("without a -main: the Mac starts Claude in tab 1 under the agent name, nothing goes to the history")
+    func startsMissingMain() async throws {
+        let session = await Session(world())
+        let acme = try session.workspace("wS")
+        #expect(session.model.targetState(for: acme) == .missing)
+
+        await session.model.startMain(of: acme)
+
+        #expect(await session.mac.commands.filter { $0.hasPrefix("start") } == ["start wS QWNtZQ=="])
+        #expect(await session.mac.prompts.isEmpty)
+        #expect(session.model.notice?.kind == .sent)
+        #expect(session.model.notice?.title == "Starting Claude in Acme")
+        #expect(session.model.notice?.detail == "The Mac starts Claude in tab 1, named acme-main.")
+        #expect(session.model.targetState(for: acme) == .agent(.idle, workingOnOurRequest: false))
+        #expect(session.model.history.entries.isEmpty)
+    }
+
+    @Test("while Claude starts, the target says so and a send queues behind the start")
+    func sendDuringStart() async throws {
+        let session = await Session(
+            world(jobs: [.init(id: "20261012120000-000000000001-aa", workspaceId: "wS", agent: "acme-main", state: "queued", kind: "start")]))
+        let acme = try session.workspace("wS")
+        #expect(session.model.targetState(for: acme) == .starting)
+
+        try await session.model.send("Fix the bug", to: Target(acme))
+
+        #expect(session.model.notice?.kind == .queued)
+        #expect(session.model.notice?.title == "Queued for Acme")
+        #expect(session.model.notice?.detail == "The request goes out as soon as Claude has started.")
+        #expect(session.model.targetState(for: acme) == .sending)
+    }
+
+    @Test("several -main, none named after the label: the Mac refuses the start and the app says so")
+    func refusedWithSeveralMains() async throws {
+        let session = await Session(
+            world(agents: [main("w---acme-main", in: "wS", "idle"), main("acme_api-main", in: "wS", "idle")]))
+
+        await session.model.startMain(of: try session.workspace("wS"))
+
+        #expect(session.model.notice?.kind == .failed)
+        #expect(session.model.notice?.title == "Claude not started in Acme")
+        #expect(
+            session.model.notice?.detail == "Command refused by the Mac (2): several -main agents in wS: w---acme-main acme_api-main")
+        #expect(await session.mac.scenario.jobs?.isEmpty ?? true)
+    }
+
+    @Test("a Claude that does not come up on the Mac is announced with the herdr reason")
+    func herdrStartFails() async throws {
+        var scenario = world()
+        scenario.startFailure = "agent start: pane_not_ready"
+        let session = await Session(scenario)
+
+        await session.model.startMain(of: try session.workspace("wS"))
+
+        #expect(session.model.notice?.kind == .failed)
+        #expect(session.model.notice?.title == "Claude not started in Acme")
+        #expect(session.model.notice?.detail == "agent start: pane_not_ready")
+        #expect(session.model.targetState(for: try session.workspace("wS")) == .missing)
+    }
+
+    @Test("a start seen failed by another refresh before the Mac returned its id is still announced")
+    func failureSeenBeforeJobId() async throws {
+        var scenario = world()
+        scenario.startFailure = "agent start: pane_not_ready"
+        let session = await Session(scenario)
+        await session.mac.hold("start:done")
+        let acme = try session.workspace("wS")
+        let starting = Task { await session.model.startMain(of: acme) }
+        while !(await session.mac.isWaiting(at: "start:done")) { await Task.yield() }
+        await session.model.refresh()
+        await session.mac.release("start:done")
+
+        await starting.value
+
+        #expect(session.model.notice?.title == "Claude not started in Acme")
+        #expect(session.model.notice?.detail == "agent start: pane_not_ready")
+        session.model.notice = nil
+        await session.model.refresh()
+        #expect(session.model.notice == nil)
+    }
+
+    @Test("a start that fails while the Mac has not yet returned its id is announced only once")
+    func failureAnnouncedOnceBeforeJobId() async throws {
+        let session = await Session(
+            world(jobs: [.init(id: "20261012120000-000000000001-aa", workspaceId: "wS", agent: "acme-main", state: "queued")]))
+        await session.mac.hold("start:done")
+        let acme = try session.workspace("wS")
+        let starting = Task { await session.model.startMain(of: acme) }
+        while !(await session.mac.isWaiting(at: "start:done")) { await Task.yield() }
+        await session.model.refresh()
+        let start = try #require(await session.mac.scenario.jobs?.last)
+        await session.mac.setJob(start.id, state: "failed", error: "agent start: pane_not_ready")
+        await session.model.refresh()
+        #expect(session.model.notice?.title == "Claude not started in Acme")
+        session.model.notice = nil
+        await session.mac.release("start:done")
+
+        await starting.value
+
+        #expect(session.model.notice == nil)
+    }
+}
