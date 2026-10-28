@@ -81,7 +81,16 @@
                 }
                 guard ["clear", "keep"].contains(arguments[3]), !input.isEmpty else { return Self.failure("2:usage") }
                 return .success(enqueue(workspaceId: arguments[1], agent: arguments[2], prompt: input))
-            case "enqueue", "enqueue-pane":
+            case "start" where arguments.count == 3:
+                guard let label = Data(base64Encoded: arguments[2]).map({ String(decoding: $0, as: UTF8.self) }), !label.isEmpty
+                else { return Self.failure("2:invalid label") }
+                let mains = mainAgents(of: arguments[1])
+                let named = AgentName.forWorkspace(label: label)
+                guard mains.count <= 1 || mains.contains(named) else {
+                    return Self.failure("2:several -main agents in \(arguments[1]): \(mains.joined(separator: " "))")
+                }
+                return .success(start(workspaceId: arguments[1], agent: mains.count == 1 ? mains[0] : named))
+            case "enqueue", "enqueue-pane", "start":
                 return Self.failure("2:usage")
             case "attach":
                 guard ["jpg", "png"].contains(arguments.dropFirst().first ?? "") else { return Self.failure("2:invalid extension") }
@@ -182,11 +191,35 @@
             return id + "\n"
         }
 
+        private func start(workspaceId: String, agent: String) -> String {
+            sequence += 1
+            let id = "20261012120000-\(String(format: "%012d", sequence))-fa\(sequence)"
+            let owner = scenario.agents?.first { $0.name == agent }?.workspaceId
+            let error: String? =
+                if let owner, owner != workspaceId { "agent \(agent) belongs to workspace \(owner)" } else { scenario.startFailure }
+            if owner == nil && error == nil {
+                let tab = scenario.tabs?.first { $0.workspaceId == workspaceId && $0.number == 1 }
+                scenario.agents =
+                    (scenario.agents ?? []) + [
+                        FakeMacScenario.Agent(
+                            name: agent, kind: "claude", paneId: "\(workspaceId):p\(sequence)", workspaceId: workspaceId, tabId: tab?.id,
+                            status: "idle")
+                    ]
+            }
+            scenario.jobs =
+                (scenario.jobs ?? []) + [
+                    FakeMacScenario.Job(
+                        id: id, workspaceId: workspaceId, agent: agent, state: error == nil ? "sent" : "failed", error: error, kind: "start")
+                ]
+            return id + "\n"
+        }
+
         private func outcome(workspaceId: String, agent: String) -> (String, String?) {
             let agents = scenario.agents ?? []
             let isPane = agent.contains(":")
+            let pending = (scenario.jobs ?? []).contains { $0.agent == agent && ($0.state == "queued" || $0.state == "sending") }
             guard let target = agents.first(where: { isPane ? $0.paneId == agent : $0.name == agent }) else {
-                return isPane ? ("failed", "no Claude left in pane \(agent)") : ("sent", nil)
+                return isPane ? ("failed", "no Claude left in pane \(agent)") : (pending ? "queued" : "sent", nil)
             }
             if isPane && target.kind != "claude" {
                 return ("failed", "no Claude left in pane \(agent)")
@@ -197,7 +230,6 @@
             if let owner = target.workspaceId, owner != workspaceId {
                 return ("failed", isPane ? "pane \(agent) belongs to workspace \(owner)" : "agent \(agent) belongs to workspace \(owner)")
             }
-            let pending = (scenario.jobs ?? []).contains { $0.agent == agent && ($0.state == "queued" || $0.state == "sending") }
             return ["idle", "done"].contains(target.status) && !pending ? ("sent", nil) : ("queued", nil)
         }
 
@@ -208,8 +240,11 @@
 
         private func statusOutput() -> String {
             (scenario.jobs ?? []).map { job in
-                [job.id, job.workspaceId, job.agent, job.state, job.error ?? "", job.answered == true ? "answered" : ""]
-                    .joined(separator: "\t")
+                [
+                    job.id, job.workspaceId, job.agent, job.state, job.error ?? "", job.answered == true ? "answered" : "",
+                    job.kind ?? "send",
+                ]
+                .joined(separator: "\t")
             }
             .joined(separator: "\n") + "\n"
         }

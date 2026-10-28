@@ -105,6 +105,7 @@ will do:
 | no `-main` agent in this workspace | No agent yet | A send will start Claude in tab 1, named `<slug>-main`. |
 | several `-main` agents, none named `<slug>-main`, even with a queued send | Several -main Claudes | A send will fail: keep only one of <names>, or name it `<slug>-main`. |
 | send queued or in progress to this agent | Sending… | A new send will go out right after. |
+| start from the grid queued or in progress (§6.6), no send queued | Starting Claude… | A send will go out once it has started. |
 | `idle` or `done` | Ready | A send clears its context, then hands over the request. |
 | `working`, send from the app to this target accepted by the Mac less than an hour ago (history, kept across relaunches) | Working on your request | A new send will wait until it finishes its work. |
 | `working` | Working | A new send will wait until it finishes its work. |
@@ -136,15 +137,19 @@ line (§5) and the notices after a send (§6).
   the target (§4.1); the workspace's other tabs do not count:
   - grey ring: unknown state, no `-main` or several
   - green dot: idle or done
-  - animated blue: working, or send queued or in progress
+  - animated blue: working, or send or start (§6.6) queued or in
+    progress
   - amber with halo: blocked
 - "waiting" badge when a send to this workspace is queued or in
-  progress, to its `main` or one of its tabs
+  progress, to its `main` or one of its tabs, or a start (§6.6)
 - tap: the workspace's `main` becomes the target (lighter glass, bold
   name, no colour), even if one of its tabs was targeted. This is the
   only meaning of "focus": nothing moves on the Mac
-- long press: "Target a tab of <label>" menu, with "main" then the
-  workspace's tabs other than tab 1 that hold at least one Claude
+- long press: "Start Claude" first, apart from the rest, only when
+  the workspace has no `-main` and no send to its `main` nor start
+  queued (title "No agent yet", §4.1; §6.6), then the "Target a tab
+  of <label>" menu, with "main" then the workspace's tabs other than
+  tab 1 that hold at least one Claude
   without a herdr name, in herdr order (`number`), named by their
   herdr label ("tab <n>" without a label); without such a tab: "No
   Claude in the other tabs". Choosing a tab makes it the target; the
@@ -541,6 +546,7 @@ one stays 5 s in turn):
 | --- | --- |
 | missing | Sent to <label> — The Mac starts Claude in tab 1, named <agent>, then hands it the request. |
 | `idle` or `done` | Sent to <label> — The Mac clears Claude's context, then hands it the request. |
+| start from the grid in progress (§6.6), no send queued | Queued for <label> — The request goes out as soon as Claude has started. |
 | other, or send already queued | Queued for <label> — Claude is busy: the request goes out as soon as it is done. |
 
 To a tab, `<label>` becomes `<label> — <tab>`, and an `idle` or `done`
@@ -727,6 +733,30 @@ Mac, the notification's summary shows alone with a progress indicator;
 Mac unreachable: "Full answer unavailable: <reason>" under the
 summary. The sheet closes the history and settings if they are open.
 
+### 6.6 Starting the `-main` without a request
+
+"Start Claude" (long press, §4.2) creates the workspace's `-main`
+without sending it anything, to have it ready on the Mac:
+
+1. a `start` job (§8.2) in the queue of the `-main` resolved as for a
+   send (§6.4): the Mac creates it as in §6 point 1 (tab 1, yolo,
+   `<slug>-main`, Remote Control name, wait for the shell prompt), with
+   no `/clear` nor prompt; a `-main` already there when the job is
+   processed: done, nothing started
+2. a send queued after it waits for the start, then goes out to the
+   same Claude with its `/clear` (§6 point 4): never a second Claude
+3. several `-main` agents with none named `<slug>-main`: refused,
+   nothing queued
+4. notice "Starting Claude in <label>" — "The Mac starts Claude in tab
+   1, named <agent>."; refused by the Mac or Mac unreachable: "Claude
+   not started in <label>" with the reason
+5. a start that turns `failed` (Claude does not start: "agent start:
+   …", new pane closed) shows "Claude not started in <label>" with its
+   reason, only once; tracked until the app quits, or seen on the Mac
+   at the previous refresh; with other failures at the same refresh,
+   it counts in "<n> sends failed"
+6. not recorded in the history (§4.4)
+
 ## 7. Notifications
 
 - permission asked at the first successful refresh, once per launch;
@@ -783,7 +813,7 @@ summary. The sheet closes the history and settings if they are open.
 
 The app only talks to the Mac over SSH, and this contract changes on
 both sides at once: the script is reinstalled by the app before each
-`enqueue`, `register-push`, `lexicon-get`, `lexicon-put` and
+`enqueue`, `start`, `register-push`, `lexicon-get`, `lexicon-put` and
 `journal-append`, the hook with `register-push`. `status` reads the
 already installed script, which may come from a previous version of
 the app: its output stays readable by the newer app.
@@ -811,12 +841,13 @@ the app: its output stays readable by the newer app.
 | --- | --- | --- |
 | `install` | the script | nothing |
 | `enqueue <workspace_id> <label_base64>` | wrapped prompt | job id; code 2 with several `-main` agents and none `<slug>-main` (reason and names on stderr) |
+| `start <workspace_id> <label_base64>` | nothing | job id; code 2 for an empty label or several `-main` agents and none `<slug>-main` (reason and names on stderr) |
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | raw text | job id; code 2 for a `pane_id` outside `[A-Za-z0-9]+:[A-Za-z0-9]+` or an unknown option |
 | `relay <workspace_id>` | raw request, without its surrounding whitespace as in the app | job id; code 2 to Home, an unknown workspace, an empty request or several `-main` agents and none `<slug>-main` |
 | `attach <jpg\|png>` | an image | absolute path of the file kept on the Mac; code 2 for an empty image, one over 20 MB, or another extension; code 1 without a path when the Mac cannot write it |
 | `answer <job_id>` | summary on the first line, blank line, full answer | nothing; code 2 for an unknown job or an empty first line; notification refused: answer kept, reason on stderr, code 0 |
 | `read-answer <job_id>` | nothing | the answer as handed in; code 2 without an answer |
-| `status` | nothing | one line per job: `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (empty without an answer), tab-separated |
+| `status` | nothing | one line per job: `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (empty without an answer), `kind` (`send` or `start`), tab-separated |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | the hook | nothing; code 2 for an empty hook, the installed one kept |
 | `reply <pane_id> <question_id> <option>` | the hook | nothing; types the option in the pane once the screen is read again; code 3 when the pane is no longer a `blocked` agent or shows another question (reason on stderr, nothing typed); code 2 for an empty hook (the installed one kept), a pane that is not a `-main`, a malformed argument or an option not offered by the notification; code 1 when the pane did not take the answer; once typed, a next question that cannot be notified only adds a line on stderr, code 0 |
 | `lexicon-get` | nothing | the lexicon backup as written, nothing without a backup (code 0) |
@@ -834,6 +865,12 @@ the app: its output stays readable by the newer app.
 - `error`: on one line, tabs and line breaks replaced by spaces
 - `answered`: missing from an older script, the app then reads the job
   as unanswered
+- `kind`: `start` for a job created by `start` (§6.6), `send`
+  otherwise; missing from an older script or unknown, the app reads a
+  send
+- `start` resolves the `-main` like `enqueue`; its job has no prompt
+  and turns `sent` once Claude is started, or right away when the
+  `-main` already exists
 - `{{job_id}}` in the prompt of `enqueue` or `relay` becomes the job
   id
 - `sent` jobs disappear after an hour, `failed` ones after a day,

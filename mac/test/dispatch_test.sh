@@ -384,6 +384,56 @@ wait_until 10 '[ "$(job_states)" = "failed " ]'
 check "failure announced with the herdr reason" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f4)|$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "failed|agent start: {\"error\":{\"code\":\"pane_not_ready"
 teardown_world
 
+echo "starting the -main of a workspace without one creates it in tab 1 without sending anything"
+setup_world
+started_job="$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" start w5 "$(printf 'Naïve search' | base64)")"
+wait_until 15 '[ "$(job_states)" = "sent " ]'
+check "split of the first pane of tab 1, Claude in yolo mode named as the app does" "$(cat "$FAKE_HERDR_WORLD/splits")|$(cat "$FAKE_HERDR_WORLD/starts")" "pane split w5:p1 --direction down --cwd /work/project --no-focus|--kind claude --pane w5:p2 --timeout 60000 -- --dangerously-skip-permissions --remote-control Naïve search—main"
+check "no /clear nor prompt is sent" "$(prompts_of naive-search-main)" ""
+check "the app reads the start by its id, agent and kind" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f1,3,4,7)" "$started_job	naive-search-main	sent	start"
+check "a send is read as a send" "$(enqueue w5 'Naïve search' "Hi"; /bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f7 | sort | tr '\n' ' ')" "send start "
+teardown_world
+
+echo "a send queued right after a start goes out once Claude has started, to the same Claude"
+setup_world
+echo 3 > "$FAKE_HERDR_WORLD/start_busy_attempts"
+/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" start w1 "$(printf '~' | base64)" > /dev/null
+enqueue w1 '~' "Right after"
+wait_until 20 '[ "$(job_states)" = "sent sent " ]'
+check "a single pane is split for a single Claude" "$(wc -l < "$FAKE_HERDR_WORLD/splits" | tr -d ' ')|$(find "$FAKE_HERDR_WORLD/agents" -mindepth 1 -maxdepth 1 -exec basename {} \; | tr '\n' ' ')" "1|home-main "
+check "the request goes out after /clear" "$(prompts_of home-main)" "idle|/clear
+idle|Right after"
+teardown_world
+
+echo "starting a workspace that already has its -main changes nothing"
+setup_world
+add_agent herdr-ios-companion-main wH working
+/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" start wH "$(printf '📯 Heraldr' | base64)" > /dev/null
+wait_until 10 '[ "$(job_states)" = "sent " ]'
+check "no Claude is started and nothing is sent" "$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)|$(prompts_of herdr-ios-companion-main)" "|"
+check "the start counts for the existing -main" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f3)" "herdr-ios-companion-main"
+teardown_world
+
+echo "starting a workspace with several -main and none named after the label is refused"
+setup_world
+add_agent local_events-main w8 idle
+add_agent morris-main w8 idle
+check "refused with the candidates" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" start w8 "$(printf 'Archives' | base64)" 2>&1; echo "code $?")" "several -main agents in w8: local_events-main morris-main
+code 2"
+check "an empty label is refused" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" start w8 '' 2>&1; echo "code $?")" "invalid label
+code 2"
+check "nothing is queued or started" "$(job_states)|$(cat "$FAKE_HERDR_WORLD/starts" 2>/dev/null)" "|"
+teardown_world
+
+echo "a start whose Claude does not come up fails with the herdr reason and closes its pane"
+setup_world
+echo pane_not_ready > "$FAKE_HERDR_WORLD/start_error"
+/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" start w1 "$(printf '~' | base64)" > /dev/null
+wait_until 10 '[ "$(job_states)" = "failed " ]'
+check "failure announced with the herdr reason" "$(/bin/sh "$HERALDR_STATE_DIR/dispatch.sh" status | cut -f5 | grep -o 'agent start: .*pane_not_ready')" "agent start: {\"error\":{\"code\":\"pane_not_ready"
+check "the split pane is closed" "$(cat "$FAKE_HERDR_WORLD/closed_panes")" "w1:p2"
+teardown_world
+
 echo "a new pane still running its shell rc is waited for before starting Claude"
 setup_world
 echo 3 > "$FAKE_HERDR_WORLD/start_busy_attempts"

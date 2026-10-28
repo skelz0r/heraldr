@@ -24,12 +24,13 @@ final class AppModel {
         case ambiguousMain([String])
         case tabWithoutClaude
         case sending
+        case starting
         case agent(AgentStatus, workingOnOurRequest: Bool)
 
         var acceptsImmediately: Bool {
             switch self {
             case .missing: true
-            case .ambiguousMain, .tabWithoutClaude, .sending: false
+            case .ambiguousMain, .tabWithoutClaude, .sending, .starting: false
             case .agent(let status, _): status.isReady
             }
         }
@@ -47,7 +48,9 @@ final class AppModel {
             } else {
                 let main = AgentName.main(of: workspace, in: agents)
                 if case .ambiguous(let names) = main { return .ambiguousMain(names) }
-                if jobs.contains(where: { $0.workspaceId == workspace.id && !$0.targetsPane && $0.isPending }) { return .sending }
+                let pending = jobs.filter { $0.workspaceId == workspace.id && !$0.targetsPane && $0.isPending }
+                if pending.contains(where: { $0.kind == .send }) { return .sending }
+                if !pending.isEmpty { return .starting }
                 guard case .found(let found) = main else { return .missing }
                 agent = found
             }
@@ -58,7 +61,7 @@ final class AppModel {
         var dotStatus: AgentStatus {
             switch self {
             case .missing, .ambiguousMain, .tabWithoutClaude: .unknown
-            case .sending: .working
+            case .sending, .starting: .working
             case .agent(let status, _): status
             }
         }
@@ -94,6 +97,7 @@ final class AppModel {
     private var pushDevice: PushDevice?
     private var pushDeviceRegistered = false
     private var notificationsRequested = false
+    private var startedJobIds: Set<String> = []
 
     private let environment: AppEnvironment
     private var link: (any MacTransport)?
@@ -420,9 +424,24 @@ final class AppModel {
             return Notice(kind: .sent, title: "Sent to \(label)", detail: "The Mac clears Claude's context, then hands it the request.")
         case .agent(let status, _) where status.isReady:
             return Notice(kind: .sent, title: "Sent to \(label)", detail: "The Mac hands the request as is to Claude, which keeps its context.")
+        case .starting:
+            return Notice(kind: .queued, title: "Queued for \(label)", detail: "The request goes out as soon as Claude has started.")
         default:
             return Notice(kind: .queued, title: "Queued for \(label)", detail: "Claude is busy: the request goes out as soon as it is done.")
         }
+    }
+
+    func startMain(of workspace: Workspace) async {
+        do {
+            guard let link else { throw MacLinkError.unreachable("no paired Mac") }
+            startedJobIds.insert(try await Dispatcher(link: link).startMain(of: workspace))
+            notice = Notice(
+                kind: .sent, title: "Starting Claude in \(workspace.label)",
+                detail: "The Mac starts Claude in tab 1, named \(AgentName.forWorkspace(label: workspace.label)).")
+        } catch {
+            notice = Notice(kind: .failed, title: "Claude not started in \(workspace.label)", detail: error.localizedDescription)
+        }
+        await refresh()
     }
 
     func resend(_ entry: SentRequest) async {
@@ -468,7 +487,7 @@ final class AppModel {
     private func announceFailures(previous: [DispatchJob], current: [DispatchJob], workspaces: [Workspace]) {
         let awaitedInHistory = Set(history.entries.filter { $0.status != .failed }.compactMap(\.jobId))
         let knownFailures = Set(previous.filter { $0.state == .failed }.map(\.id)).subtracting(awaitedInHistory)
-        let tracked = Set(previous.map(\.id)).union(awaitedInHistory)
+        let tracked = Set(previous.map(\.id)).union(awaitedInHistory).union(startedJobIds)
         let failures = current.filter { $0.state == .failed && !knownFailures.contains($0.id) && tracked.contains($0.id) }
         guard let first = failures.first else { return }
         func label(of job: DispatchJob) -> String {
@@ -477,7 +496,8 @@ final class AppModel {
                 ?? job.workspaceId
         }
         guard failures.count > 1 else {
-            notice = Notice(kind: .failed, title: "Failed to send to \(label(of: first))", detail: first.error ?? "unknown error")
+            let title = first.kind == .start ? "Claude not started in \(label(of: first))" : "Failed to send to \(label(of: first))"
+            notice = Notice(kind: .failed, title: title, detail: first.error ?? "unknown error")
             return
         }
         notice = Notice(
