@@ -783,7 +783,7 @@ summary. The sheet closes the history and settings if they are open.
 
 The app only talks to the Mac over SSH, and this contract changes on
 both sides at once: the script is reinstalled by the app before each
-`enqueue`, `register-push`, `lexicon-get`, `lexicon-put` and
+`enqueue`, `start`, `register-push`, `lexicon-get`, `lexicon-put` and
 `journal-append`, the hook with `register-push`. `status` reads the
 already installed script, which may come from a previous version of
 the app: its output stays readable by the newer app.
@@ -811,12 +811,13 @@ the app: its output stays readable by the newer app.
 | --- | --- | --- |
 | `install` | the script | nothing |
 | `enqueue <workspace_id> <label_base64>` | wrapped prompt | job id; code 2 with several `-main` agents and none `<slug>-main` (reason and names on stderr) |
+| `start <workspace_id> <label_base64>` | nothing | job id; code 2 for an empty label or several `-main` agents and none `<slug>-main` (reason and names on stderr) |
 | `enqueue-pane <workspace_id> <pane_id> <clear\|keep>` | raw text | job id; code 2 for a `pane_id` outside `[A-Za-z0-9]+:[A-Za-z0-9]+` or an unknown option |
 | `relay <workspace_id>` | raw request, without its surrounding whitespace as in the app | job id; code 2 to Home, an unknown workspace, an empty request or several `-main` agents and none `<slug>-main` |
 | `attach <jpg\|png>` | an image | absolute path of the file kept on the Mac; code 2 for an empty image, one over 20 MB, or another extension; code 1 without a path when the Mac cannot write it |
 | `answer <job_id>` | summary on the first line, blank line, full answer | nothing; code 2 for an unknown job or an empty first line; notification refused: answer kept, reason on stderr, code 0 |
 | `read-answer <job_id>` | nothing | the answer as handed in; code 2 without an answer |
-| `status` | nothing | one line per job: `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (empty without an answer), tab-separated |
+| `status` | nothing | one line per job: `id`, `workspace_id`, `agent`, `state`, `error`, `answered` (empty without an answer), `kind` (`send` or `start`), tab-separated |
 | `register-push <token> <sandbox\|production> <topic> <team_id>` | the hook | nothing; code 2 for an empty hook, the installed one kept |
 | `reply <pane_id> <question_id> <option>` | the hook | nothing; types the option in the pane once the screen is read again; code 3 when the pane is no longer a `blocked` agent or shows another question (reason on stderr, nothing typed); code 2 for an empty hook (the installed one kept), a pane that is not a `-main`, a malformed argument or an option not offered by the notification; code 1 when the pane did not take the answer; once typed, a next question that cannot be notified only adds a line on stderr, code 0 |
 | `lexicon-get` | nothing | the lexicon backup as written, nothing without a backup (code 0) |
@@ -834,6 +835,12 @@ the app: its output stays readable by the newer app.
 - `error`: on one line, tabs and line breaks replaced by spaces
 - `answered`: missing from an older script, the app then reads the job
   as unanswered
+- `kind`: `start` for a job created by `start` (§6.6), `send`
+  otherwise; missing from an older script or unknown, the app reads a
+  send
+- `start` resolves the `-main` like `enqueue`; its job has no prompt
+  and turns `sent` once Claude is started, or right away when the
+  `-main` already exists
 - `{{job_id}}` in the prompt of `enqueue` or `relay` becomes the job
   id
 - `sent` jobs disappear after an hour, `failed` ones after a day,
