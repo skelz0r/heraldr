@@ -72,6 +72,42 @@ final class HomeScreenTests: XCTestCase {
         capture("menu-without-tab", in: app, dark: false)
     }
 
+    func testStartClaudeFromLongPressWithoutMain() {
+        let app = launch("demo")
+        let blog = element("tile.wB", in: app)
+        waitFor(blog)
+        blog.press(forDuration: 1)
+        let start = element("tile.wB.start", in: app)
+        waitFor(start)
+        capture("menu-start-claude", in: app)
+        start.tap()
+
+        let notice = element("notice", in: app)
+        waitFor(notice)
+        XCTAssertTrue(notice.label.contains("Starting Claude in Blog"))
+        XCTAssertTrue(notice.label.contains("The Mac starts Claude in tab 1, named blog-main."))
+        capture("started-claude", in: app)
+
+        blog.press(forDuration: 1)
+        waitFor(app.descendants(matching: .any)["No Claude in the other tabs"].firstMatch)
+        XCTAssertFalse(element("tile.wB.start", in: app).exists)
+    }
+
+    func testNoStartClaudeWhenTheWorkspaceHasItsMain() {
+        let app = launch("demo")
+        let heraldr = element("tile.wH", in: app)
+        waitFor(heraldr)
+        heraldr.press(forDuration: 1)
+        waitFor(app.buttons["harness-qa"])
+        XCTAssertFalse(element("tile.wH.start", in: app).exists)
+        app.buttons["harness-qa"].tap()
+
+        let morris = element("tile.wK", in: app)
+        morris.press(forDuration: 1)
+        waitFor(app.descendants(matching: .any)["No Claude in the other tabs"].firstMatch)
+        XCTAssertFalse(element("tile.wK.start", in: app).exists)
+    }
+
     func testMacUnreachable() {
         let app = launch("unreachable")
         waitFor(app.staticTexts["Mac unreachable"])

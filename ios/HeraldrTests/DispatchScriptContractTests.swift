@@ -31,6 +31,14 @@ struct DispatchScriptContractTests {
         #expect(jobs.map(\.answered) == [true, false, false])
     }
 
+    @Test("a start from the grid is told apart from a send, an older script without that column only lists sends")
+    func kindColumn() {
+        let jobs = DispatchJob.parse(
+            statusOutput: "a\tw1\thome-main\tqueued\t\t\tstart\nb\tw1\thome-main\tqueued\t\t\tsend\nc\tw1\thome-main\tsent\t\t\n")
+
+        #expect(jobs.map(\.kind) == [.start, .send, .send])
+    }
+
     @Test("read-answer output gives the summary, then the full answer in markdown")
     func readAnswer() throws {
         let answer = try #require(Answer(scriptOutput: "The cache is cleared on every deploy.\n\n## Details\n\nThe `purge` job runs after `deploy`.\n"))

@@ -105,6 +105,7 @@ will do:
 | no `-main` agent in this workspace | No agent yet | A send will start Claude in tab 1, named `<slug>-main`. |
 | several `-main` agents, none named `<slug>-main`, even with a queued send | Several -main Claudes | A send will fail: keep only one of <names>, or name it `<slug>-main`. |
 | send queued or in progress to this agent | Sending… | A new send will go out right after. |
+| start from the grid queued or in progress (§6.6), no send queued | Starting Claude… | A send will go out once it has started. |
 | `idle` or `done` | Ready | A send clears its context, then hands over the request. |
 | `working`, send from the app to this target accepted by the Mac less than an hour ago (history, kept across relaunches) | Working on your request | A new send will wait until it finishes its work. |
 | `working` | Working | A new send will wait until it finishes its work. |
@@ -136,15 +137,19 @@ line (§5) and the notices after a send (§6).
   the target (§4.1); the workspace's other tabs do not count:
   - grey ring: unknown state, no `-main` or several
   - green dot: idle or done
-  - animated blue: working, or send queued or in progress
+  - animated blue: working, or send or start (§6.6) queued or in
+    progress
   - amber with halo: blocked
 - "waiting" badge when a send to this workspace is queued or in
-  progress, to its `main` or one of its tabs
+  progress, to its `main` or one of its tabs, or a start (§6.6)
 - tap: the workspace's `main` becomes the target (lighter glass, bold
   name, no colour), even if one of its tabs was targeted. This is the
   only meaning of "focus": nothing moves on the Mac
-- long press: "Target a tab of <label>" menu, with "main" then the
-  workspace's tabs other than tab 1 that hold at least one Claude
+- long press: "Start Claude" first, apart from the rest, only when
+  the workspace has no `-main` and no send to its `main` nor start
+  queued (title "No agent yet", §4.1; §6.6), then the "Target a tab
+  of <label>" menu, with "main" then the workspace's tabs other than
+  tab 1 that hold at least one Claude
   without a herdr name, in herdr order (`number`), named by their
   herdr label ("tab <n>" without a label); without such a tab: "No
   Claude in the other tabs". Choosing a tab makes it the target; the
@@ -541,6 +546,7 @@ one stays 5 s in turn):
 | --- | --- |
 | missing | Sent to <label> — The Mac starts Claude in tab 1, named <agent>, then hands it the request. |
 | `idle` or `done` | Sent to <label> — The Mac clears Claude's context, then hands it the request. |
+| start from the grid in progress (§6.6), no send queued | Queued for <label> — The request goes out as soon as Claude has started. |
 | other, or send already queued | Queued for <label> — Claude is busy: the request goes out as soon as it is done. |
 
 To a tab, `<label>` becomes `<label> — <tab>`, and an `idle` or `done`
@@ -726,6 +732,30 @@ selectable. "Copy" copies the full answer. While it arrives from the
 Mac, the notification's summary shows alone with a progress indicator;
 Mac unreachable: "Full answer unavailable: <reason>" under the
 summary. The sheet closes the history and settings if they are open.
+
+### 6.6 Starting the `-main` without a request
+
+"Start Claude" (long press, §4.2) creates the workspace's `-main`
+without sending it anything, to have it ready on the Mac:
+
+1. a `start` job (§8.2) in the queue of the `-main` resolved as for a
+   send (§6.4): the Mac creates it as in §6 point 1 (tab 1, yolo,
+   `<slug>-main`, Remote Control name, wait for the shell prompt), with
+   no `/clear` nor prompt; a `-main` already there when the job is
+   processed: done, nothing started
+2. a send queued after it waits for the start, then goes out to the
+   same Claude with its `/clear` (§6 point 4): never a second Claude
+3. several `-main` agents with none named `<slug>-main`: refused,
+   nothing queued
+4. notice "Starting Claude in <label>" — "The Mac starts Claude in tab
+   1, named <agent>."; refused by the Mac or Mac unreachable: "Claude
+   not started in <label>" with the reason
+5. a start that turns `failed` (Claude does not start: "agent start:
+   …", new pane closed) shows "Claude not started in <label>" with its
+   reason, only once; tracked until the app quits, or seen on the Mac
+   at the previous refresh; with other failures at the same refresh,
+   it counts in "<n> sends failed"
+6. not recorded in the history (§4.4)
 
 ## 7. Notifications
 

@@ -37,6 +37,7 @@
             var state: String
             var error: String?
             var answered: Bool?
+            var kind: String?
         }
 
         var paired: Bool?
@@ -51,6 +52,7 @@
         var dictationLanguage: String?
         var transcriptionLocales: [String]?
         var failures: [String: String]?
+        var startFailure: String?
         var stalled: [String]?
         var notification: [String: FakeNotificationValue]?
         var notificationDelay: Double?

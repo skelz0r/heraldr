@@ -270,6 +270,10 @@ struct HomeView: View {
         }
         .accessibilityIdentifier("tile.\(workspace.id)")
         .contextMenu {
+            if model.targetState(for: workspace) == .missing {
+                Button("Start Claude") { Task { await model.startMain(of: workspace) } }
+                    .accessibilityIdentifier("tile.\(workspace.id).start")
+            }
             Section("Target a tab of \(workspace.label)") {
                 Button(Tab.mainName) { select(workspace) }
                 let tabs = model.claudeTabs(of: workspace)
