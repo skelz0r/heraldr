@@ -43,9 +43,8 @@ final class NotificationTests: XCTestCase {
         sqlite.tap()
 
         app.activate()
-        let notice = element("notice", in: app)
+        let notice = notice(containing: "Answer sent to acme-main", in: app)
         waitFor(notice)
-        XCTAssertTrue(notice.label.contains("Answer sent to acme-main"), notice.label)
         XCTAssertTrue(notice.label.contains("SQLite"), notice.label)
         capture("question-answered-from-notification", in: app)
     }

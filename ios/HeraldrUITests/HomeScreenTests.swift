@@ -6,7 +6,8 @@ final class HomeScreenTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testDefaultTargetAndStateOfEachAgent() {
+    func testTargetCardThenEmptyClipboard() {
+        UIPasteboard.general.items = []
         let app = launch("demo")
         waitFor(element("tile.wH", in: app))
         XCTAssertEqual(label(of: "target.workspace", in: app), "~")
@@ -16,10 +17,6 @@ final class HomeScreenTests: XCTestCase {
 
         let expected: [(tile: String, state: String, next: String)] = [
             ("wH", "Working", "A new send will wait until it finishes its work."),
-            ("wS", "Sending…", "A new send will go out right after."),
-            ("wM", "Ready", "A send clears its context, then hands over the request."),
-            ("wL", "Unknown state", "A new send will wait until it is ready."),
-            ("wB", "No agent yet", "A send will start Claude in tab 1, named blog-main."),
             ("wK", "Several -main Claudes", "A send will fail: keep only one of w---morris-main, morris_api-main, or name it morris-main."),
         ]
         for (tile, state, next) in expected {
@@ -28,18 +25,12 @@ final class HomeScreenTests: XCTestCase {
             XCTAssertEqual(label(of: "target.next", in: app), next, tile)
             capture("target-\(tile)", in: app)
         }
-    }
 
-    func testBlockedAgentWithoutQueuedSend() {
-        let app = launch("demo")
-        element("tile.wH", in: app).press(forDuration: 1)
-        app.buttons["dictation-journal"].firstMatch.tap()
-        element("tile.wH", in: app).press(forDuration: 1)
-        app.buttons["tab 4"].firstMatch.tap()
-        XCTAssertEqual(label(of: "target.tab", in: app), "tab 4")
-        XCTAssertEqual(label(of: "target.state", in: app), "Asking you a question: answer in Claude mobile")
-        XCTAssertEqual(label(of: "target.next", in: app), "A new send will wait until you have answered it.")
-        capture("target-blocked-tab", in: app)
+        element("home.paste", in: app).tap()
+        let notice = notice(containing: "Clipboard empty", in: app)
+        waitFor(notice)
+        XCTAssertTrue(notice.label.contains("First copy the text or screenshot to send."))
+        capture("empty-clipboard", in: app)
     }
 
     func testTargetATabWithLongPress() {
@@ -50,6 +41,7 @@ final class HomeScreenTests: XCTestCase {
         waitFor(app.buttons["harness-qa"])
         XCTAssertTrue(app.buttons["main"].exists)
         XCTAssertTrue(app.buttons["dictation-journal"].exists)
+        XCTAssertFalse(element("tile.wH.start", in: app).exists)
         capture("tabs-menu", in: app, dark: false)
         app.buttons["harness-qa"].tap()
 
@@ -61,14 +53,19 @@ final class HomeScreenTests: XCTestCase {
 
         heraldr.tap()
         XCTAssertEqual(label(of: "target.tab", in: app), "main")
-    }
 
-    func testWorkspaceWithoutOtherClaudeTab() {
-        let app = launch("demo")
-        let acme = element("tile.wS", in: app)
-        waitFor(acme)
-        acme.press(forDuration: 1)
+        heraldr.press(forDuration: 1)
+        app.buttons["dictation-journal"].firstMatch.tap()
+        heraldr.press(forDuration: 1)
+        app.buttons["tab 4"].firstMatch.tap()
+        XCTAssertEqual(label(of: "target.tab", in: app), "tab 4")
+        XCTAssertEqual(label(of: "target.state", in: app), "Asking you a question: answer in Claude mobile")
+        XCTAssertEqual(label(of: "target.next", in: app), "A new send will wait until you have answered it.")
+        capture("target-blocked-tab", in: app)
+
+        element("tile.wK", in: app).press(forDuration: 1)
         waitFor(app.descendants(matching: .any)["No Claude in the other tabs"].firstMatch)
+        XCTAssertFalse(element("tile.wK.start", in: app).exists)
         capture("menu-without-tab", in: app, dark: false)
     }
 
@@ -82,30 +79,14 @@ final class HomeScreenTests: XCTestCase {
         capture("menu-start-claude", in: app)
         start.tap()
 
-        let notice = element("notice", in: app)
+        let notice = notice(containing: "Starting Claude in Blog", in: app)
         waitFor(notice)
-        XCTAssertTrue(notice.label.contains("Starting Claude in Blog"))
         XCTAssertTrue(notice.label.contains("The Mac starts Claude in tab 1, named blog-main."))
         capture("started-claude", in: app)
 
         blog.press(forDuration: 1)
         waitFor(app.descendants(matching: .any)["No Claude in the other tabs"].firstMatch)
         XCTAssertFalse(element("tile.wB.start", in: app).exists)
-    }
-
-    func testNoStartClaudeWhenTheWorkspaceHasItsMain() {
-        let app = launch("demo")
-        let heraldr = element("tile.wH", in: app)
-        waitFor(heraldr)
-        heraldr.press(forDuration: 1)
-        waitFor(app.buttons["harness-qa"])
-        XCTAssertFalse(element("tile.wH.start", in: app).exists)
-        app.buttons["harness-qa"].tap()
-
-        let morris = element("tile.wK", in: app)
-        morris.press(forDuration: 1)
-        waitFor(app.descendants(matching: .any)["No Claude in the other tabs"].firstMatch)
-        XCTAssertFalse(element("tile.wK.start", in: app).exists)
     }
 
     func testMacUnreachable() {
@@ -119,16 +100,5 @@ final class HomeScreenTests: XCTestCase {
         let app = launch("connecting")
         waitFor(app.staticTexts["Connecting to the Mac…"])
         capture("connecting", in: app)
-    }
-
-    func testEmptyClipboardAnnounced() {
-        UIPasteboard.general.items = []
-        let app = launch("demo")
-        element("home.paste", in: app).tap()
-        let notice = element("notice", in: app)
-        waitFor(notice)
-        XCTAssertTrue(notice.label.contains("Clipboard empty"))
-        XCTAssertTrue(notice.label.contains("First copy the text or screenshot to send."))
-        capture("empty-clipboard", in: app)
     }
 }

@@ -28,6 +28,10 @@ extension XCTestCase {
         app.descendants(matching: .any)[identifier].firstMatch
     }
 
+    func notice(containing text: String, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'notice' AND label CONTAINS %@", text)).firstMatch
+    }
+
     func waitFor(_ element: XCUIElement, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "\(element) missing", file: file, line: line)
     }
