@@ -66,6 +66,7 @@ run_tests() {
     fi
 
     run_check "iOS + Mac tests" ./bin/run-ios-tests
+    run_check "UI tests" ./bin/qa
 }
 
 warn_on_stale_spec() {
