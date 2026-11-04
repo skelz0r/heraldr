@@ -71,7 +71,7 @@ never a temporary patch of fake data.
 ## Proof, in this order
 
 1. `$PWD/bin/qa` on the diff: plays the `HeraldrUITests` classes the
-   diff touches (it prints them; `--all` for everything, 3 to 4 min on 3
+   diff touches (it prints them; `--all` for everything, about 3 min on 3
    simulator clones), and exports the light and dark screenshots to
    `~/share/screenshots/<worktree>/`. Look at the 2 or 3 of the changed
    screens, in light and dark (`docs/design.md`), before saying the UI

@@ -43,6 +43,24 @@ extension XCTestCase {
         return text.exists ? text.label : found.label
     }
 
+    func pressActionButton() {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName("com.skelz0r.heraldr.debug.action-button" as CFString), nil, nil, true)
+    }
+
+    func dismissSheet(in app: XCUIApplication, backTo home: XCUIElement) {
+        let hittable = NSPredicate(format: "isHittable == true")
+        for _ in 0..<3 {
+            let grabber = app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            grabber.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+            if XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: hittable, object: home)], timeout: 3) == .completed {
+                return
+            }
+        }
+        XCTFail("sheet still open")
+    }
+
     private var appearanceName: String {
         XCUIDevice.shared.appearance == .dark ? "dark" : "light"
     }
