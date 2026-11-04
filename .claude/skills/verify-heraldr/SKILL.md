@@ -74,8 +74,10 @@ never a temporary patch of fake data.
    simulator clones), and exports the light and dark screenshots to
    `~/share/screenshots/<worktree>/`. Look at the 2 or 3 of the changed
    screens, in light and dark (`docs/design.md`), before saying the UI
-   is done; a defect seen is fixed with its test. It records the
-   durations in `build/qa-durations.tsv` of the main checkout and warns
+   is done; a defect seen is fixed with its test. It records every
+   run, passed or failed with its failing tests, in
+   `build/qa-durations.tsv` of the main checkout, keeps the result
+   bundles of the last 5 failed runs in `build/qa/failed/`, and warns
    when a test exceeds 45 s or `--all` grows by 20 %: move a check down
    to a unit test, merge flows, cut fixed waits.
 2. A flow no UI test covers: write the UI test (one class per flow,
