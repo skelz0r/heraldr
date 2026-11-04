@@ -29,6 +29,10 @@ bin/local-ci push            # checks then push, no remote CI
 bin/remove-worktree <name>   # after merge: processes, simulator, worktree, branch
 ```
 
+Every `xcodebuild` build or test goes through `bin/ci-slot-run`, which
+waits for room on the machine shared with the other worktrees and
+projects (`ci-slot status`); a new heavy step gets it too.
+
 Installing on the iPhone follows the global `ios-device-install` skill
 (`devicectl` on the LAN, OTA through Tailscale elsewhere): over OTA,
 `bin/run-ios-device` prints the URL to open in Safari on the iPhone.

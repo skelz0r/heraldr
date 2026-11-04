@@ -154,9 +154,10 @@ for flow in "${FLOWS[@]}"; do ONLY_TESTING+=(-only-testing:"HeraldrUITests/${flo
 printf 'QA on %s (%s): %s\n' "${SIMULATOR}" "${UDID}" "${FLOWS[*]}"
 rm -rf "${RESULT_BUNDLE}"
 status=0
-xcodebuild test \
+WORKERS="${QA_WORKERS:-3}"
+"${PROJECT_DIR}/bin/ci-slot-run" "$((WORKERS * 3))" "QA (${WORKERS} workers)" -- xcodebuild test \
     -parallel-testing-enabled YES \
-    -parallel-testing-worker-count "${QA_WORKERS:-3}" \
+    -parallel-testing-worker-count "${WORKERS}" \
     -project "${PROJECT_DIR}/ios/Heraldr.xcodeproj" \
     -scheme Heraldr \
     -destination "platform=iOS Simulator,id=${UDID}" \
