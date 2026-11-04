@@ -24,7 +24,8 @@ Builds (about 60 s cold, 5 s incremental), boots the worktree's
 simulator, installs and launches on the fake Mac preset given as
 argument. Without argument the app talks to the paired Mac: never for a
 QA. Presets (`FakeMacScenario.presets`): `demo`, `history`, `question`
-(a notification arrives after 12 s), `unpaired`, `unreachable`,
+(a notification arrives 2 s after the app leaves the foreground,
+each time), `unpaired`, `unreachable`,
 `connecting`, `empty`. A whole scenario as JSON:
 `HERALDR_FAKE_MAC='<json>' $PWD/bin/run-ios`. Usable when the doctor is
 green, not when the build succeeded.
@@ -133,7 +134,7 @@ SwiftUI):
   `"$A" run describe --udid "$U"` (ax-service, sees system alerts) and
   tap "Allow" (about `0.698,0.600` on the iPhone SE).
   `settings-permissions` cannot grant notifications on iOS.
-- The question banner shows 12 s after launch: take the screenshot
+- The question banner shows 2 s after going to the Home Screen: take the screenshot
   then, `screen` does not list it.
 - The `notice` after a send lasts about 2 s: read `screen` right after
   the tap; a screenshot taken a few seconds later misses it.

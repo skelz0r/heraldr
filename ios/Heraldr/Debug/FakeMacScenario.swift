@@ -123,7 +123,6 @@
                 scenario.agents?[index].status = "blocked"
                 scenario.agents?[index].question = Question(id: questionId, options: [1, 2])
             }
-            scenario.notificationDelay = 12
             return scenario
         }
 

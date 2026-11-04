@@ -10,9 +10,12 @@ final class NotificationTests: XCTestCase {
 
     func testTapOnAQuestionWithAppKilled() {
         let app = launchAllowingNotifications(environment: ["HERALDR_FAKE_MAC_KEPT_FOR_RELAUNCH": "1"])
+        XCUIDevice.shared.press(.home)
+        let banner = questionBanner()
+        XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
         app.terminate()
 
-        tapNotification()
+        banner.tap()
 
         assertQuestionOpened(in: app, capturedAs: "unopened-question-app-killed")
     }
@@ -20,8 +23,9 @@ final class NotificationTests: XCTestCase {
     func testTapOnAQuestionWithAppInBackground() {
         let app = launchAllowingNotifications()
         XCUIDevice.shared.press(.home)
-
-        tapNotification()
+        let banner = questionBanner()
+        XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
+        banner.tap()
 
         assertQuestionOpened(in: app, capturedAs: "unopened-question")
     }
@@ -29,7 +33,6 @@ final class NotificationTests: XCTestCase {
     func testAnswerAQuestionFromTheNotification() {
         let app = launchAllowingNotifications()
         XCUIDevice.shared.press(.home)
-
         let banner = questionBanner()
         XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
         banner.press(forDuration: 1.5)
@@ -54,18 +57,11 @@ final class NotificationTests: XCTestCase {
         if allow.waitForExistence(timeout: 3) {
             allow.tap()
         }
-        RunLoop.current.run(until: Date().addingTimeInterval(1))
         return app
     }
 
     private func questionBanner() -> XCUIElement {
         springboard.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Which database for the export")).firstMatch
-    }
-
-    private func tapNotification() {
-        let banner = questionBanner()
-        XCTAssertTrue(banner.waitForExistence(timeout: 20), "notification missing")
-        banner.tap()
     }
 
     private func assertQuestionOpened(in app: XCUIApplication, capturedAs screen: String) {
