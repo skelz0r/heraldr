@@ -10,7 +10,10 @@ ATTACHMENTS="${DERIVED_DATA}/attachments"
 SCREENSHOTS="${HOME}/share/screenshots/${WORKTREE}"
 BASE_BRANCH="origin/main"
 DURATIONS="$(dirname "$(git -C "${PROJECT_DIR}" rev-parse --path-format=absolute --git-common-dir)")/build/qa-durations.tsv"
-ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacAndVoiceTests ActionButtonTests)
+FAILED_RESULTS="${DERIVED_DATA}/failed"
+APP_BUNDLE_ID="com.skelz0r.heraldr.dev"
+FAILED_RESULTS_KEPT=5
+ALL_FLOWS=(HomeScreenTests SendFlowTests SheetsTests NotificationTests MacMenuTests DictationTests)
 
 usage() {
     cat <<EOF
@@ -20,7 +23,8 @@ Plays the UI flows touched by the diff since ${BASE_BRANCH} on the
 simulator dedicated to this worktree ("${SIMULATOR}", bin/ios-simulator,
 an iPhone SE, the smallest screen iOS 26 runs on), against the fake Mac, then
 exports light and dark screenshots to ${SCREENSHOTS}/ and records
-test durations in ${DURATIONS}.
+every run, passed or failed, in ${DURATIONS}. The result
+bundles of the last ${FAILED_RESULTS_KEPT} failed runs stay in ${FAILED_RESULTS}/.
 
 Flows: ${ALL_FLOWS[*]}
 EOF
@@ -29,9 +33,9 @@ EOF
 flows_for_path() {
     case "$1" in
         ios/Heraldr/UI/Home* | ios/Heraldr/UI/Components.swift | ios/Heraldr/UI/Theme.swift | ios/Heraldr/Herdr/* | ios/Heraldr/Mac/*)
-            printf '%s\n' HomeScreenTests MacAndVoiceTests ;;
+            printf '%s\n' HomeScreenTests MacMenuTests DictationTests ;;
         ios/Heraldr/Voice/*)
-            printf '%s\n' SendFlowTests MacAndVoiceTests ;;
+            printf '%s\n' SendFlowTests DictationTests ;;
         ios/Heraldr/UI/Compose* | ios/Heraldr/Dispatch/*)
             echo SendFlowTests ;;
         ios/Heraldr/UI/* | ios/Heraldr/Pairing/*)
@@ -54,6 +58,7 @@ flows_from_diff() {
 }
 
 prepare_simulator() {
+    xcrun simctl privacy "$1" grant microphone "${APP_BUNDLE_ID}"
     xcrun simctl ui "$1" appearance dark
     xcrun simctl ui "$1" appearance light
     xcrun simctl status_bar "$1" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
@@ -76,12 +81,12 @@ PYTHON
 }
 
 record_durations() {
-    python3 - "${RESULT_BUNDLE}" "${DURATIONS}" "$1" "$(git -C "${PROJECT_DIR}" rev-parse --short HEAD)" \
+    python3 - "${RESULT_BUNDLE}" "${DURATIONS}" "$1" "$2" "$(git -C "${PROJECT_DIR}" rev-parse --short HEAD)" \
         "$(git -C "${PROJECT_DIR}" branch --show-current)" "$(sysctl -n vm.loadavg | awk '{print $3}')" "$(sysctl -n hw.ncpu)" <<'PYTHON'
 import datetime, json, os, statistics, subprocess, sys
-bundle, history, scope, revision, branch, load, cpus = sys.argv[1:]
+bundle, history, scope, status, revision, branch, load, cpus = sys.argv[1:]
 SLOWEST_TEST_LIMIT, GROWTH_LIMIT, BASELINE_RUNS, MINIMUM_BASELINE_RUNS = 45, 1.2, 10, 5
-COLUMNS = ["recorded_at", "revision", "branch", "scope", "load_5min", "cpu_count", "tests", "total_s", "slowest_test", "slowest_test_s"]
+COLUMNS = ["recorded_at", "revision", "branch", "scope", "load_5min", "cpu_count", "tests", "total_s", "slowest_test", "slowest_test_s", "status", "failed_tests"]
 
 def xcresult(kind):
     return json.loads(subprocess.run(["xcrun", "xcresulttool", "get", "test-results", kind, "--path", bundle], capture_output=True, check=True).stdout)
@@ -90,19 +95,25 @@ def test_cases(node, owner=""):
     if node.get("nodeType") == "Test Suite":
         owner = node["name"]
     if node.get("nodeType") == "Test Case":
-        yield f"{owner}/{node['name'].removesuffix('()')}", node.get("durationInSeconds", 0)
+        yield f"{owner}/{node['name'].removesuffix('()')}", (node.get("durationInSeconds", 0), node.get("result"))
     for child in node.get("children", []):
         yield from test_cases(child, owner)
 
 def quiet(run):
     return float(run["load_5min"]) <= int(run["cpu_count"])
 
+def passed(run):
+    return run.get("status", "passed") == "passed"
+
 summary = xcresult("summary")
-durations = dict(case for node in xcresult("tests")["testNodes"] for case in test_cases(node))
+cases = dict(case for node in xcresult("tests")["testNodes"] for case in test_cases(node))
+durations = {name: seconds for name, (seconds, _) in cases.items()}
+failed = sorted(name for name, (_, result) in cases.items() if result == "Failed")
 slowest = max(durations.items(), key=lambda item: item[1], default=("", 0))
 run = dict(zip(COLUMNS, [
     datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), revision, branch, scope, load, cpus,
     len(durations), round(summary["finishTime"] - summary["startTime"]), slowest[0], round(slowest[1]),
+    status, ",".join(failed) or "-",
 ]))
 
 past = []
@@ -116,9 +127,11 @@ with open(history, "a") as output:
     output.write("\t".join(str(run[column]) for column in COLUMNS) + "\n")
 
 warnings = [f"{name} took {round(seconds)}s, above {SLOWEST_TEST_LIMIT}s" for name, seconds in sorted(durations.items(), key=lambda item: -item[1]) if seconds > SLOWEST_TEST_LIMIT]
-baseline = [int(past_run["total_s"]) for past_run in past if past_run["scope"] == "all" and quiet(past_run)][-BASELINE_RUNS:]
+baseline = [int(past_run["total_s"]) for past_run in past if past_run["scope"] == "all" and quiet(past_run) and passed(past_run)][-BASELINE_RUNS:]
 if scope == "all" and quiet(run) and len(baseline) >= MINIMUM_BASELINE_RUNS and run["total_s"] > statistics.median(baseline) * GROWTH_LIMIT:
     warnings.append(f"bin/qa --all took {run['total_s']}s, more than {round((GROWTH_LIMIT - 1) * 100)}% above the {round(statistics.median(baseline))}s median of the last {len(baseline)} quiet runs")
+if status != "passed":
+    sys.exit(0)
 if warnings:
     print("\nWarning: the UI tests are getting slow (not blocking): move a check down to a unit test, merge flows that relaunch the app, or cut fixed waits")
     for warning in warnings:
@@ -154,9 +167,10 @@ for flow in "${FLOWS[@]}"; do ONLY_TESTING+=(-only-testing:"HeraldrUITests/${flo
 printf 'QA on %s (%s): %s\n' "${SIMULATOR}" "${UDID}" "${FLOWS[*]}"
 rm -rf "${RESULT_BUNDLE}"
 status=0
-xcodebuild test \
+WORKERS="${QA_WORKERS:-3}"
+"${PROJECT_DIR}/bin/ci-slot-run" "$((WORKERS * 3))" "QA (${WORKERS} workers)" -- xcodebuild test \
     -parallel-testing-enabled YES \
-    -parallel-testing-worker-count "${QA_WORKERS:-3}" \
+    -parallel-testing-worker-count "${WORKERS}" \
     -project "${PROJECT_DIR}/ios/Heraldr.xcodeproj" \
     -scheme Heraldr \
     -destination "platform=iOS Simulator,id=${UDID}" \
@@ -166,11 +180,20 @@ xcodebuild test \
     2>&1 | xcbeautify --quiet --disable-logging --renderer terminal || status=$?
 
 printf '\nScreenshots, light and dark, to look at:\n'
-export_screenshots
+export_screenshots || printf '  none: no readable result bundle\n'
 
 if [ "$status" -ne 0 ]; then
-    printf '\nQA FAILED: see the failures above and %s\n' "${RESULT_BUNDLE}" >&2
+    record_durations "${SCOPE}" failed || printf '\nWarning: failed run not recorded\n'
+    kept="${FAILED_RESULTS}/$(date +%Y%m%d-%H%M%S).xcresult"
+    mkdir -p "${FAILED_RESULTS}"
+    [ ! -d "${RESULT_BUNDLE}" ] || cp -R "${RESULT_BUNDLE}" "${kept}"
+    kept_count=0
+    while IFS= read -r -d '' result; do
+        kept_count=$((kept_count + 1))
+        [ "$kept_count" -le "$FAILED_RESULTS_KEPT" ] || rm -rf "$result"
+    done < <(find "${FAILED_RESULTS}" -maxdepth 1 -name '*.xcresult' -print0 | sort -rz)
+    printf '\nQA FAILED: see the failures above and %s\n' "${kept}" >&2
     exit "$status"
 fi
-record_durations "${SCOPE}" || printf '\nWarning: test durations not recorded\n'
+record_durations "${SCOPE}" passed || printf '\nWarning: test durations not recorded\n'
 printf '\nQA passed: %s\n' "${FLOWS[*]}"

@@ -6,9 +6,10 @@ final class SheetsTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testHistoryTasksAndQuestions() {
+    func testHistoryThenCopyResendSettingsAndLexicon() {
         let app = launch("history")
-        element("home.history", in: app).tap()
+        let history = element("home.history", in: app)
+        history.tap()
         waitFor(app.staticTexts["Add a dark mode to the settings screen and check the contrast of the status dots"])
         app.navigationBars["History"].swipeUp()
         XCTAssertTrue(app.staticTexts["2 screenshots attached"].exists)
@@ -26,34 +27,17 @@ final class SheetsTests: XCTestCase {
         app.staticTexts["How does the thumbnail cache work?"].tap()
         waitFor(app.staticTexts["The thumbnail cache lives in tmp/thumbnails."])
         capture("answer", in: app)
-    }
+        dismissSheet(in: app, backTo: history)
 
-    func testCopyThenResend() {
-        let app = launch("history")
-        element("home.history", in: app).tap()
+        history.tap()
         let copy = element("history.copy", in: app)
         waitFor(copy)
         copy.tap()
         XCTAssertTrue(app.buttons["Copied"].waitForExistence(timeout: 2))
         capture("history-copy", in: app, dark: false)
-
         element("history.resend", in: app).tap()
-        let notice = element("notice", in: app)
-        waitFor(notice)
-        XCTAssertTrue(notice.label.contains("Heraldr"), notice.label)
-    }
+        waitFor(notice(containing: "Heraldr", in: app))
 
-    func testEmptyHistory() {
-        let app = launch("demo")
-        element("home.history", in: app).tap()
-        waitFor(app.staticTexts["No sends"])
-        capture("empty-history", in: app)
-        app.buttons["Questions"].tap()
-        waitFor(app.staticTexts["No questions"])
-    }
-
-    func testSettingsAndLexicon() {
-        let app = launch("history")
         element("home.settings", in: app).tap()
         waitFor(element("settings.lexicon", in: app))
         XCTAssertTrue(app.staticTexts["Installed build"].exists || app.staticTexts["INSTALLED BUILD"].exists)
@@ -70,8 +54,16 @@ final class SheetsTests: XCTestCase {
         capture("lexicon-new-term", in: app)
     }
 
-    func testDictationLanguage() {
+    func testEmptySheetsThenDictationLanguage() {
         let app = launch("demo")
+        let history = element("home.history", in: app)
+        history.tap()
+        waitFor(app.staticTexts["No sends"])
+        capture("empty-history", in: app)
+        app.buttons["Questions"].tap()
+        waitFor(app.staticTexts["No questions"])
+        dismissSheet(in: app, backTo: history)
+
         element("home.settings", in: app).tap()
         let setting = element("settings.dictationLanguage", in: app)
         waitFor(setting)
@@ -92,21 +84,21 @@ final class SheetsTests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         waitFor(setting)
         XCTAssertTrue(setting.label.contains("French (France)"), setting.label)
-    }
 
-    func testEmptyLexicon() {
-        let app = launch("demo")
-        element("home.settings", in: app).tap()
         element("settings.lexicon", in: app).tap()
         waitFor(app.staticTexts["No terms"])
         capture("empty-lexicon", in: app)
     }
 
-    func testPairing() {
+    func testPairingIgnoresTheActionButton() {
         let app = launch("unpaired")
         let paste = element("pairing.paste", in: app)
         waitFor(paste)
         XCTAssertTrue(app.staticTexts["Camera unavailable: paste the code instead"].exists)
         capture("pairing", in: app)
+
+        pressActionButton()
+        XCTAssertFalse(app.buttons["Stop dictation"].waitForExistence(timeout: 3))
+        XCTAssertTrue(paste.exists)
     }
 }

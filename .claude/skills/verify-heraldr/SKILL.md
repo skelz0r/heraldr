@@ -24,7 +24,8 @@ Builds (about 60 s cold, 5 s incremental), boots the worktree's
 simulator, installs and launches on the fake Mac preset given as
 argument. Without argument the app talks to the paired Mac: never for a
 QA. Presets (`FakeMacScenario.presets`): `demo`, `history`, `question`
-(a notification arrives after 12 s), `unpaired`, `unreachable`,
+(a notification arrives 2 s after the app leaves the foreground,
+each time), `unpaired`, `unreachable`,
 `connecting`, `empty`. A whole scenario as JSON:
 `HERALDR_FAKE_MAC='<json>' $PWD/bin/run-ios`. Usable when the doctor is
 green, not when the build succeeded.
@@ -70,12 +71,14 @@ never a temporary patch of fake data.
 ## Proof, in this order
 
 1. `$PWD/bin/qa` on the diff: plays the `HeraldrUITests` classes the
-   diff touches (it prints them; `--all` for everything, 3 to 4 min on 3
+   diff touches (it prints them; `--all` for everything, about 3 min on 3
    simulator clones), and exports the light and dark screenshots to
    `~/share/screenshots/<worktree>/`. Look at the 2 or 3 of the changed
    screens, in light and dark (`docs/design.md`), before saying the UI
-   is done; a defect seen is fixed with its test. It records the
-   durations in `build/qa-durations.tsv` of the main checkout and warns
+   is done; a defect seen is fixed with its test. It records every
+   run, passed or failed with its failing tests, in
+   `build/qa-durations.tsv` of the main checkout, keeps the result
+   bundles of the last 5 failed runs in `build/qa/failed/`, and warns
    when a test exceeds 45 s or `--all` grows by 20 %: move a check down
    to a unit test, merge flows, cut fixed waits.
 2. A flow no UI test covers: write the UI test (one class per flow,
@@ -131,7 +134,7 @@ SwiftUI):
   `"$A" run describe --udid "$U"` (ax-service, sees system alerts) and
   tap "Allow" (about `0.698,0.600` on the iPhone SE).
   `settings-permissions` cannot grant notifications on iOS.
-- The question banner shows 12 s after launch: take the screenshot
+- The question banner shows 2 s after going to the Home Screen: take the screenshot
   then, `screen` does not list it.
 - The `notice` after a send lasts about 2 s: read `screen` right after
   the tap; a screenshot taken a few seconds later misses it.

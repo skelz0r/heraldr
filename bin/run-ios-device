@@ -71,7 +71,7 @@ fi
 
 echo "Building for device..."
 
-if ! "${HOME}/dotfiles/bin/with-ci-keychain" xcodebuild \
+if ! "${PROJECT_DIR}/bin/ci-slot-run" 8 "build device" -- "${HOME}/dotfiles/bin/with-ci-keychain" xcodebuild \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
     -destination "generic/platform=iOS" \

@@ -1,5 +1,6 @@
 #if DEBUG
     import Foundation
+    import UIKit
     import UserNotifications
 
     extension AppEnvironment {
@@ -62,9 +63,18 @@
         }
 
         private static func scheduleNotification(of scenario: FakeMacScenario) async {
-            guard var payload = scenario.notification else { return }
+            guard let payload = scenario.notification else { return }
+            let delay = scenario.notificationDelay ?? 2
+            _ = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+                Task { await deliverNotification(payload, after: delay) }
+            }
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+        }
+
+        private static func deliverNotification(_ payload: [String: FakeNotificationValue], after delay: Double) async {
             let center = UNUserNotificationCenter.current()
-            guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
+            guard await center.notificationSettings().authorizationStatus == .authorized else { return }
+            var payload = payload
             let content = UNMutableNotificationContent()
             content.title = payload.removeValue(forKey: "title")?.text ?? ""
             content.subtitle = payload.removeValue(forKey: "subtitle")?.text ?? ""
@@ -74,8 +84,8 @@
                 await reply.register()
                 content.categoryIdentifier = reply.categoryIdentifier
             }
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: scenario.notificationDelay ?? 5, repeats: false)
-            try? await center.add(UNNotificationRequest(identifier: "fake-mac-question", content: content, trigger: trigger))
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+            try? await center.add(UNNotificationRequest(identifier: "fake-mac-question-\(UUID().uuidString)", content: content, trigger: trigger))
         }
 
         static var launch: AppEnvironment {

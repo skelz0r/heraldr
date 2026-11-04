@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat >&2 <<USAGE
+Usage: bin/ci-slot-run <weight> <label> -- <command>...
+
+Runs a heavy step (xcodebuild build or test) through ci-slot, which
+shares the cores of this machine between the worktrees and projects
+running side by side. The label is prefixed with "heraldr <worktree>".
+Runs the command directly when ci-slot is missing, or when an outer
+step already holds a slot (CI_SLOT_HELD).
+USAGE
+    exit 2
+}
+
+[[ $# -ge 4 && "$3" == "--" ]] || usage
+
+weight="$1"
+label="heraldr $(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)") $2"
+shift 3
+
+if [[ -n "${CI_SLOT_HELD:-}" ]] || ! command -v ci-slot >/dev/null 2>&1; then
+    exec "$@"
+fi
+
+exec ci-slot run -w "$weight" -n "$label" -- "$@"

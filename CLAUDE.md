@@ -24,10 +24,14 @@ bin/run-ios-tests [suite]    # app unit tests, then bin/run-mac-tests; fails on 
 bin/run-mac-tests            # dispatch.sh (fake herdr) and hook (fake APNs), no Xcode
 bin/lint                     # shellcheck, swift-format, SwiftLint, Biome, guards (2 s)
 bin/qa [--all|<class>...]    # UI tests touched by the diff on the fake Mac, light and dark screenshots
-bin/local-ci                 # lint then tests (iOS skipped if the diff is docs only)
+bin/local-ci                 # lint, tests, then bin/qa on the diff (iOS skipped if the diff is docs only)
 bin/local-ci push            # checks then push, no remote CI
 bin/remove-worktree <name>   # after merge: processes, simulator, worktree, branch
 ```
+
+Every `xcodebuild` build or test goes through `bin/ci-slot-run`, which
+waits for room on the machine shared with the other worktrees and
+projects (`ci-slot status`); a new heavy step gets it too.
 
 Installing on the iPhone follows the global `ios-device-install` skill
 (`devicectl` on the LAN, OTA through Tailscale elsewhere): over OTA,

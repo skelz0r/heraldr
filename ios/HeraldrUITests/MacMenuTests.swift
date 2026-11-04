@@ -1,9 +1,7 @@
 import XCTest
 
 @MainActor
-final class MacAndVoiceTests: XCTestCase {
-    private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-
+final class MacMenuTests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
     }
@@ -25,20 +23,5 @@ final class MacAndVoiceTests: XCTestCase {
         app.buttons["Forget and pair again"].tap()
 
         waitFor(element("pairing.paste", in: app))
-    }
-
-    func testDictationScreen() {
-        let app = launch("demo")
-        element("home.voice", in: app).tap()
-        let allow = springboard.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["Autoriser", "Allow", "OK"])).firstMatch
-        for _ in 0..<2 where allow.waitForExistence(timeout: 3) {
-            allow.tap()
-        }
-        waitFor(app.buttons["Stop dictation"])
-        XCTAssertTrue(app.buttons["Cancel"].exists)
-        capture("dictation", in: app)
-
-        app.buttons["Cancel"].tap()
-        waitFor(element("home.voice", in: app))
     }
 }

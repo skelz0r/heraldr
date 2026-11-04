@@ -437,7 +437,7 @@ in flight).
     raises `homeDictationRequest`, which `HomeView` (compose closed)
     or `ComposeView` (compose open) takes. Under `#if DEBUG`, the
     Darwin notification `com.skelz0r.heraldr.debug.action-button`
-    calls the same method, posted by `ActionButtonTests`
+    calls the same method, posted by `DictationTests`
   - `UI`: list, buttons, preview
 - Foundation Models unavailable (Apple Intelligence off, model not
   ready): the raw transcript is kept and the preview says so

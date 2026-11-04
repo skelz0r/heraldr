@@ -33,7 +33,7 @@ SIMULATOR_UUID="$("${PROJECT_DIR}/bin/ios-simulator" --boot)"
 echo "Building for ${SIMULATOR} (${SIMULATOR_UUID})..."
 
 set +e
-BUILD_OUTPUT=$(xcodebuild \
+BUILD_OUTPUT=$("${PROJECT_DIR}/bin/ci-slot-run" 8 "build simulator" -- xcodebuild \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
     -destination "platform=iOS Simulator,id=${SIMULATOR_UUID}" \

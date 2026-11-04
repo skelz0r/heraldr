@@ -45,6 +45,6 @@ if [[ "${BUILD_TYPE}" == "device" ]]; then
     BUILD_ARGS+=(-allowProvisioningUpdates)
 fi
 
-xcodebuild build "${BUILD_ARGS[@]}"
+"${PROJECT_DIR}/bin/ci-slot-run" 8 "build ${BUILD_TYPE}" -- xcodebuild build "${BUILD_ARGS[@]}"
 
 echo "Build complete: ${DERIVED_DATA}/Build/Products"

@@ -19,7 +19,7 @@ if [ -n "${1:-}" ]; then
 fi
 
 rm -rf "${RESULT_BUNDLE}"
-xcodebuild test \
+"${PROJECT_DIR}/bin/ci-slot-run" 3 "unit tests" -- xcodebuild test \
     -project "${IOS_DIR}/${PROJECT_NAME}.xcodeproj" \
     -scheme "${SCHEME}" \
     -destination "platform=iOS Simulator,id=${UDID}" \
