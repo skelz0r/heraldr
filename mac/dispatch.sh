@@ -31,7 +31,7 @@ json_value() {
 }
 
 fail_usage() {
-  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | reply <pane_id> <question_id> <option> | lexicon-get | lexicon-put | journal-append" >&2
+  echo "usage: dispatch.sh install | enqueue <workspace_id> <label_base64> | start <workspace_id> <label_base64> | enqueue-pane <workspace_id> <pane_id> <clear|keep> | relay <workspace_id> | attach <jpg|png> | answer <job_id> | read-answer <job_id> | run <agent> | status | register-push <token> <sandbox|production> <topic> <team_id> | reply <pane_id> <question_id> <option> | lexicon-get | lexicon-put | journal-append" >&2
   exit 2
 }
 
@@ -121,6 +121,13 @@ enqueue_job() {
   create_job "$1" "$agent" "$label" clear
 }
 
+start_job() {
+  label="$(printf '%s' "$2" | base64 -d 2>/dev/null)" || label=""
+  [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
+  agent="$(main_agent_for "$1" "$label")" || exit 2
+  create_job "$1" "$agent" "$label" keep start </dev/null
+}
+
 enqueue_pane_job() {
   valid_pane_id "$2" || { echo "invalid pane: $2" >&2; exit 2; }
   case "$3" in clear|keep) ;; *) fail_usage ;; esac
@@ -143,6 +150,7 @@ create_job() {
   agent="$2"
   label="$3"
   clear="$4"
+  kind="${5:-send}"
   valid_queue_target "$agent" || { echo "invalid agent name: $agent" >&2; exit 2; }
   [ -n "$label" ] || { echo "invalid label" >&2; exit 2; }
 
@@ -150,7 +158,7 @@ create_job() {
   job_dir="$JOBS_DIR/$job_id"
   mkdir -p "$job_dir.tmp"
   sed "s/{{job_id}}/$job_id/g" > "$job_dir.tmp/prompt"
-  if [ ! -s "$job_dir.tmp/prompt" ]; then
+  if [ "$kind" = "send" ] && [ ! -s "$job_dir.tmp/prompt" ]; then
     rm -rf "$job_dir.tmp"
     echo "empty prompt" >&2
     exit 2
@@ -159,6 +167,7 @@ create_job() {
   printf '%s' "$agent" > "$job_dir.tmp/agent"
   printf '%s' "$label" > "$job_dir.tmp/label"
   printf '%s' "$clear" > "$job_dir.tmp/clear"
+  printf '%s' "$kind" > "$job_dir.tmp/kind"
   printf 'queued' > "$job_dir.tmp/state"
   mv "$job_dir.tmp" "$job_dir"
 
@@ -331,6 +340,7 @@ process_job() {
   workspace_id="$(cat "$job_dir/workspace_id")"
   label="$(cat "$job_dir/label")"
   clear="$(cat "$job_dir/clear" 2>/dev/null || echo clear)"
+  kind="$(cat "$job_dir/kind" 2>/dev/null || echo send)"
 
   agent_workspace="$(agent_field "$agent" workspace_id)"
   if valid_pane_id "$agent"; then
@@ -342,6 +352,12 @@ process_job() {
   elif [ "$agent_workspace" != "$workspace_id" ]; then
     fail_job "$job_dir" "agent $agent belongs to workspace $agent_workspace"
     return 1
+  fi
+
+  if [ "$kind" = "start" ]; then
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$job_dir/sent_at"
+    set_state "$job_dir" sent
+    return 0
   fi
 
   waited="$(herdr agent wait "$agent" --until idle --until "done" 2>&1)" || { fail_job "$job_dir" "agent wait: $waited"; return 1; }
@@ -404,13 +420,14 @@ print_status() {
     [ -f "$job_dir/error" ] && error="$(tr '\t\n' '  ' < "$job_dir/error")"
     answered=""
     [ -f "$job_dir/answer" ] && answered="answered"
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
       "$(basename "$job_dir")" \
       "$(cat "$job_dir/workspace_id" 2>/dev/null)" \
       "$(cat "$job_dir/agent" 2>/dev/null)" \
       "$(cat "$job_dir/state" 2>/dev/null)" \
       "$error" \
-      "$answered"
+      "$answered" \
+      "$(cat "$job_dir/kind" 2>/dev/null || echo send)"
   done
 }
 
@@ -551,6 +568,7 @@ shift
 case "$command" in
   install) install_script ;;
   enqueue) [ $# -eq 2 ] || fail_usage; enqueue_job "$@" ;;
+  start) [ $# -eq 2 ] || fail_usage; start_job "$@" ;;
   enqueue-pane) [ $# -eq 3 ] || fail_usage; enqueue_pane_job "$@" ;;
   relay) [ $# -eq 1 ] || fail_usage; relay_job "$1" ;;
   attach) [ $# -eq 1 ] || fail_usage; store_attachment "$1" ;;

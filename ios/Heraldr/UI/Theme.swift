@@ -82,6 +82,7 @@ extension AppModel.TargetState {
         case .ambiguousMain: "Several -main Claudes"
         case .tabWithoutClaude: "No Claude left in this tab"
         case .sending: "Sending…"
+        case .starting: "Starting Claude…"
         case .agent(.idle, _), .agent(.done, _): "Ready"
         case .agent(.working, true): "Working on your request"
         case .agent(.working, false): "Working"
@@ -97,6 +98,7 @@ extension AppModel.TargetState {
             "A send will fail: keep only one of \(names.joined(separator: ", ")), or name it \(AgentName.forWorkspace(label: target.workspace.label))."
         case .tabWithoutClaude: "A send will fail: restart Claude in this tab on the Mac."
         case .sending: "A new send will go out right after."
+        case .starting: "A send will go out once it has started."
         case .agent(.idle, _), .agent(.done, _):
             target.tab == nil || clearingContext
                 ? "A send clears its context, then hands over the request."

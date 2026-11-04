@@ -8,12 +8,18 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
         case failed
     }
 
+    enum Kind: String, Sendable {
+        case send
+        case start
+    }
+
     let id: String
     let workspaceId: String
     let agent: String
     let state: State
     let error: String?
     var answered = false
+    var kind = Kind.send
 
     var isPending: Bool { state == .queued || state == .sending }
     var targetsPane: Bool { agent.contains(":") }
@@ -25,7 +31,8 @@ struct DispatchJob: Identifiable, Equatable, Sendable {
             let error = fields.count > 4 && !fields[4].isEmpty ? fields[4] : nil
             return DispatchJob(
                 id: fields[0], workspaceId: fields[1], agent: fields[2], state: state, error: error,
-                answered: fields.count > 5 && fields[5] == "answered")
+                answered: fields.count > 5 && fields[5] == "answered",
+                kind: fields.count > 6 && fields[6] == Kind.start.rawValue ? .start : .send)
         }
     }
 }
@@ -85,6 +92,14 @@ struct Dispatcher: Sendable {
         try await enqueue(
             "enqueue-pane \(quoted(workspace.id)) \(quoted(paneId)) \(clearingContext ? "clear" : "keep")",
             prompt: PromptEnvelope.forTab(text, attachments: attachments))
+    }
+
+    func startMain(of workspace: Workspace) async throws -> String {
+        try await installScript()
+        let label = Data(workspace.label.utf8).base64EncodedString()
+        let result = try await link.run("/bin/sh \(Self.script) start \(quoted(workspace.id)) \(quoted(label))", replayable: false)
+        guard result.exitStatus == 0 else { throw failure(result) }
+        return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func enqueue(_ arguments: String, prompt: String) async throws -> String {
