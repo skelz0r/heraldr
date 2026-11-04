@@ -12,14 +12,16 @@ extension XCTestCase {
     }
 
     func capture(_ name: String, in app: XCUIApplication, dark: Bool = true) {
+        let device = XCUIDevice.shared
+        if !dark, device.appearance == .dark {
+            device.appearance = .light
+        }
         settle()
-        attach(app.screenshot(), named: "\(name)-light")
+        attach(app.screenshot(), named: "\(name)-\(appearanceName)")
         guard dark else { return }
-        XCUIDevice.shared.appearance = .dark
+        device.appearance = device.appearance == .dark ? .light : .dark
         settle()
-        attach(app.screenshot(), named: "\(name)-dark")
-        XCUIDevice.shared.appearance = .light
-        settle()
+        attach(app.screenshot(), named: "\(name)-\(appearanceName)")
     }
 
     func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
@@ -35,6 +37,10 @@ extension XCTestCase {
         waitFor(found)
         let text = app.staticTexts.matching(identifier: identifier).firstMatch
         return text.exists ? text.label : found.label
+    }
+
+    private var appearanceName: String {
+        XCUIDevice.shared.appearance == .dark ? "dark" : "light"
     }
 
     private func attach(_ screenshot: XCUIScreenshot, named name: String) {
